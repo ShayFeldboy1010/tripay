@@ -1,0 +1,114 @@
+"use client"
+
+import { useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { Expense } from "@/lib/supabase/client"
+
+interface LocationsReportProps {
+  expenses: Expense[]
+}
+
+export function LocationsReport({ expenses }: LocationsReportProps) {
+  const locationData = useMemo(() => {
+    const locationMap = new Map<
+      string,
+      {
+        total: number
+        categories: Map<string, { amount: number; expenses: Expense[] }>
+      }
+    >()
+
+    expenses.forEach((expense) => {
+      const location = expense.location || "Unknown Location"
+      const category = expense.category || "Other"
+      const amount = Number(expense.amount)
+
+      if (!locationMap.has(location)) {
+        locationMap.set(location, { total: 0, categories: new Map() })
+      }
+
+      const locationData = locationMap.get(location)!
+      locationData.total += amount
+
+      if (!locationData.categories.has(category)) {
+        locationData.categories.set(category, { amount: 0, expenses: [] })
+      }
+
+      const categoryData = locationData.categories.get(category)!
+      categoryData.amount += amount
+      categoryData.expenses.push(expense)
+    })
+
+    return Array.from(locationMap.entries())
+      .map(([location, data]) => ({
+        location,
+        total: data.total,
+        categories: Array.from(data.categories.entries())
+          .map(([category, categoryData]) => ({
+            category,
+            amount: categoryData.amount,
+            expenses: categoryData.expenses.sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+            ),
+          }))
+          .sort((a, b) => b.amount - a.amount),
+      }))
+      .sort((a, b) => b.total - a.total)
+  }, [expenses])
+
+  if (expenses.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <p className="text-gray-500">No expenses to analyze</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-gray-900">Spending by Location</h2>
+
+      {locationData.map(({ location, total, categories }) => (
+        <Card key={location}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">{location}</CardTitle>
+              <span className="text-xl font-bold text-blue-600">₪{total.toFixed(2)}</span>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Category Breakdown:</h4>
+              {categories.map(({ category, amount, expenses: categoryExpenses }) => (
+                <div key={category} className="space-y-2">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm bg-gray-100 px-2 py-1 rounded-full text-gray-700">{category}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">₪{amount.toFixed(2)}</span>
+                      <span className="text-xs text-gray-500">({((amount / total) * 100).toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                  <div className="ml-4 space-y-1">
+                    {categoryExpenses.map((expense) => (
+                      <div key={expense.id} className="flex items-center justify-between py-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600">{expense.title || "Untitled"}</span>
+                          {expense.description && <span className="text-gray-400">• {expense.description}</span>}
+                        </div>
+                        <span className="font-medium text-gray-700">₪{expense.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
