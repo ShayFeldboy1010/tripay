@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Trash2, Plus, ArrowLeft, MapPin, Users } from "lucide-react"
+import { MobileNav } from "@/components/mobile-nav"
 
 export default function SettingsPage() {
   const params = useParams()
@@ -109,18 +110,23 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 pb-24 md:pb-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Trip
+        <div className="flex items-center gap-4 mb-6 md:mb-8 pt-2 md:pt-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => router.back()} 
+            className="flex items-center gap-2 h-11 min-w-[44px] px-2 md:px-4"
+          >
+            <ArrowLeft className="h-5 w-5 md:h-4 md:w-4" />
+            <span className="hidden md:inline">Back to Trip</span>
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Trip Settings</h1>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Trip Settings</h1>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4 md:gap-6">
           {/* Locations Management */}
           <Card className="backdrop-blur-sm bg-white/80 border-0 shadow-xl">
             <CardHeader className="pb-4">
@@ -136,28 +142,33 @@ export default function SettingsPage() {
                   value={newLocationName}
                   onChange={(e) => setNewLocationName(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && addLocation()}
-                  className="flex-1"
+                  className="flex-1 h-12 md:h-10 text-base md:text-sm"
+                  autoComplete="off"
                 />
-                <Button onClick={addLocation} size="sm">
-                  <Plus className="h-4 w-4" />
+                <Button 
+                  onClick={addLocation} 
+                  size="sm"
+                  className="h-12 w-12 md:h-10 md:w-10 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
+                >
+                  <Plus className="h-5 w-5 md:h-4 md:w-4" />
                 </Button>
               </div>
 
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {locations.map((location) => (
-                  <div key={location.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium">{location.name}</span>
+                  <div key={location.id} className="flex items-center justify-between p-4 md:p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium text-base md:text-sm flex-1 truncate pr-2">{location.name}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteLocation(location.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-11 w-11 md:h-8 md:w-8 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex-shrink-0"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
                     </Button>
                   </div>
                 ))}
-                {locations.length === 0 && <p className="text-gray-500 text-center py-4">No locations added yet</p>}
+                {locations.length === 0 && <p className="text-gray-500 text-center py-6 md:py-4 text-base md:text-sm">No locations added yet</p>}
               </div>
             </CardContent>
           </Card>
@@ -177,35 +188,43 @@ export default function SettingsPage() {
                   value={newParticipantName}
                   onChange={(e) => setNewParticipantName(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && addParticipant()}
-                  className="flex-1"
+                  className="flex-1 h-12 md:h-10 text-base md:text-sm"
+                  autoComplete="off"
                 />
-                <Button onClick={addParticipant} size="sm">
-                  <Plus className="h-4 w-4" />
+                <Button 
+                  onClick={addParticipant} 
+                  size="sm"
+                  className="h-12 w-12 md:h-10 md:w-10 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
+                >
+                  <Plus className="h-5 w-5 md:h-4 md:w-4" />
                 </Button>
               </div>
 
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {participants.map((participant) => (
-                  <div key={participant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium">{participant.name}</span>
+                  <div key={participant.id} className="flex items-center justify-between p-4 md:p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium text-base md:text-sm flex-1 truncate pr-2">{participant.name}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteParticipant(participant.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-11 w-11 md:h-8 md:w-8 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex-shrink-0"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
                     </Button>
                   </div>
                 ))}
                 {participants.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No participants added yet</p>
+                  <p className="text-gray-500 text-center py-6 md:py-4 text-base md:text-sm">No participants added yet</p>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Mobile Navigation */}
+      <MobileNav tripId={tripId} />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { MoreVertical, Edit, Trash2, MapPin, User, Users } from "lucide-react"
 import { EditExpenseForm } from "./edit-expense-form"
+import { ExpenseCardMobile } from "./expense-card-mobile"
 import { Plus } from "lucide-react"
 
 interface ExpenseListProps {
@@ -102,9 +103,21 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
 
           <div className="space-y-3">
             {dayExpenses.map((expense) => (
+              <div key={expense.id} className="md:hidden">
+                <ExpenseCardMobile
+                  expense={expense}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  isDeleting={deletingExpense === expense.id}
+                />
+              </div>
+            ))}
+            
+            {/* Desktop version */}
+            {dayExpenses.map((expense) => (
               <Card
-                key={expense.id}
-                className={`bg-white/70 backdrop-blur-sm border-white/40 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl ${
+                key={`desktop-${expense.id}`}
+                className={`hidden md:block bg-white/70 backdrop-blur-sm border-white/40 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl ${
                   editingExpense?.id === expense.id ? "ring-2 ring-blue-400 shadow-lg" : ""
                 }`}
               >

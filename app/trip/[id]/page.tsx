@@ -11,6 +11,8 @@ import { AddExpenseForm } from "@/components/add-expense-form"
 import { ExpenseReports } from "@/components/expense-reports"
 import { ExpenseFilters } from "@/components/expense-filters"
 import { OfflineIndicator } from "@/components/offline-indicator"
+import { MobileNav } from "@/components/mobile-nav"
+import { FAB } from "@/components/fab"
 import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
@@ -34,13 +36,18 @@ export default function TripPage() {
     loadTripData()
     setupRealtimeSubscription()
 
+    // Listen for reports toggle from mobile nav
+    const handleToggleReports = () => setShowReports(!showReports)
+    window.addEventListener('toggleReports', handleToggleReports)
+
     // Cleanup subscription on unmount
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
+      window.removeEventListener('toggleReports', handleToggleReports)
     }
-  }, [tripId])
+  }, [tripId, showReports])
 
   const loadTripData = async () => {
     try {
@@ -272,8 +279,9 @@ export default function TripPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-2xl mx-auto p-4">
-        <div className="flex items-center justify-between mb-8 pt-6">
+      <div className="max-w-2xl mx-auto p-4 pb-24 md:pb-4">
+        {/* Desktop header */}
+        <div className="hidden md:flex items-center justify-between mb-8 pt-6">
           <Button
             variant="ghost"
             onClick={() => router.push("/")}
@@ -299,6 +307,27 @@ export default function TripPage() {
             >
               <Settings className="h-4 w-4" />
               <span className="font-medium">Settings</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile header */}
+        <div className="flex md:hidden items-center justify-between mb-6 pt-2">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/")}
+            className="flex items-center gap-2 hover:bg-white/60 rounded-xl px-2 py-2 transition-all duration-200 h-11 min-w-[44px]"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <OfflineIndicator />
+            <Button
+              variant="outline"
+              onClick={shareTrip}
+              className="flex items-center gap-1 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl px-3 py-2 transition-all duration-200 h-11 min-w-[44px]"
+            >
+              <Share2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -330,7 +359,8 @@ export default function TripPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        {/* Desktop action buttons */}
+        <div className="hidden md:grid grid-cols-2 gap-3 mb-8">
           <Button
             onClick={() => setShowAddForm(true)}
             className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
@@ -353,6 +383,18 @@ export default function TripPage() {
           >
             <BarChart3 className="h-4 w-4" />
             <span className="font-medium">Reports</span>
+          </Button>
+        </div>
+
+        {/* Mobile filter toggle */}
+        <div className="flex md:hidden items-center justify-end mb-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl px-4 py-2 transition-all duration-200 h-11 min-w-[44px] ${showFilters ? "bg-blue-50 border-blue-200 text-blue-700" : ""}`}
+          >
+            <Filter className="h-4 w-4" />
+            <span className="font-medium">Filter</span>
           </Button>
         </div>
 
@@ -386,6 +428,10 @@ export default function TripPage() {
           onExpenseDeleted={onExpenseDeleted}
         />
       </div>
+
+      {/* Mobile FAB and Navigation */}
+      <FAB onClick={() => setShowAddForm(true)} />
+      <MobileNav tripId={tripId} onAddExpenseClick={() => setShowAddForm(true)} />
     </div>
   )
 }
