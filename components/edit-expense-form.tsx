@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { supabase, type Expense, type Location, type Participant, EXPENSE_CATEGORIES } from "@/lib/supabase/client"
+import { updateExpense } from "@/lib/expenses"
 import { offlineStorage } from "@/lib/offline-storage"
 import { X } from "lucide-react"
 
@@ -101,15 +102,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
       }
 
       if (navigator.onLine) {
-        const { data, error } = await supabase
-          .from("expenses")
-          .update(updateData)
-          .eq("id", expense.id)
-          .select()
-          .single()
-
-        if (error) throw error
-
+        const data = await updateExpense(expense.id, updateData)
         onExpenseUpdated(data)
       } else {
         const offlineExpense: Expense = { ...expense, ...updateData }
@@ -122,9 +115,9 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
         offlineStorage.saveExpense(offlineExpense)
         onExpenseUpdated(offlineExpense)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating expense:", err)
-      alert("Failed to update expense. Please try again.")
+      alert(`Failed to update expense: ${err.message || "Unknown error"}`)
     } finally {
       setIsSubmitting(false)
     }

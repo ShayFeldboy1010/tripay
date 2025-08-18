@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Expense } from "@/lib/supabase/client"
+import { calculateBalances } from "@/lib/balance"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { TrendingUp, Users, Banknote, Calendar } from "lucide-react"
 import { LocationsReport } from "@/components/locations-report"
@@ -37,62 +38,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
     {} as Record<string, { total: number; count: number; expenses: Expense[] }>,
   )
 
-  const calculateBalances = () => {
-    const participants = Array.from(
-      new Set(expenses.map((e) => e.paid_by).filter((p) => p !== "Both" && p !== "Multiple")),
-    )
-    const balances: Record<string, Record<string, number>> = {}
-
-    // Initialize balance matrix
-    participants.forEach((p1) => {
-      balances[p1] = {}
-      participants.forEach((p2) => {
-        if (p1 !== p2) balances[p1][p2] = 0
-      })
-    })
-
-    // Calculate who owes whom
-    expenses.forEach((expense) => {
-      if (expense.paid_by === "Both" || expense.paid_by === "Multiple" || expense.is_shared_payment) return // Skip shared expenses
-
-      const payer = expense.paid_by
-      const amountPerPerson = expense.amount / participants.length
-
-      participants.forEach((participant) => {
-        if (participant !== payer) {
-          balances[participant][payer] += amountPerPerson
-        }
-      })
-    })
-
-    // Net out the balances (if A owes B $10 and B owes A $6, then A owes B $4)
-    const netBalances: Array<{ from: string; to: string; amount: number }> = []
-
-    participants.forEach((p1) => {
-      participants.forEach((p2) => {
-        if (p1 !== p2) {
-          const debt1to2 = balances[p1][p2] || 0
-          const debt2to1 = balances[p2][p1] || 0
-          const netDebt = debt1to2 - debt2to1
-
-          if (netDebt > 0.01) {
-            // Only show debts > 1 cent
-            netBalances.push({
-              from: p1,
-              to: p2,
-              amount: netDebt,
-            })
-            // Clear the reverse debt to avoid double counting
-            balances[p2][p1] = 0
-          }
-        }
-      })
-    })
-
-    return netBalances.sort((a, b) => b.amount - a.amount)
-  }
-
-  const balances = calculateBalances()
+  const balances = calculateBalances(expenses)
 
   // Group expenses by category
   const expensesByCategory = expenses.reduce(
