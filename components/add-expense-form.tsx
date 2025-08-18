@@ -18,7 +18,7 @@ interface AddExpenseFormProps {
   onCancel: () => void
 }
 
-export function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: AddExpenseFormProps) {
+export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: AddExpenseFormProps) {
   const [title, setTitle] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [amount, setAmount] = useState("")
@@ -302,7 +302,6 @@ export function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: AddExpenseF
             </Button>
           </div>
         </div>
-        </CardContent>
       </Card>
     </div>
   )
