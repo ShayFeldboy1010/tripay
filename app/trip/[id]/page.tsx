@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
 import { ArrowLeft, Share2, Plus, Filter, BarChart3, Settings } from "lucide-react"
+import { BottomNav } from "@/components/bottom-nav"
 import { ExpenseList } from "@/components/expense-list"
 import { AddExpenseForm } from "@/components/add-expense-form"
 import { ExpenseReports } from "@/components/expense-reports"
@@ -271,8 +272,8 @@ export default function TripPage() {
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-2xl mx-auto p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pb-24">
+      <div className="max-w-2xl mx-auto p-4 pb-32">
         <div className="flex items-center justify-between mb-8 pt-6">
           <Button
             variant="ghost"
@@ -330,7 +331,7 @@ export default function TripPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        <div className="hidden md:grid grid-cols-2 gap-3 mb-8">
           <Button
             onClick={() => setShowAddForm(true)}
             className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
@@ -386,6 +387,26 @@ export default function TripPage() {
           onExpenseDeleted={onExpenseDeleted}
         />
       </div>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="md:hidden fixed right-4 z-50 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center"
+        style={{ bottom: `calc(4.5rem + env(safe-area-inset-bottom))` }}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      <BottomNav
+        tripId={tripId}
+        onAdd={() => setShowAddForm(true)}
+        onExpenses={() => {
+          setShowFilters(false)
+          setShowReports(false)
+        }}
+        onSummary={() => setShowReports((prev) => !prev)}
+        showSummary={showReports}
+      />
     </div>
   )
 }
