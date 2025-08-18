@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
-import { ArrowLeft, Share2, Plus, Filter, BarChart3, Settings } from "lucide-react"
+import { ArrowLeft, Share2, Plus, Filter, BarChart3 } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
 import { ExpenseReports } from "@/components/expense-reports"
@@ -17,6 +17,8 @@ import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
+import { ManageParticipantsModal } from "@/components/manage-participants-modal"
+import { ManageLocationsModal } from "@/components/manage-locations-modal"
 
 export default function TripPage() {
   const params = useParams()
@@ -30,6 +32,8 @@ export default function TripPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [showReports, setShowReports] = useState(false)
+  const [showParticipants, setShowParticipants] = useState(false)
+  const [showLocations, setShowLocations] = useState(false)
   const [isConnected, setIsConnected] = useState(true)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
@@ -307,14 +311,6 @@ export default function TripPage() {
               <Share2 className="h-4 w-4" />
               <span className="font-medium">Share</span>
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/trip/${tripId}/settings`)}
-              className="flex items-center gap-2 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl px-4 py-2 transition-all duration-200"
-            >
-              <Settings className="h-4 w-4" />
-              <span className="font-medium">Settings</span>
-            </Button>
           </div>
         </div>
 
@@ -341,13 +337,15 @@ export default function TripPage() {
 
         <Card className="mb-8 bg-white/70 backdrop-blur-sm border-white/40 shadow-lg rounded-2xl">
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl font-bold text-gray-900">{trip.name}</CardTitle>
-            {trip.description && <CardDescription className="text-gray-600 mt-1">{trip.description}</CardDescription>}
+            <CardTitle dir="auto" className="text-2xl font-bold text-gray-900">{trip.name}</CardTitle>
+            {trip.description && (
+              <CardDescription dir="auto" className="text-gray-600 mt-1">{trip.description}</CardDescription>
+            )}
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-3xl font-bold text-emerald-600 mb-1">₪{totalAmount.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-emerald-600 mb-1 text-end">₪{totalAmount.toFixed(2)}</p>
                 <p className="text-sm text-gray-600 font-medium">
                   {filteredExpenses.length !== expenses.length
                     ? `${filteredExpenses.length} of ${expenses.length} expenses`
@@ -365,6 +363,15 @@ export default function TripPage() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="flex flex-wrap gap-2 mt-3">
+          <Button variant="outline" size="sm" onClick={() => setShowParticipants(true)}>
+            + Add Participants
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowLocations(true)}>
+            + Add Locations
+          </Button>
+        </div>
 
         {/* Desktop action buttons */}
 
@@ -435,6 +442,12 @@ export default function TripPage() {
           onExpenseUpdated={onExpenseUpdated}
           onExpenseDeleted={onExpenseDeleted}
         />
+        {showParticipants && (
+          <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
+        )}
+        {showLocations && (
+          <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
+        )}
       </div>
       <FAB onClick={() => setShowAddForm(true)} />
       <MobileNav tripId={tripId} />

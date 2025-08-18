@@ -109,16 +109,16 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
               {/* Title and Amount Row */}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-base leading-tight truncate">
+                  <h4 dir="auto" className="font-semibold text-gray-900 text-base leading-tight truncate">
                     {expense.title || "Untitled Expense"}
                   </h4>
                   {expense.description && (
-                    <p className="text-sm text-gray-600 mt-0.5 line-clamp-1">
+                    <p dir="auto" className="text-sm text-gray-600 mt-0.5 line-clamp-1">
                       {expense.description}
                     </p>
                   )}
                 </div>
-                <div className="text-right ml-3 flex-shrink-0">
+                <div className="text-end ms-3 flex-shrink-0">
                   <p className="text-xl font-bold text-gray-900">₪{expense.amount.toFixed(2)}</p>
                 </div>
               </div>
@@ -127,7 +127,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
               {expense.location && (
                 <div className="flex items-center gap-1 mb-2">
                   <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm text-gray-600 truncate">{expense.location}</span>
+                  <span dir="auto" className="text-sm text-gray-600 truncate">{expense.location}</span>
                 </div>
               )}
 
@@ -141,7 +141,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                     ) : (
                       <User className="h-3 w-3 text-gray-500 flex-shrink-0" />
                     )}
-                    <span className="text-xs font-medium text-gray-700 truncate">
+                    <span dir="auto" className="text-xs font-medium text-gray-700 truncate">
                       {expense.paid_by === "Both" ? "Both" : expense.paid_by}
                     </span>
                   </div>
@@ -161,7 +161,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                 </div>
 
                 {/* Time and Menu */}
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-2 flex-shrink-0 ms-2">
                   <span className="text-xs text-gray-500 font-medium">
                     {formatDistanceToNow(new Date(expense.created_at), { addSuffix: true })}
                   </span>

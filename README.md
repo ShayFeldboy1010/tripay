@@ -35,3 +35,14 @@ Continue building your app on:
 2. **Schema** – run the SQL scripts in `scripts/` to keep the database in sync. Missing columns such as `is_shared_payment` will cause inserts to fail.
 3. **Row Level Security** – confirm that policies allow your user to insert and update rows for the trip. RLS errors surface from Supabase with a detailed `code` and `message`.
 4. **Client errors** – the app now logs Supabase error `code`, `message`, and `details` to the console. Use these logs to diagnose issues quickly.
+
+## Locale & Direction
+
+- Text inputs and dynamic text containers use `dir="auto"` so Hebrew/English content flows in the correct direction.
+- The `<html>` element reads a `locale` cookie (`he` or `en`) and sets the page `dir` accordingly. Default is `en`.
+- To test manually, set `document.cookie = "locale=he"` (or `en`) and reload.
+
+## Trip Page Shortcuts
+
+- Buttons above the expense list open participant and location management modals.
+- Components added: `ManageParticipantsModal` and `ManageLocationsModal`.

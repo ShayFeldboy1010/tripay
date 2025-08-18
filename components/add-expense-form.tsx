@@ -199,7 +199,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                   placeholder="25.50"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-8 h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm"
+                  className="pl-8 h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm text-end"
                   inputMode="decimal"
                   required
                 />

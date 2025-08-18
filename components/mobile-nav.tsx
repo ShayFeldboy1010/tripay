@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { Home, BarChart3, Settings } from "lucide-react"
+import { Home, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface MobileNavProps {
@@ -14,7 +14,6 @@ export function MobileNav({ tripId }: MobileNavProps) {
 
   const isHome = pathname === "/"
   const isExpenses = pathname === `/trip/${tripId}`
-  const isSettings = pathname === `/trip/${tripId}/settings`
   
   // Don't show nav on home page
   if (isHome) return null
@@ -39,13 +38,6 @@ export function MobileNav({ tripId }: MobileNavProps) {
         window.dispatchEvent(new CustomEvent('toggleReports'))
       }
     },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      active: isSettings,
-      onClick: () => router.push(`/trip/${tripId}/settings`)
-    }
   ]
 
   return (

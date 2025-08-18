@@ -180,7 +180,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   .map(([category, data]) => (
                     <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">{category}</Badge>
+                        <Badge variant="outline" dir="auto">{category}</Badge>
                         <span className="text-sm text-gray-600">{data.count} expenses</span>
                       </div>
                       <span className="font-semibold">₪{data.total.toFixed(2)}</span>
@@ -251,8 +251,8 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   .map(([payer, data]) => (
                     <div key={payer} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">{payer}</h4>
-                        <div className="text-right">
+                        <h4 dir="auto" className="font-semibold">{payer}</h4>
+                        <div className="text-end">
                           <p className="font-bold text-lg">₪{data.total.toFixed(2)}</p>
                           <p className="text-sm text-gray-600">{data.count} expenses</p>
                         </div>
@@ -314,11 +314,11 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
                         <div>
-                          <p className="font-medium">{category}</p>
+                          <p dir="auto" className="font-medium">{category}</p>
                           <p className="text-sm text-gray-600">{data.count} expenses</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <p className="font-semibold">₪{data.total.toFixed(2)}</p>
                         <p className="text-sm text-gray-600">{((data.total / totalAmount) * 100).toFixed(1)}%</p>
                       </div>
