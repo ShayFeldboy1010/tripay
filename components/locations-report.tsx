@@ -74,7 +74,7 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
         <Card key={location}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{location}</CardTitle>
+              <CardTitle dir="auto" className="text-lg">{location}</CardTitle>
               <span className="text-xl font-bold text-blue-600">₪{total.toFixed(2)}</span>
             </div>
           </CardHeader>
@@ -85,21 +85,21 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
                 <div key={category} className="space-y-2">
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm bg-gray-100 px-2 py-1 rounded-full text-gray-700">{category}</span>
+                      <span dir="auto" className="text-sm bg-gray-100 px-2 py-1 rounded-full text-gray-700">{category}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">₪{amount.toFixed(2)}</span>
+                      <span className="text-sm font-medium text-end">₪{amount.toFixed(2)}</span>
                       <span className="text-xs text-gray-500">({((amount / total) * 100).toFixed(1)}%)</span>
                     </div>
                   </div>
-                  <div className="ml-4 space-y-1">
+                  <div className="ms-4 space-y-1">
                     {categoryExpenses.map((expense) => (
                       <div key={expense.id} className="flex items-center justify-between py-1 text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600">{expense.title || "Untitled"}</span>
-                          {expense.description && <span className="text-gray-400">• {expense.description}</span>}
+                          <span dir="auto" className="text-gray-600">{expense.title || "Untitled"}</span>
+                          {expense.description && <span dir="auto" className="text-gray-400">• {expense.description}</span>}
                         </div>
-                        <span className="font-medium text-gray-700">₪{expense.amount.toFixed(2)}</span>
+                        <span className="font-medium text-gray-700 text-end">₪{expense.amount.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { cookies } from 'next/headers'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -29,8 +30,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = (cookies().get('locale')?.value as 'he' | 'en') || 'en'
+  const dir = locale === 'he' ? 'rtl' : 'ltr'
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
+    <html lang={locale} dir={dir} className={inter.className} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#2563eb" />
       </head>

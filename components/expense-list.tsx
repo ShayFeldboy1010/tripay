@@ -97,7 +97,7 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
               })}
             </h3>
             <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"></div>
-            <span className="text-sm font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">
+            <span className="text-sm font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full text-end">
               ₪{dayExpenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
             </span>
           </div>
@@ -127,18 +127,20 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-3 mb-3">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 text-lg leading-tight">
+                          <h4 dir="auto" className="font-semibold text-gray-900 text-lg leading-tight">
                             {expense.title || "Untitled Expense"}
                           </h4>
-                          {expense.description && <p className="text-sm text-gray-600 mt-1">{expense.description}</p>}
+                          {expense.description && (
+                            <p dir="auto" className="text-sm text-gray-600 mt-1">{expense.description}</p>
+                          )}
                           {expense.location && (
                             <div className="flex items-center gap-1 mt-1">
                               <MapPin className="h-3 w-3 text-gray-400" />
-                              <span className="text-sm text-gray-600">{expense.location}</span>
+                              <span dir="auto" className="text-sm text-gray-600">{expense.location}</span>
                             </div>
                           )}
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                           <p className="text-2xl font-bold text-gray-900">₪{expense.amount.toFixed(2)}</p>
                         </div>
                       </div>
@@ -151,11 +153,11 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
                             ) : (
                               <User className="h-4 w-4 text-gray-500" />
                             )}
-                            <span className="text-sm font-medium text-gray-700">
+                            <span dir="auto" className="text-sm font-medium text-gray-700">
                               {expense.paid_by === "Both" ? "Paid by Both" : `Paid by ${expense.paid_by}`}
                             </span>
                           </div>
-                          {expense.category && (
+                        {expense.category && (
                             (() => {
                               const Icon = categoryIcons[expense.category]
                               return (

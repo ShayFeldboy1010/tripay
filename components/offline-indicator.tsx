@@ -109,12 +109,12 @@ export function OfflineIndicator({ className }: OfflineIndicatorProps) {
           <Button variant="ghost" size="sm" onClick={handleSync} disabled={syncing} className="h-6 px-2 text-xs">
             {syncing ? (
               <>
-                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                <RefreshCw className="h-3 w-3 me-1 animate-spin" />
                 Syncing...
               </>
             ) : (
               <>
-                <RefreshCw className="h-3 w-3 mr-1" />
+                <RefreshCw className="h-3 w-3 me-1" />
                 Sync
               </>
             )}

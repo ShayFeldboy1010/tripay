@@ -137,6 +137,7 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
               placeholder="0.00"
               value={minAmount}
               onChange={(e) => setMinAmount(e.target.value)}
+              className="text-end"
             />
           </div>
           <div>
@@ -150,6 +151,7 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
               placeholder="999.99"
               value={maxAmount}
               onChange={(e) => setMaxAmount(e.target.value)}
+              className="text-end"
             />
           </div>
         </div>
@@ -183,6 +185,7 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
                     variant={selectedCategory === category ? "default" : "outline"}
                     className="cursor-pointer flex items-center gap-1"
                     onClick={() => setSelectedCategory(selectedCategory === category ? "" : category)}
+                    dir="auto"
                   >
                     {Icon && <Icon className="h-3 w-3" />}
                     {category}
@@ -203,6 +206,7 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
                 variant={selectedPayer === payer ? "default" : "outline"}
                 className="cursor-pointer"
                 onClick={() => setSelectedPayer(selectedPayer === payer ? "" : payer)}
+                dir="auto"
               >
                 {payer}
               </Badge>
