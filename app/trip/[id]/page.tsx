@@ -14,7 +14,6 @@ import { ExpenseReports } from "@/components/expense-reports"
 import { ExpenseFilters } from "@/components/expense-filters"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { MobileNav } from "@/components/mobile-nav"
-import { FAB } from "@/components/fab"
 import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
@@ -35,25 +34,37 @@ export default function TripPage() {
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
-  const [showReports, setShowReports] = useState(false)
+  type Panel = 'none' | 'filter' | 'reports'
+  const [openPanel, setOpenPanel] = useState<Panel>('none')
   const [showParticipants, setShowParticipants] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
   const [showEditTrip, setShowEditTrip] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const reportsRef = useRef<HTMLDivElement>(null)
+  const filtersRef = useRef<HTMLDivElement>(null)
+
+  const toggleFilter = () =>
+    setOpenPanel((prev) => (prev === 'filter' ? 'none' : 'filter'))
+  const toggleReports = () =>
+    setOpenPanel((prev) => (prev === 'reports' ? 'none' : 'reports'))
+
+  useEffect(() => {
+    if (openPanel === 'reports') {
+      reportsRef.current?.focus()
+    } else if (openPanel === 'filter') {
+      filtersRef.current?.focus()
+    }
+  }, [openPanel])
 
   useEffect(() => {
     loadTripData()
     setupRealtimeSubscription()
 
     // Listen for reports toggle from mobile nav
-    const handleToggleReports = () => setShowReports(!showReports)
-    const handleShowExpenses = () => {
-      setShowFilters(false)
-      setShowReports(false)
-    }
+    const handleToggleReports = toggleReports
+    const handleShowExpenses = () => setOpenPanel('none')
     window.addEventListener('toggleReports', handleToggleReports)
     window.addEventListener('showExpenses', handleShowExpenses)
 
@@ -65,7 +76,7 @@ export default function TripPage() {
       window.removeEventListener('toggleReports', handleToggleReports)
       window.removeEventListener('showExpenses', handleShowExpenses)
     }
-  }, [tripId, showReports])
+  }, [tripId])
 
   useEffect(() => {
     if (trip && showEditTrip) {
@@ -207,12 +218,12 @@ export default function TripPage() {
 
   useEffect(() => {
     // Re-apply filters when expenses change from real-time updates
-    if (showFilters) {
+    if (openPanel === 'filter') {
       // Let the filter component handle this
       return
     }
     setFilteredExpenses(expenses)
-  }, [expenses, showFilters])
+  }, [expenses, openPanel])
 
   const deleteTrip = async () => {
     if (!confirm("Are you sure you want to delete this trip?")) return
@@ -317,8 +328,8 @@ export default function TripPage() {
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-24">
-      <header className="bg-gray-900 text-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
+      <header className="sticky top-0 z-30 bg-gray-900 text-white shadow-sm">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <span className="text-lg font-semibold">TripPay</span>
           <div className="flex items-center gap-2">
@@ -332,79 +343,96 @@ export default function TripPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto p-4 pb-32 md:pb-8 space-y-6">
-        <Card className="rounded-2xl shadow-md">
-          <CardHeader className="pb-4">
-            <CardTitle dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+      <div className="max-w-2xl mx-auto px-4 pb-32 md:pb-8 space-y-6">
+        <Card className="rounded-2xl shadow-md p-5 sm:p-6">
+          <div>
+            <h2 dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
               {trip.name}
-            </CardTitle>
+            </h2>
             {trip.description && (
-              <CardDescription dir="auto" className="text-gray-500 mt-1">
+              <p dir="auto" className="text-gray-500 mt-1">
                 {trip.description}
-              </CardDescription>
+              </p>
             )}
-          </CardHeader>
-          <CardContent className="text-end space-y-1">
+          </div>
+          <div className="mt-4 text-end space-y-1">
             <p className="text-4xl font-bold text-green-600">₪{totalAmount.toFixed(2)}</p>
             <p className="text-sm text-gray-500">
               {filteredExpenses.length !== expenses.length
                 ? `${filteredExpenses.length} of ${expenses.length} expenses`
                 : `${expenses.length} total expenses`}
             </p>
-          </CardContent>
+          </div>
         </Card>
 
         <Button
-          onClick={() => setShowAddForm(true)}
-          className="w-full h-12 rounded-2xl bg-gray-900 text-white font-medium hover:bg-gray-800 hover:shadow"
+          onClick={() => {
+            setShowAddForm(true)
+            setOpenPanel('none')
+          }}
+          className="w-full h-12 rounded-2xl bg-gray-900 text-white text-base font-medium hover:bg-gray-800 hover:shadow"
         >
           <Plus className="h-5 w-5 mr-2" /> Add Expense
         </Button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Button
             variant="outline"
-            className="h-11 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
+            className="w-full h-12 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
             onClick={() => setShowParticipants(true)}
           >
             <Users className="h-4 w-4 mr-2" /> Add Participants
           </Button>
           <Button
             variant="outline"
-            className="h-11 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
+            className="w-full h-12 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
             onClick={() => setShowLocations(true)}
           >
             <MapPin className="h-4 w-4 mr-2" /> Add Locations
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Button
-            variant="ghost"
-            className={`h-11 rounded-2xl justify-center border border-gray-200 bg-white hover:bg-gray-50 hover:shadow ${showFilters ? "bg-gray-50" : ""}`}
-            onClick={() => setShowFilters(!showFilters)}
+            variant="secondary"
+            className="w-full h-12 rounded-2xl justify-center"
+            onClick={toggleFilter}
+            aria-expanded={openPanel === 'filter'}
+            aria-controls="filter-panel"
           >
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
           <Button
-            variant="ghost"
-            className={`h-11 rounded-2xl justify-center border border-gray-200 bg-white hover:bg-gray-50 hover:shadow ${showReports ? "bg-gray-50" : ""}`}
-            onClick={() => setShowReports(!showReports)}
+            variant="secondary"
+            className="w-full h-12 rounded-2xl justify-center"
+            onClick={toggleReports}
+            aria-expanded={openPanel === 'reports'}
+            aria-controls="reports-panel"
           >
             <BarChart3 className="h-4 w-4 mr-2" />
             Reports
           </Button>
         </div>
 
-        {showReports && (
-          <div className="mb-8">
+        {openPanel === 'reports' && (
+          <div
+            id="reports-panel"
+            ref={reportsRef}
+            tabIndex={-1}
+            className="mb-8 focus:outline-none"
+          >
             <ExpenseReports expenses={expenses} />
           </div>
         )}
 
-        {showFilters && (
-          <div className="mb-8">
+        {openPanel === 'filter' && (
+          <div
+            id="filter-panel"
+            ref={filtersRef}
+            tabIndex={-1}
+            className="mb-8"
+          >
             <ExpenseFilters
               expenses={expenses}
               onFiltersChanged={onFiltersChanged}
@@ -474,7 +502,6 @@ export default function TripPage() {
           </Dialog.Portal>
         </Dialog.Root>
       </div>
-      <FAB onClick={() => setShowAddForm(true)} />
       <MobileNav tripId={tripId} />
     </div>
   )
