@@ -4,11 +4,10 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
-import { Settings, Plus, Filter, BarChart3, Clipboard, Trash2, Pencil, X } from "lucide-react"
+import { Plus, Filter, BarChart3, X, Users, MapPin } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
 import { ExpenseReports } from "@/components/expense-reports"
@@ -24,6 +23,7 @@ import { ManageParticipantsModal } from "@/components/manage-participants-modal"
 import { ManageLocationsModal } from "@/components/manage-locations-modal"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
+import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 
 export default function TripPage() {
   const params = useParams()
@@ -73,6 +73,13 @@ export default function TripPage() {
       setEditDescription(trip.description || "")
     }
   }, [trip, showEditTrip])
+
+  useEffect(() => {
+    if (!showEditTrip) {
+      setEditName("")
+      setEditDescription("")
+    }
+  }, [showEditTrip])
 
   const loadTripData = async () => {
     try {
@@ -207,11 +214,6 @@ export default function TripPage() {
     setFilteredExpenses(expenses)
   }, [expenses, showFilters])
 
-  const copyTripId = () => {
-    navigator.clipboard.writeText(tripId)
-    toast.success("Trip ID copied to clipboard")
-  }
-
   const deleteTrip = async () => {
     if (!confirm("Are you sure you want to delete this trip?")) return
     try {
@@ -288,7 +290,7 @@ export default function TripPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 space-y-4">
+      <div className="min-h-screen bg-gray-100 p-4 space-y-4">
         <ExpenseCardSkeleton />
         <ExpenseCardSkeleton />
         <ExpenseCardSkeleton />
@@ -298,7 +300,7 @@ export default function TripPage() {
 
   if (!trip) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-700 mb-6 font-medium">Trip not found</p>
           <Button
@@ -315,43 +317,36 @@ export default function TripPage() {
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <header className="flex items-center justify-between h-14 px-4 bg-gray-900 text-white">
-        <span className="text-lg font-semibold">TripPay</span>
-        <div className="flex items-center gap-2">
-          <OfflineIndicator />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800 rounded-full">
-                <Settings className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={copyTripId} className="gap-2">
-                <Clipboard className="h-4 w-4" /> Copy Trip ID
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowEditTrip(true)} className="gap-2">
-                <Pencil className="h-4 w-4" /> Edit Trip
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={deleteTrip} className="gap-2 text-red-600 focus:text-red-600">
-                <Trash2 className="h-4 w-4" /> Delete Trip
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="min-h-screen bg-gray-100 pb-24">
+      <header className="bg-gray-900 text-white shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          <span className="text-lg font-semibold">TripPay</span>
+          <div className="flex items-center gap-2">
+            <OfflineIndicator />
+            <TripSettingsDropdown
+              tripId={tripId}
+              onEdit={() => setShowEditTrip(true)}
+              onDelete={deleteTrip}
+            />
+          </div>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto p-4 pb-32 md:pb-8">
-        <Card className="mb-6 rounded-2xl shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle dir="auto" className="text-2xl font-bold text-gray-900">{trip.name}</CardTitle>
+      <div className="max-w-2xl mx-auto p-4 pb-32 md:pb-8 space-y-6">
+        <Card className="rounded-2xl shadow-md">
+          <CardHeader className="pb-4">
+            <CardTitle dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              {trip.name}
+            </CardTitle>
             {trip.description && (
-              <CardDescription dir="auto" className="text-gray-600 mt-1">{trip.description}</CardDescription>
+              <CardDescription dir="auto" className="text-gray-500 mt-1">
+                {trip.description}
+              </CardDescription>
             )}
           </CardHeader>
-          <CardContent className="text-end">
-            <p className="text-3xl font-bold text-green-600 mb-1">₪{totalAmount.toFixed(2)}</p>
-            <p className="text-sm text-gray-600">
+          <CardContent className="text-end space-y-1">
+            <p className="text-4xl font-bold text-green-600">₪{totalAmount.toFixed(2)}</p>
+            <p className="text-sm text-gray-500">
               {filteredExpenses.length !== expenses.length
                 ? `${filteredExpenses.length} of ${expenses.length} expenses`
                 : `${expenses.length} total expenses`}
@@ -361,24 +356,32 @@ export default function TripPage() {
 
         <Button
           onClick={() => setShowAddForm(true)}
-          className="w-full h-12 rounded-2xl mb-4 bg-gray-900 text-white font-medium"
+          className="w-full h-12 rounded-2xl bg-gray-900 text-white font-medium hover:bg-gray-800 hover:shadow"
         >
-          + Add Expense
+          <Plus className="h-5 w-5 mr-2" /> Add Expense
         </Button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <Button variant="outline" className="h-11 rounded-xl" onClick={() => setShowParticipants(true)}>
-            + Add Participants
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            className="h-11 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
+            onClick={() => setShowParticipants(true)}
+          >
+            <Users className="h-4 w-4 mr-2" /> Add Participants
           </Button>
-          <Button variant="outline" className="h-11 rounded-xl" onClick={() => setShowLocations(true)}>
-            + Add Locations
+          <Button
+            variant="outline"
+            className="h-11 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
+            onClick={() => setShowLocations(true)}
+          >
+            <MapPin className="h-4 w-4 mr-2" /> Add Locations
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3">
           <Button
             variant="ghost"
-            className={`h-11 rounded-xl justify-center ${showFilters ? "bg-gray-100" : ""}`}
+            className={`h-11 rounded-2xl justify-center border border-gray-200 bg-white hover:bg-gray-50 hover:shadow ${showFilters ? "bg-gray-50" : ""}`}
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="h-4 w-4 mr-2" />
@@ -386,7 +389,7 @@ export default function TripPage() {
           </Button>
           <Button
             variant="ghost"
-            className={`h-11 rounded-xl justify-center ${showReports ? "bg-gray-100" : ""}`}
+            className={`h-11 rounded-2xl justify-center border border-gray-200 bg-white hover:bg-gray-50 hover:shadow ${showReports ? "bg-gray-50" : ""}`}
             onClick={() => setShowReports(!showReports)}
           >
             <BarChart3 className="h-4 w-4 mr-2" />
@@ -425,53 +428,51 @@ export default function TripPage() {
         {showLocations && (
           <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
         )}
-        {showEditTrip && (
-          <Dialog.Root open onOpenChange={setShowEditTrip}>
-            <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-              <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
-                <Card className="rounded-t-2xl md:rounded-2xl border-0 shadow-2xl">
-                  <CardHeader className="flex flex-row items-center justify-between pb-4 px-4 md:px-6 pt-4 md:pt-6">
-                    <CardTitle>Edit Trip</CardTitle>
-                    <Dialog.Close asChild>
-                      <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full hover:bg-gray-100">
-                        <X className="h-5 w-5" />
-                      </Button>
-                    </Dialog.Close>
-                  </CardHeader>
-                  <CardContent className="px-4 md:px-6 pb-4 space-y-4">
-                    <div>
-                      <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
-                        Trip Name
-                      </label>
-                      <Input
-                        id="edit-name"
-                        dir="auto"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
-                        Description
-                      </label>
-                      <Textarea
-                        id="edit-description"
-                        dir="auto"
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                    <Button onClick={saveTrip} disabled={!editName.trim()} className="w-full">
-                      Save
+        <Dialog.Root open={showEditTrip} onOpenChange={setShowEditTrip}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+            <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
+              <Card className="rounded-t-2xl md:rounded-2xl border-0 shadow-2xl">
+                <CardHeader className="flex flex-row items-center justify-between pb-4 px-4 md:px-6 pt-4 md:pt-6">
+                  <CardTitle>Edit Trip</CardTitle>
+                  <Dialog.Close asChild>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full hover:bg-gray-100">
+                      <X className="h-5 w-5" />
                     </Button>
-                  </CardContent>
-                </Card>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </Dialog.Root>
-        )}
+                  </Dialog.Close>
+                </CardHeader>
+                <CardContent className="px-4 md:px-6 pb-4 space-y-4">
+                  <div>
+                    <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Trip Name
+                    </label>
+                    <Input
+                      id="edit-name"
+                      dir="auto"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <Textarea
+                      id="edit-description"
+                      dir="auto"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <Button onClick={saveTrip} disabled={!editName.trim()} className="w-full">
+                    Save
+                  </Button>
+                </CardContent>
+              </Card>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </div>
       <FAB onClick={() => setShowAddForm(true)} />
       <MobileNav tripId={tripId} />
