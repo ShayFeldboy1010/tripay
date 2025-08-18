@@ -26,6 +26,7 @@ export type Expense = {
   description?: string | null // Keep for backward compatibility
   paid_by?: string // Keep for backward compatibility
   location?: string // Keep for backward compatibility
+  is_shared_payment?: boolean
   created_at: string
   updated_at: string
 }

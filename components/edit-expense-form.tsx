@@ -1,177 +1,320 @@
-"use client";
-import type React from "react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase, type Expense } from "@/lib/supabase/client";
-import { X } from "lucide-react";
+"use client"
 
-// ⬇️ רכיבי Select של shadcn (אם עדיין לא מיובא אצלך)
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import React, { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { supabase, type Expense, type Location, type Participant, EXPENSE_CATEGORIES } from "@/lib/supabase/client"
+import { offlineStorage } from "@/lib/offline-storage"
+import { X } from "lucide-react"
 
 interface EditExpenseFormProps {
-  expense: Expense;
-  onExpenseUpdated: (expense: Expense) => void;
-  onCancel: () => void;
+  expense: Expense
+  onExpenseUpdated: (expense: Expense) => void
+  onCancel: () => void
 }
 
-// שמור את אותן האופציות כמו בטופס ההוספה
-const CATEGORY_OPTIONS = ["Food", "Transportation", "Accommodation", "Sleep", "Other"] as const;
-// אם יש לך רשימה סגורה ל"מי שילם" (Settings.payers), תחליף למקור הנתונים אצלך:
-const PAYER_OPTIONS = ["Me", "Partner"] as const;
-
 export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExpenseFormProps) {
-  // סדר שדות: Title/Description → Category → Amount → PaidBy → Date (אופציונלי) → Note
-  const [description, setDescription] = useState(expense.description ?? "");
-  const [category, setCategory] = useState<string>(expense.category ?? CATEGORY_OPTIONS[0]);
-  const [amount, setAmount] = useState(String(expense.amount ?? ""));
-  const [paidBy, setPaidBy] = useState<string>(expense.paid_by ?? PAYER_OPTIONS[0]);
-  const [date, setDate] = useState<string>(expense.date ?? ""); // אם אין שדה כזה בטבלה – מחק/התאם
-  const [note, setNote] = useState<string>(expense.note ?? ""); // אם אין – מחק/התאם
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [title, setTitle] = useState(expense.title || "")
+  const [date, setDate] = useState(expense.date)
+  const [amount, setAmount] = useState(expense.amount.toString())
+  const [category, setCategory] = useState<string>(expense.category || "")
+  const [locationId, setLocationId] = useState(expense.location_id || "")
+  const [selectedPayers, setSelectedPayers] = useState<string[]>(expense.payers || [])
+  const [description, setDescription] = useState(expense.description || "")
+  const [isSharedPayment, setIsSharedPayment] = useState<boolean>(!!expense.is_shared_payment)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([])
+  const [availableLocations, setAvailableLocations] = useState<Location[]>([])
+
+  useEffect(() => {
+    loadParticipants()
+    loadLocations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expense.trip_id])
+
+  const loadParticipants = async () => {
+    try {
+      const { data, error } = await supabase.from("participants").select("*").eq("trip_id", expense.trip_id)
+      if (data && !error) {
+        setAvailableParticipants(data)
+      }
+    } catch (err) {
+      console.error("Error loading participants:", err)
+    }
+  }
+
+  const loadLocations = async () => {
+    try {
+      const { data, error } = await supabase.from("locations").select("*").eq("trip_id", expense.trip_id)
+      if (data && !error) {
+        setAvailableLocations(data)
+      }
+    } catch (err) {
+      console.error("Error loading locations:", err)
+    }
+  }
+
+  const handlePayerToggle = (payerId: string) => {
+    setSelectedPayers((prev) =>
+      prev.includes(payerId) ? prev.filter((id) => id !== payerId) : [...prev, payerId],
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!description.trim() || !amount.trim() || !category || !paidBy) {
-      alert("Please fill in all required fields");
-      return;
+    e.preventDefault()
+
+    if (!title.trim() || !date || !amount.trim() || !category || !locationId || selectedPayers.length === 0) {
+      alert("Please fill in all required fields (title, date, amount, category, location, and at least one payer)")
+      return
     }
-    const amountNum = Number.parseFloat(amount);
+
+    const amountNum = Number.parseFloat(amount)
     if (isNaN(amountNum) || amountNum <= 0) {
-      alert("Please enter a valid amount");
-      return;
+      alert("Please enter a valid amount")
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      const { data, error } = await supabase
-        .from("expenses")
-        .update({
-          description: description.trim(),
-          category: category,
-          amount: amountNum,
-          paid_by: paidBy,
-          // הוסף/הסר לפי הסכימה האמיתית שלך:
-          date: date || null,
-          note: note?.trim() || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", expense.id)
-        .select()
-        .single();
+      const selectedPayerNames = availableParticipants
+        .filter((p) => selectedPayers.includes(p.id))
+        .map((p) => p.name)
+      const selectedLocation = availableLocations.find((l) => l.id === locationId)
+      const locationName = selectedLocation?.name || ""
 
-      if (error) throw error;
-      onExpenseUpdated(data);
+      const updateData = {
+        title: title.trim(),
+        date,
+        amount: amountNum,
+        category: category as Expense["category"],
+        location_id: locationId,
+        location: locationName,
+        payers: selectedPayers,
+        paid_by: selectedPayerNames.length === 1 ? selectedPayerNames[0] : "Multiple",
+        description: description.trim() || "",
+        is_shared_payment: isSharedPayment,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (navigator.onLine) {
+        const { data, error } = await supabase
+          .from("expenses")
+          .update(updateData)
+          .eq("id", expense.id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        onExpenseUpdated(data)
+      } else {
+        const offlineExpense: Expense = { ...expense, ...updateData }
+        offlineStorage.addPendingAction({
+          ...offlineExpense,
+          offline_id: expense.id,
+          pending_sync: true,
+          action: "update",
+        })
+        offlineStorage.saveExpense(offlineExpense)
+        onExpenseUpdated(offlineExpense)
+      }
     } catch (err) {
-      console.error("Error updating expense:", err);
-      alert("Failed to update expense. Please try again.");
+      console.error("Error updating expense:", err)
+      alert("Failed to update expense. Please try again.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
-    <Card className="mb-6 ring-2 ring-blue-500">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg">Edit Expense</CardTitle>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 1) Title/Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-            <Input
-              placeholder="Dinner at restaurant"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
+    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4 z-50">
+      <Card className="w-full max-w-md bg-white shadow-2xl border-0 rounded-t-2xl md:rounded-2xl h-[90vh] md:max-h-[90vh] overflow-hidden flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-1 bg-gray-300 rounded-full md:hidden" />
+            <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">Edit Expense</CardTitle>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            className="h-9 w-9 p-0 rounded-full hover:bg-gray-100 transition-colors min-w-[44px] min-h-[44px] md:h-8 md:w-8 md:min-w-0 md:min-h-0"
+          >
+            <X className="h-5 w-5 md:h-4 md:w-4 text-gray-500" />
+          </Button>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6 pb-0 flex-1 overflow-y-auto">
+          <form id="edit-expense-form" onSubmit={handleSubmit} className="space-y-4 md:space-y-5 pb-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-900 mb-2">
+                Title *
+              </label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm"
+                required
+              />
+            </div>
 
-          {/* 2) Category (dropdown סגור) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+            <div>
+              <label htmlFor="date" className="block text-sm font-medium text-gray-900 mb-2">
+                Date *
+              </label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-900 mb-2">
+                Amount (₪) *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 font-medium">₪</span>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="pl-8 h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm"
+                  inputMode="decimal"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-900 mb-2">
+                Category *
+              </label>
+              <Select value={category} onValueChange={setCategory} required>
+                <SelectTrigger className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-gray-200 shadow-lg">
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat} className="rounded-lg">
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-900 mb-2">
+                Location *
+              </label>
+              <Select value={locationId} onValueChange={setLocationId} required>
+                <SelectTrigger className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-gray-200 shadow-lg">
+                  {availableLocations.map((location) => (
+                    <SelectItem key={location.id} value={location.id} className="rounded-lg">
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Payers * (select one or more)</label>
+              <div className="space-y-3 p-4 border border-gray-200 rounded-xl">
+                {availableParticipants.map((participant) => (
+                  <div key={participant.id} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={participant.id}
+                      checked={selectedPayers.includes(participant.id)}
+                      onCheckedChange={() => handlePayerToggle(participant.id)}
+                      className="h-5 w-5"
+                    />
+                    <label htmlFor={participant.id} className="text-base md:text-sm text-gray-700 cursor-pointer flex-1 py-2">
+                      {participant.name}
+                    </label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </div>
 
-          {/* 3) Amount */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount *</label>
-            <Input
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="25.50"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="shared-payment"
+                checked={isSharedPayment}
+                onCheckedChange={(checked) => setIsSharedPayment(!!checked)}
+                className="h-5 w-5"
+              />
+              <label
+                htmlFor="shared-payment"
+                className="text-base md:text-sm text-gray-700 cursor-pointer"
+              >
+                Shared Payment (no balance impact)
+              </label>
+            </div>
 
-          {/* 4) Who Paid (dropdown סגור) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Paid by *</label>
-            <Select value={paidBy} onValueChange={setPaidBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select payer" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYER_OPTIONS.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-900 mb-2">
+                Description (optional)
+              </label>
+              <Textarea
+                id="description"
+                placeholder="Additional details..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all resize-none text-base md:text-sm"
+              />
+            </div>
+          </form>
+        </CardContent>
 
-          {/* 5) Optional: Date + Note, שמור עקביות עם ההוספה */}
-          {/* אם אין שדה date/note בטבלה שלך – הסר את שני הבלוקים הבאים */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <Input
-              type="date"
-              value={date || ""}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
-            <Input
-              placeholder="Optional note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 hover:bg-blue-700">
+        <div
+          className="flex-shrink-0 p-4 md:p-6 bg-white border-t border-gray-100"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              form="edit-expense-form"
+              disabled={
+                isSubmitting ||
+                !title.trim() ||
+                !date ||
+                !amount.trim() ||
+                !category ||
+                !locationId ||
+                selectedPayers.length === 0
+              }
+              className="flex-1 h-12 md:h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-base md:text-sm"
+              onClick={handleSubmit}
+            >
               {isSubmitting ? "Updating..." : "Update Expense"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="h-12 md:h-11 px-6 border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-200 bg-transparent text-base md:text-sm"
+            >
               Cancel
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
+        </div>
+      </Card>
+    </div>
+  )
 }
+

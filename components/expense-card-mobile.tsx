@@ -149,6 +149,11 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                       {expense.category}
                     </span>
                   )}
+                  {expense.is_shared_payment && (
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                      Shared
+                    </span>
+                  )}
                 </div>
 
                 {/* Time and Menu */}

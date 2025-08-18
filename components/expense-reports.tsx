@@ -53,7 +53,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
 
     // Calculate who owes whom
     expenses.forEach((expense) => {
-      if (expense.paid_by === "Both" || expense.paid_by === "Multiple") return // Skip shared expenses
+      if (expense.paid_by === "Both" || expense.paid_by === "Multiple" || expense.is_shared_payment) return // Skip shared expenses
 
       const payer = expense.paid_by
       const amountPerPerson = expense.amount / participants.length

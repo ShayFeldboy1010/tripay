@@ -26,6 +26,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
   const [locationId, setLocationId] = useState("")
   const [selectedPayers, setSelectedPayers] = useState<string[]>([])
   const [description, setDescription] = useState("")
+  const [isSharedPayment, setIsSharedPayment] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([])
   const [availableLocations, setAvailableLocations] = useState<Location[]>([])
@@ -92,6 +93,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
         payers: selectedPayers,
         paid_by: selectedPayerNames.length === 1 ? selectedPayerNames[0] : "Multiple", // Set paid_by for database constraint
         description: description.trim() || "",
+        is_shared_payment: isSharedPayment,
       }
 
       if (navigator.onLine) {
@@ -126,6 +128,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
       setLocationId("")
       setSelectedPayers([])
       setDescription("")
+      setIsSharedPayment(false)
     } catch (error) {
       console.error("Error adding expense:", error)
       alert("Failed to add expense. Please try again.")
@@ -258,6 +261,21 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="shared-payment"
+                checked={isSharedPayment}
+                onCheckedChange={(checked) => setIsSharedPayment(!!checked)}
+                className="h-5 w-5"
+              />
+              <label
+                htmlFor="shared-payment"
+                className="text-base md:text-sm text-gray-700 cursor-pointer"
+              >
+                Shared Payment (no balance impact)
+              </label>
             </div>
 
             <div>
