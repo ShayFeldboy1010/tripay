@@ -8,6 +8,7 @@ import type { Expense } from "@/lib/supabase/client"
 import { supabase } from "@/lib/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { MoreVertical, Edit, Trash2, MapPin, User, Users } from "lucide-react"
+import { categoryIcons } from "@/lib/category-icons"
 import { EditExpenseForm } from "./edit-expense-form"
 import { ExpenseCardMobile } from "./expense-card-mobile"
 import { Plus } from "lucide-react"
@@ -155,9 +156,15 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
                             </span>
                           </div>
                           {expense.category && (
-                            <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                              {expense.category}
-                            </span>
+                            (() => {
+                              const Icon = categoryIcons[expense.category]
+                              return (
+                                <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                                  <Icon className="h-4 w-4" />
+                                  {expense.category}
+                                </span>
+                              )
+                            })()
                           )}
                           {expense.is_shared_payment && (
                             <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium">

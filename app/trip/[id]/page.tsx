@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
 import { ArrowLeft, Share2, Plus, Filter, BarChart3, Settings } from "lucide-react"
-import { BottomNav } from "@/components/bottom-nav"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
 import { ExpenseReports } from "@/components/expense-reports"
@@ -17,6 +16,7 @@ import { FAB } from "@/components/fab"
 import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
+import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
 
 export default function TripPage() {
   const params = useParams()
@@ -39,7 +39,12 @@ export default function TripPage() {
 
     // Listen for reports toggle from mobile nav
     const handleToggleReports = () => setShowReports(!showReports)
+    const handleShowExpenses = () => {
+      setShowFilters(false)
+      setShowReports(false)
+    }
     window.addEventListener('toggleReports', handleToggleReports)
+    window.addEventListener('showExpenses', handleShowExpenses)
 
     // Cleanup subscription on unmount
     return () => {
@@ -47,6 +52,7 @@ export default function TripPage() {
         supabase.removeChannel(channelRef.current)
       }
       window.removeEventListener('toggleReports', handleToggleReports)
+      window.removeEventListener('showExpenses', handleShowExpenses)
     }
   }, [tripId, showReports])
 
@@ -251,11 +257,10 @@ export default function TripPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-          <p className="text-gray-700 font-medium">Loading trip...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 space-y-4">
+        <ExpenseCardSkeleton />
+        <ExpenseCardSkeleton />
+        <ExpenseCardSkeleton />
       </div>
     )
   }
@@ -431,26 +436,8 @@ export default function TripPage() {
           onExpenseDeleted={onExpenseDeleted}
         />
       </div>
-{/* Floating Action Button */}
-<button
-  onClick={() => setShowAddForm(true)}
-  className="md:hidden fixed right-4 z-50 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center"
-  style={{ bottom: `calc(4.5rem + env(safe-area-inset-bottom))` }}
->
-  <Plus className="h-6 w-6" />
-</button>
-
-<BottomNav
-  tripId={tripId}
-  onAdd={() => setShowAddForm(true)}
-  onExpenses={() => {
-    setShowFilters(false)
-    setShowReports(false)
-  }}
-  onSummary={() => setShowReports((prev) => !prev)}
-  showSummary={showReports}
-/>
-
+      <FAB onClick={() => setShowAddForm(true)} />
+      <MobileNav tripId={tripId} />
     </div>
   )
 }
