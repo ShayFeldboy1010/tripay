@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { supabase, type Expense, type Location, type Participant, EXPENSE_CATEGORIES } from "@/lib/supabase/client"
+import { createExpense } from "@/lib/expenses"
 import { offlineStorage } from "@/lib/offline-storage"
 import { X } from "lucide-react"
 
@@ -97,10 +98,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
       }
 
       if (navigator.onLine) {
-        const { data, error } = await supabase.from("expenses").insert([expenseData]).select().single()
-
-        if (error) throw error
-
+        const data = await createExpense(expenseData)
         onExpenseAdded(data)
       } else {
         const offlineId = offlineStorage.generateOfflineId()
@@ -129,9 +127,9 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
       setSelectedPayers([])
       setDescription("")
       setIsSharedPayment(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding expense:", error)
-      alert("Failed to add expense. Please try again.")
+      alert(`Failed to add expense: ${error.message || "Unknown error"}`)
     } finally {
       setIsSubmitting(false)
     }
