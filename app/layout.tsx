@@ -32,6 +32,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#2563eb" />
+ main
         <style>{`
 html {
   font-family: ${GeistSans.style.fontFamily};
@@ -40,7 +41,10 @@ html {
 }
         `}</style>
       </head>
-      <body className="antialiased touch-manipulation">{children}</body>
+<body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)]">
+  {children}
+</body>
+
     </html>
   )
 }
