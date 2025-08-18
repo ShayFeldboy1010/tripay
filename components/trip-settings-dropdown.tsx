@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
+import { forgetRecentTrips } from "@/lib/recent-trips"
 
 interface TripSettingsDropdownProps {
   tripId: string
@@ -46,6 +47,15 @@ export function TripSettingsDropdown({ tripId, onEdit, onDelete }: TripSettingsD
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onEdit} className="gap-2">
           <Pencil className="h-4 w-4" /> Edit Trip
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            forgetRecentTrips()
+            toast.success("Cleared recent trips on this device")
+          }}
+          className="gap-2"
+        >
+          <span className="h-4 w-4">🧹</span> Forget recent trips on this device
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -1,14 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase/client"
+import {
+  addRecentTrip,
+  getRecentTrips,
+  removeRecentTrip,
+  type RecentTrip,
+} from "@/lib/recent-trips"
 import { Plus, Users } from "lucide-react"
 import { toast } from "sonner"
+
+const AUTO_RESUME =
+  process.env.NEXT_PUBLIC_AUTO_RESUME_LAST_TRIP === "true"
 
 export default function HomePage() {
   const [isCreating, setIsCreating] = useState(false)
@@ -16,7 +25,53 @@ export default function HomePage() {
   const [tripName, setTripName] = useState("")
   const [tripDescription, setTripDescription] = useState("")
   const [tripId, setTripId] = useState("")
+  const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([])
   const router = useRouter()
+
+  useEffect(() => {
+    setRecentTrips(getRecentTrips())
+  }, [])
+
+  const resumeTrip = useCallback(async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("trips")
+        .select("id, name")
+        .eq("id", id)
+        .single()
+
+      if (error || !data) {
+        removeRecentTrip(id)
+        setRecentTrips(getRecentTrips())
+        toast.error("Trip not found or access denied")
+        return
+      }
+
+      router.push(`/trip/${id}`)
+    } catch (e) {
+      console.error("Error resuming trip:", e)
+      toast.error("Failed to open trip")
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (!AUTO_RESUME || recentTrips.length === 0) return
+
+    let interacted = false
+    const cancel = () => {
+      interacted = true
+    }
+    window.addEventListener("pointerdown", cancel, { once: true })
+    window.addEventListener("keydown", cancel, { once: true })
+    const t = setTimeout(() => {
+      if (!interacted) resumeTrip(recentTrips[0].id)
+    }, 800)
+    return () => {
+      window.removeEventListener("pointerdown", cancel)
+      window.removeEventListener("keydown", cancel)
+      clearTimeout(t)
+    }
+  }, [resumeTrip, recentTrips])
 
   const createTrip = async () => {
     if (!tripName.trim()) return
@@ -35,7 +90,7 @@ export default function HomePage() {
         .single()
 
       if (error) throw error
-
+      addRecentTrip({ id: data.id, name: data.name })
       router.push(`/trip/${data.id}`)
       toast.success("Trip created")
     } catch (error) {
@@ -53,7 +108,7 @@ export default function HomePage() {
     try {
       const { data, error } = await supabase
         .from("trips")
-        .select("id")
+        .select("id, name")
         .eq("id", tripId.trim())
         .single()
 
@@ -62,7 +117,8 @@ export default function HomePage() {
         return
       }
 
-      router.push(`/trip/${tripId.trim()}`)
+      addRecentTrip({ id: data.id, name: data.name })
+      router.push(`/trip/${data.id}`)
     } catch (error) {
       console.error("Error joining trip:", error)
       toast.error("Failed to join trip")
@@ -78,6 +134,34 @@ export default function HomePage() {
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">TripPay</h1>
           <p className="text-gray-500">Share expenses with friends instantly</p>
         </div>
+
+        {recentTrips.length > 0 && (
+          <div className="space-y-4" aria-label="Recent trips">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Recent Trips
+            </h2>
+            <Button
+              onClick={() => resumeTrip(recentTrips[0].id)}
+              className="w-full h-12 rounded-2xl bg-blue-600 text-white font-medium hover:bg-blue-500"
+              aria-label="Resume last trip"
+            >
+              Resume last trip
+            </Button>
+            <div className="flex flex-col gap-2">
+              {recentTrips.slice(1, 5).map((t) => (
+                <Button
+                  key={t.id}
+                  variant="outline"
+                  onClick={() => resumeTrip(t.id)}
+                  className="h-11 justify-start rounded-xl"
+                  aria-label={`Open trip ${t.name ?? t.id}`}
+                >
+                  {t.name || t.id}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Create Trip Card */}
