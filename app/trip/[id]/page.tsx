@@ -431,25 +431,19 @@ export default function TripPage() {
           onExpenseDeleted={onExpenseDeleted}
         />
       </div>
-{/* Floating Action Button */}
-<button
-  onClick={() => setShowAddForm(true)}
-  className="md:hidden fixed right-4 z-50 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center"
-  style={{ bottom: `calc(4.5rem + env(safe-area-inset-bottom))` }}
->
-  <Plus className="h-6 w-6" />
-</button>
+      {/* Floating Action Button */}
+      <FAB onClick={() => setShowAddForm(true)} />
 
-<BottomNav
-  tripId={tripId}
-  onAdd={() => setShowAddForm(true)}
-  onExpenses={() => {
-    setShowFilters(false)
-    setShowReports(false)
-  }}
-  onSummary={() => setShowReports((prev) => !prev)}
-  showSummary={showReports}
-/>
+      <BottomNav
+        tripId={tripId}
+        onAdd={() => setShowAddForm(true)}
+        onExpenses={() => {
+          setShowFilters(false)
+          setShowReports(false)
+        }}
+        onSummary={() => setShowReports((prev) => !prev)}
+        showSummary={showReports}
+      />
 
     </div>
   )

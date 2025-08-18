@@ -13,9 +13,9 @@ export function FAB({ onClick, disabled = false }: FABProps) {
     <Button
       onClick={onClick}
       disabled={disabled}
-      className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 md:hidden"
+      className="fixed right-4 z-30 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 md:hidden scale-95 active:scale-90"
       style={{
-        bottom: `calc(6rem + env(safe-area-inset-bottom))`
+        bottom: `calc(4.5rem + env(safe-area-inset-bottom))`
       }}
     >
       <Plus className="h-6 w-6" />
