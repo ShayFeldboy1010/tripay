@@ -69,11 +69,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-md mx-auto pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
+      <div className="max-w-md mx-auto pt-8 md:pt-16">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Trip Expenses</h1>
-          <p className="text-gray-600">Share expenses with friends instantly</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Trip Expenses</h1>
+          <p className="text-gray-600 text-base md:text-base">Share expenses with friends instantly</p>
         </div>
 
         <div className="space-y-6">
@@ -96,6 +96,8 @@ export default function HomePage() {
                   placeholder="Weekend getaway"
                   value={tripName}
                   onChange={(e) => setTripName(e.target.value)}
+                  className="h-12 md:h-10 text-base md:text-sm"
+                  autoComplete="off"
                 />
               </div>
               <div>
@@ -108,12 +110,13 @@ export default function HomePage() {
                   value={tripDescription}
                   onChange={(e) => setTripDescription(e.target.value)}
                   rows={2}
+                  className="text-base md:text-sm"
                 />
               </div>
               <Button
                 onClick={createTrip}
                 disabled={!tripName.trim() || isCreating}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-blue-600 hover:bg-blue-700 h-12 md:h-10 text-base md:text-sm font-medium"
               >
                 {isCreating ? "Creating..." : "Create Trip"}
               </Button>
@@ -139,12 +142,14 @@ export default function HomePage() {
                   placeholder="550e8400-e29b-41d4-a716-446655440000"
                   value={tripId}
                   onChange={(e) => setTripId(e.target.value)}
+                  className="h-12 md:h-10 text-base md:text-sm"
+                  autoComplete="off"
                 />
               </div>
               <Button
                 onClick={joinTrip}
                 disabled={!tripId.trim() || isJoining}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-green-600 hover:bg-green-700 h-12 md:h-10 text-base md:text-sm font-medium"
               >
                 {isJoining ? "Joining..." : "Join Trip"}
               </Button>
