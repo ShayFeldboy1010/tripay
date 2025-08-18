@@ -4,8 +4,11 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
-import { ArrowLeft, Share2, Plus, Filter, BarChart3 } from "lucide-react"
+import { Settings, Plus, Filter, BarChart3, Clipboard, Trash2, Pencil, X } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
 import { ExpenseReports } from "@/components/expense-reports"
@@ -19,6 +22,8 @@ import type { RealtimeChannel } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
 import { ManageParticipantsModal } from "@/components/manage-participants-modal"
 import { ManageLocationsModal } from "@/components/manage-locations-modal"
+import * as Dialog from "@radix-ui/react-dialog"
+import { toast } from "sonner"
 
 export default function TripPage() {
   const params = useParams()
@@ -34,7 +39,9 @@ export default function TripPage() {
   const [showReports, setShowReports] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
-  const [isConnected, setIsConnected] = useState(true)
+  const [showEditTrip, setShowEditTrip] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
@@ -59,6 +66,13 @@ export default function TripPage() {
       window.removeEventListener('showExpenses', handleShowExpenses)
     }
   }, [tripId, showReports])
+
+  useEffect(() => {
+    if (trip && showEditTrip) {
+      setEditName(trip.name)
+      setEditDescription(trip.description || "")
+    }
+  }, [trip, showEditTrip])
 
   const loadTripData = async () => {
     try {
@@ -179,7 +193,6 @@ export default function TripPage() {
       )
       .subscribe((status) => {
         console.log("[v0] Real-time subscription status:", status)
-        setIsConnected(status === "SUBSCRIBED")
       })
 
     channelRef.current = channel
@@ -194,27 +207,41 @@ export default function TripPage() {
     setFilteredExpenses(expenses)
   }, [expenses, showFilters])
 
-  const shareTrip = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Join "${trip?.name}" trip`,
-          text: `Join my trip to track expenses together!`,
-          url: window.location.href,
-        })
-      } catch (error) {
-        // User cancelled sharing
-      }
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href)
-      alert("Trip link copied to clipboard!")
+  const copyTripId = () => {
+    navigator.clipboard.writeText(tripId)
+    toast.success("Trip ID copied to clipboard")
+  }
+
+  const deleteTrip = async () => {
+    if (!confirm("Are you sure you want to delete this trip?")) return
+    try {
+      await supabase.from("trips").delete().eq("id", tripId)
+      toast.success("Trip deleted")
+      router.push("/")
+    } catch (error) {
+      console.error("Error deleting trip:", error)
+      toast.error("Failed to delete trip")
     }
   }
 
-  const copyTripId = () => {
-    navigator.clipboard.writeText(tripId)
-    alert("Trip ID copied to clipboard!")
+  const saveTrip = async () => {
+    if (!trip) return
+    try {
+      const { data, error } = await supabase
+        .from("trips")
+        .update({ name: editName.trim(), description: editDescription.trim() || null })
+        .eq("id", tripId)
+        .select()
+        .single()
+      if (error) throw error
+      setTrip(data)
+      offlineStorage.saveTrip(data)
+      toast.success("Trip updated")
+      setShowEditTrip(false)
+    } catch (error) {
+      console.error("Error updating trip:", error)
+      toast.error("Failed to update trip")
+    }
   }
 
   const onExpenseAdded = (newExpense: Expense) => {
@@ -261,7 +288,7 @@ export default function TripPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 space-y-4">
+      <div className="min-h-screen bg-gray-50 p-4 space-y-4">
         <ExpenseCardSkeleton />
         <ExpenseCardSkeleton />
         <ExpenseCardSkeleton />
@@ -271,12 +298,12 @@ export default function TripPage() {
 
   if (!trip) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-700 mb-6 font-medium">Trip not found</p>
           <Button
             onClick={() => router.push("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+            className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-xl shadow-sm transition-all"
           >
             Go Home
           </Button>
@@ -288,155 +315,105 @@ export default function TripPage() {
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pb-24">
-  <div className="max-w-2xl mx-auto p-4 pb-32 md:pb-4">
-    {/* Desktop header */}
-    <div className="hidden md:flex items-center justify-between mb-8 pt-6">
-
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 hover:bg-white/60 rounded-xl px-3 py-2 transition-all duration-200"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="font-medium">Back</span>
-          </Button>
-          <div className="flex items-center gap-3">
-            <OfflineIndicator />
-            <Button
-              variant="outline"
-              onClick={shareTrip}
-              className="flex items-center gap-2 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl px-4 py-2 transition-all duration-200"
-            >
-              <Share2 className="h-4 w-4" />
-              <span className="font-medium">Share</span>
-            </Button>
-          </div>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <header className="flex items-center justify-between h-14 px-4 bg-gray-900 text-white">
+        <span className="text-lg font-semibold">TripPay</span>
+        <div className="flex items-center gap-2">
+          <OfflineIndicator />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800 rounded-full">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={copyTripId} className="gap-2">
+                <Clipboard className="h-4 w-4" /> Copy Trip ID
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowEditTrip(true)} className="gap-2">
+                <Pencil className="h-4 w-4" /> Edit Trip
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={deleteTrip} className="gap-2 text-red-600 focus:text-red-600">
+                <Trash2 className="h-4 w-4" /> Delete Trip
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      </header>
 
-        {/* Mobile header */}
-        <div className="flex md:hidden items-center justify-between mb-6 pt-2">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 hover:bg-white/60 rounded-xl px-2 py-2 transition-all duration-200 h-11 min-w-[44px]"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <OfflineIndicator />
-            <Button
-              variant="outline"
-              onClick={shareTrip}
-              className="flex items-center gap-1 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl px-3 py-2 transition-all duration-200 h-11 min-w-[44px]"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <Card className="mb-8 bg-white/70 backdrop-blur-sm border-white/40 shadow-lg rounded-2xl">
-          <CardHeader className="pb-4">
+      <div className="max-w-2xl mx-auto p-4 pb-32 md:pb-8">
+        <Card className="mb-6 rounded-2xl shadow-sm">
+          <CardHeader className="pb-3">
             <CardTitle dir="auto" className="text-2xl font-bold text-gray-900">{trip.name}</CardTitle>
             {trip.description && (
               <CardDescription dir="auto" className="text-gray-600 mt-1">{trip.description}</CardDescription>
             )}
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold text-emerald-600 mb-1 text-end">₪{totalAmount.toFixed(2)}</p>
-                <p className="text-sm text-gray-600 font-medium">
-                  {filteredExpenses.length !== expenses.length
-                    ? `${filteredExpenses.length} of ${expenses.length} expenses`
-                    : `${expenses.length} total expenses`}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyTripId}
-                className="text-xs bg-gray-50 hover:bg-gray-100 border-gray-200 rounded-lg px-3 py-2 transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                Copy Trip ID
-              </Button>
-            </div>
+          <CardContent className="text-end">
+            <p className="text-3xl font-bold text-green-600 mb-1">₪{totalAmount.toFixed(2)}</p>
+            <p className="text-sm text-gray-600">
+              {filteredExpenses.length !== expenses.length
+                ? `${filteredExpenses.length} of ${expenses.length} expenses`
+                : `${expenses.length} total expenses`}
+            </p>
           </CardContent>
         </Card>
 
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Button variant="outline" size="sm" onClick={() => setShowParticipants(true)}>
+        <Button
+          onClick={() => setShowAddForm(true)}
+          className="w-full h-12 rounded-2xl mb-4 bg-gray-900 text-white font-medium"
+        >
+          + Add Expense
+        </Button>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <Button variant="outline" className="h-11 rounded-xl" onClick={() => setShowParticipants(true)}>
             + Add Participants
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowLocations(true)}>
+          <Button variant="outline" className="h-11 rounded-xl" onClick={() => setShowLocations(true)}>
             + Add Locations
           </Button>
         </div>
 
-        {/* Desktop action buttons */}
-
-        <div className="hidden md:grid grid-cols-2 gap-3 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <Button
-            onClick={() => setShowAddForm(true)}
-            className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            Add Expense
-          </Button>
-          <Button
-            variant="outline"
+            variant="ghost"
+            className={`h-11 rounded-xl justify-center ${showFilters ? "bg-gray-100" : ""}`}
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center justify-center gap-2 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl py-3 transition-all duration-200 ${showFilters ? "bg-blue-50 border-blue-200 text-blue-700" : ""}`}
           >
-            <Filter className="h-4 w-4" />
-            <span className="font-medium">Filter</span>
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
+            className={`h-11 rounded-xl justify-center ${showReports ? "bg-gray-100" : ""}`}
             onClick={() => setShowReports(!showReports)}
-            className={`flex items-center justify-center gap-2 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl py-3 transition-all duration-200 ${showReports ? "bg-blue-50 border-blue-200 text-blue-700" : ""}`}
           >
-            <BarChart3 className="h-4 w-4" />
-            <span className="font-medium">Reports</span>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Reports
           </Button>
         </div>
 
-        {/* Mobile filter toggle */}
-        <div className="flex md:hidden items-center justify-end mb-4">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 bg-white/60 border-white/40 hover:bg-white/80 rounded-xl px-4 py-2 transition-all duration-200 h-11 min-w-[44px] ${showFilters ? "bg-blue-50 border-blue-200 text-blue-700" : ""}`}
-          >
-            <Filter className="h-4 w-4" />
-            <span className="font-medium">Filter</span>
-          </Button>
-        </div>
-
-        {/* Reports */}
         {showReports && (
           <div className="mb-8">
             <ExpenseReports expenses={expenses} />
           </div>
         )}
 
-        {/* Filters */}
         {showFilters && (
           <div className="mb-8">
             <ExpenseFilters
               expenses={expenses}
               onFiltersChanged={onFiltersChanged}
-              className="bg-white/70 backdrop-blur-sm border-white/40 shadow-lg rounded-2xl"
+              className="rounded-2xl"
             />
           </div>
         )}
 
-        {/* Add Expense Form */}
         {showAddForm && (
           <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
         )}
 
-        {/* Expenses List */}
         <ExpenseList
           expenses={filteredExpenses}
           onExpenseUpdated={onExpenseUpdated}
@@ -447,6 +424,53 @@ export default function TripPage() {
         )}
         {showLocations && (
           <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
+        )}
+        {showEditTrip && (
+          <Dialog.Root open onOpenChange={setShowEditTrip}>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+              <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
+                <Card className="rounded-t-2xl md:rounded-2xl border-0 shadow-2xl">
+                  <CardHeader className="flex flex-row items-center justify-between pb-4 px-4 md:px-6 pt-4 md:pt-6">
+                    <CardTitle>Edit Trip</CardTitle>
+                    <Dialog.Close asChild>
+                      <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full hover:bg-gray-100">
+                        <X className="h-5 w-5" />
+                      </Button>
+                    </Dialog.Close>
+                  </CardHeader>
+                  <CardContent className="px-4 md:px-6 pb-4 space-y-4">
+                    <div>
+                      <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Trip Name
+                      </label>
+                      <Input
+                        id="edit-name"
+                        dir="auto"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                      </label>
+                      <Textarea
+                        id="edit-description"
+                        dir="auto"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <Button onClick={saveTrip} disabled={!editName.trim()} className="w-full">
+                      Save
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
         )}
       </div>
       <FAB onClick={() => setShowAddForm(true)} />
