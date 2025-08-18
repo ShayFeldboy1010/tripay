@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase/client"
 import { Plus, Users } from "lucide-react"
+import { toast } from "sonner"
 
 export default function HomePage() {
   const [isCreating, setIsCreating] = useState(false)
@@ -35,11 +36,11 @@ export default function HomePage() {
 
       if (error) throw error
 
-      // Navigate to the trip page
       router.push(`/trip/${data.id}`)
+      toast.success("Trip created")
     } catch (error) {
       console.error("Error creating trip:", error)
-      alert("Failed to create trip. Please try again.")
+      toast.error("Failed to create trip")
     } finally {
       setIsCreating(false)
     }
@@ -50,41 +51,43 @@ export default function HomePage() {
 
     setIsJoining(true)
     try {
-      // Check if trip exists
-      const { data, error } = await supabase.from("trips").select("id").eq("id", tripId.trim()).single()
+      const { data, error } = await supabase
+        .from("trips")
+        .select("id")
+        .eq("id", tripId.trim())
+        .single()
 
       if (error || !data) {
-        alert("Trip not found. Please check the Trip ID.")
+        toast.error("Trip not found")
         return
       }
 
-      // Navigate to the trip page
       router.push(`/trip/${tripId.trim()}`)
     } catch (error) {
       console.error("Error joining trip:", error)
-      alert("Failed to join trip. Please try again.")
+      toast.error("Failed to join trip")
     } finally {
       setIsJoining(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
-      <div className="max-w-md mx-auto pt-8 md:pt-16">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Trip Expenses</h1>
-          <p className="text-gray-600 text-base md:text-base">Share expenses with friends instantly</p>
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      <div className="max-w-md mx-auto pt-8 md:pt-16 space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">TripPay</h1>
+          <p className="text-gray-500">Share expenses with friends instantly</p>
         </div>
 
         <div className="space-y-6">
           {/* Create Trip Card */}
-          <Card>
+          <Card className="rounded-2xl shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5 text-blue-600" />
+                <Plus className="h-5 w-5" />
                 Create New Trip
               </CardTitle>
-              <CardDescription>Start a new trip and get a shareable Trip ID</CardDescription>
+              <CardDescription className="text-gray-500">Start a new trip and get a shareable Trip ID</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -95,8 +98,9 @@ export default function HomePage() {
                   id="tripName"
                   placeholder="Weekend getaway"
                   value={tripName}
+                  dir="auto"
                   onChange={(e) => setTripName(e.target.value)}
-                  className="h-12 md:h-10 text-base md:text-sm"
+                  className="h-12 text-base"
                   autoComplete="off"
                 />
               </div>
@@ -108,15 +112,16 @@ export default function HomePage() {
                   id="tripDescription"
                   placeholder="Fun weekend with friends"
                   value={tripDescription}
+                  dir="auto"
                   onChange={(e) => setTripDescription(e.target.value)}
                   rows={2}
-                  className="text-base md:text-sm"
+                  className="text-base"
                 />
               </div>
               <Button
                 onClick={createTrip}
                 disabled={!tripName.trim() || isCreating}
-                className="w-full bg-blue-600 hover:bg-blue-700 h-12 md:h-10 text-base md:text-sm font-medium"
+                className="w-full h-12 rounded-2xl bg-gray-900 text-white font-medium hover:bg-gray-800 hover:shadow"
               >
                 {isCreating ? "Creating..." : "Create Trip"}
               </Button>
@@ -124,13 +129,13 @@ export default function HomePage() {
           </Card>
 
           {/* Join Trip Card */}
-          <Card>
+          <Card className="rounded-2xl shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-green-600" />
+                <Users className="h-5 w-5" />
                 Join Existing Trip
               </CardTitle>
-              <CardDescription>Enter a Trip ID shared by a friend</CardDescription>
+              <CardDescription className="text-gray-500">Enter a Trip ID shared by a friend</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -141,15 +146,16 @@ export default function HomePage() {
                   id="tripId"
                   placeholder="550e8400-e29b-41d4-a716-446655440000"
                   value={tripId}
+                  dir="auto"
                   onChange={(e) => setTripId(e.target.value)}
-                  className="h-12 md:h-10 text-base md:text-sm"
+                  className="h-12 text-base"
                   autoComplete="off"
                 />
               </div>
               <Button
                 onClick={joinTrip}
                 disabled={!tripId.trim() || isJoining}
-                className="w-full bg-green-600 hover:bg-green-700 h-12 md:h-10 text-base md:text-sm font-medium"
+                className="w-full h-12 rounded-2xl bg-gray-900 text-white font-medium hover:bg-gray-800 hover:shadow"
               >
                 {isJoining ? "Joining..." : "Join Trip"}
               </Button>
@@ -158,8 +164,8 @@ export default function HomePage() {
         </div>
 
         {/* Sample Trip ID for testing */}
-        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800 mb-2">
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-gray-700 space-y-2">
+          <p className="text-sm">
             <strong>For testing:</strong> Use this sample Trip ID:
           </p>
           <code className="text-xs bg-yellow-100 px-2 py-1 rounded font-mono break-all">
