@@ -1,15 +1,14 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Plus, BarChart3, Settings } from "lucide-react"
+import { Home, BarChart3, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface MobileNavProps {
   tripId?: string
-  onAddExpenseClick?: () => void
 }
 
-export function MobileNav({ tripId, onAddExpenseClick }: MobileNavProps) {
+export function MobileNav({ tripId }: MobileNavProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -26,22 +25,17 @@ export function MobileNav({ tripId, onAddExpenseClick }: MobileNavProps) {
       label: "Expenses",
       icon: Home,
       active: isExpenses,
-      onClick: () => router.push(`/trip/${tripId}`)
-    },
-    {
-      id: "add",
-      label: "Add",
-      icon: Plus,
-      active: false,
-      onClick: onAddExpenseClick || (() => {})
+      onClick: () => {
+        router.push(`/trip/${tripId}`)
+        window.dispatchEvent(new CustomEvent('showExpenses'))
+      }
     },
     {
       id: "summary",
-      label: "Summary", 
+      label: "Summary",
       icon: BarChart3,
       active: false,
       onClick: () => {
-        // Toggle reports view - will be handled by parent component
         window.dispatchEvent(new CustomEvent('toggleReports'))
       }
     },
@@ -74,17 +68,13 @@ export function MobileNav({ tripId, onAddExpenseClick }: MobileNavProps) {
                   variant="ghost"
                   onClick={item.onClick}
                   className={`flex-1 flex flex-col items-center gap-1 h-16 px-2 rounded-xl transition-all duration-200 ${
-                    item.active 
-                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                      : item.id === "add"
-                      ? "bg-blue-600 text-white hover:bg-blue-700 mx-2"
+                    item.active
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 ${item.id === "add" ? "h-6 w-6" : ""}`} />
-                  <span className={`text-xs font-medium ${item.id === "add" ? "font-semibold" : ""}`}>
-                    {item.label}
-                  </span>
+                  <Icon className="h-5 w-5" />
+                  <span className="text-xs font-medium">{item.label}</span>
                 </Button>
               )
             })}

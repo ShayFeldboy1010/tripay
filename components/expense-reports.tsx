@@ -123,7 +123,13 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   }))
 
   // Colors for pie chart
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316"]
+  const COLORS = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+  ]
 
   // Group expenses by date for timeline
   const expensesByDate = expenses.reduce(
@@ -253,7 +259,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
-                    <Bar dataKey="amount" fill="#3b82f6" />
+                    <Bar dataKey="amount" fill="hsl(var(--chart-1))" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -332,7 +338,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                       labelLine={false}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
-                      fill="#8884d8"
+                      fill="hsl(var(--chart-1))"
                       dataKey="amount"
                     >
                       {categoryChartData.map((entry, index) => (
@@ -401,7 +407,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         name === "amount" ? "Amount" : "Count",
                       ]}
                     />
-                    <Bar dataKey="amount" fill="#10b981" />
+                    <Bar dataKey="amount" fill="hsl(var(--chart-1))" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

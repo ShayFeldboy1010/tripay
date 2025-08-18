@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { Expense } from "@/lib/supabase/client"
 import { X } from "lucide-react"
+import { categoryIcons } from "@/lib/category-icons"
 
 interface ExpenseFiltersProps {
   expenses: Expense[]
@@ -174,16 +175,20 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
             <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <Badge
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedCategory(selectedCategory === category ? "" : category)}
-                >
-                  {category}
-                </Badge>
-              ))}
+              {categories.map((category) => {
+                const Icon = categoryIcons[category as keyof typeof categoryIcons]
+                return (
+                  <Badge
+                    key={category}
+                    variant={selectedCategory === category ? "default" : "outline"}
+                    className="cursor-pointer flex items-center gap-1"
+                    onClick={() => setSelectedCategory(selectedCategory === category ? "" : category)}
+                  >
+                    {Icon && <Icon className="h-3 w-3" />}
+                    {category}
+                  </Badge>
+                )
+              })}
             </div>
           </div>
         )}

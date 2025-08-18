@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import type { Expense } from "@/lib/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { MoreVertical, Edit, Trash2, MapPin, User, Users } from "lucide-react"
+import { categoryIcons } from "@/lib/category-icons"
 
 interface ExpenseCardMobileProps {
   expense: Expense
@@ -59,8 +60,10 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
     setSwipeDistance(0)
   }, [expense.id])
 
+  const CategoryIcon = expense.category ? categoryIcons[expense.category] : null
+
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-hidden animate-in fade-in slide-in-from-bottom-2">
       {/* Action buttons behind the card */}
       <div className="absolute right-0 top-0 bottom-0 flex items-center">
         <Button
@@ -144,8 +147,9 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                   </div>
                   
                   {/* Category */}
-                  {expense.category && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                  {expense.category && CategoryIcon && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium flex-shrink-0 flex items-center gap-1">
+                      <CategoryIcon className="h-3 w-3" />
                       {expense.category}
                     </span>
                   )}
