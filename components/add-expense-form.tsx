@@ -12,6 +12,7 @@ import { supabase, type Expense, type Location, type Participant, EXPENSE_CATEGO
 import { createExpense } from "@/lib/expenses"
 import { offlineStorage } from "@/lib/offline-storage"
 import { X } from "lucide-react"
+import { clampToDateString } from "@/lib/date"
 
 interface AddExpenseFormProps {
   tripId: string
@@ -86,7 +87,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
       const expenseData = {
         trip_id: tripId,
         title: title.trim(),
-        date,
+        date: clampToDateString(date),
         amount: amountNum,
         category: category as Expense["category"],
         location_id: locationId,
