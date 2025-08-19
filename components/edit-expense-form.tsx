@@ -11,6 +11,7 @@ import { supabase, type Expense, type Location, type Participant, EXPENSE_CATEGO
 import { updateExpense } from "@/lib/expenses"
 import { offlineStorage } from "@/lib/offline-storage"
 import { X } from "lucide-react"
+import { clampToDateString } from "@/lib/date"
 
 interface EditExpenseFormProps {
   expense: Expense
@@ -20,7 +21,9 @@ interface EditExpenseFormProps {
 
 export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExpenseFormProps) {
   const [title, setTitle] = useState(expense.title || "")
-  const [date, setDate] = useState(expense.date)
+  const [date, setDate] = useState(
+    expense.date ? expense.date.split("T")[0] : new Date().toISOString().split("T")[0],
+  )
   const [amount, setAmount] = useState(expense.amount.toString())
   const [category, setCategory] = useState<string>(expense.category || "")
   const [locationId, setLocationId] = useState(expense.location_id || "")
@@ -89,7 +92,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
 
       const updateData = {
         title: title.trim(),
-        date,
+        date: clampToDateString(date),
         amount: amountNum,
         category: category as Expense["category"],
         location_id: locationId,

@@ -9,6 +9,7 @@ import { calculateBalances } from "@/lib/balance"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { TrendingUp, Users, Banknote, Calendar } from "lucide-react"
 import { LocationsReport } from "@/components/locations-report"
+import { colorForKey } from "@/lib/chartColors"
 
 interface ExpenseReportsProps {
   expenses: Expense[]
@@ -68,14 +69,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
     count: data.count,
   }))
 
-  // Colors for pie chart
-  const COLORS = [
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
-  ]
+  // Deterministic colors handled by colorForKey
 
   // Group expenses by date for timeline
   const expensesByDate = expenses.reduce(
@@ -177,10 +171,17 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByCategory)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .slice(0, 5)
-                  .map(([category, data]) => (
+                      .map(([category, data]) => (
                     <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" dir="auto">{category}</Badge>
+                        <Badge
+                          variant="outline"
+                          dir="auto"
+                          className="text-white"
+                          style={{ backgroundColor: colorForKey(category), borderColor: colorForKey(category) }}
+                        >
+                          {category}
+                        </Badge>
                         <span className="text-sm text-gray-600">{data.count} expenses</span>
                       </div>
                       <span className="font-semibold">₪{data.total.toFixed(2)}</span>
@@ -205,7 +206,11 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
-                    <Bar dataKey="amount" fill="hsl(var(--chart-1))" />
+                    <Bar dataKey="amount">
+                      {payerChartData.map((entry) => (
+                        <Cell key={entry.name} fill={colorForKey(entry.name)} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -251,7 +256,15 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   .map(([payer, data]) => (
                     <div key={payer} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 dir="auto" className="font-semibold">{payer}</h4>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: colorForKey(payer) }}
+                          />
+                          <h4 dir="auto" className="font-semibold">
+                            {payer}
+                          </h4>
+                        </div>
                         <div className="text-end">
                           <p className="font-bold text-lg">₪{data.total.toFixed(2)}</p>
                           <p className="text-sm text-gray-600">{data.count} expenses</p>
@@ -284,11 +297,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                       labelLine={false}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
-                      fill="hsl(var(--chart-1))"
                       dataKey="amount"
                     >
-                      {categoryChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {categoryChartData.map((entry) => (
+                        <Cell key={entry.name} fill={colorForKey(entry.name)} strokeWidth={1} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
@@ -306,12 +318,12 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
               <div className="space-y-3">
                 {Object.entries(expensesByCategory)
                   .sort(([, a], [, b]) => b.total - a.total)
-                  .map(([category, data], index) => (
+                  .map(([category, data]) => (
                     <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          style={{ backgroundColor: colorForKey(category) }}
                         />
                         <div>
                           <p dir="auto" className="font-medium">{category}</p>

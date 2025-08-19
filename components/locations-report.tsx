@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Expense } from "@/lib/supabase/client"
+import { colorForKey } from "@/lib/chartColors"
 
 interface LocationsReportProps {
   expenses: Expense[]
@@ -85,7 +86,13 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
                 <div key={category} className="space-y-2">
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                      <span dir="auto" className="text-sm bg-gray-100 px-2 py-1 rounded-full text-gray-700">{category}</span>
+                      <span
+                        dir="auto"
+                        className="text-sm px-2 py-1 rounded-full text-white"
+                        style={{ backgroundColor: colorForKey(category) }}
+                      >
+                        {category}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-end">₪{amount.toFixed(2)}</span>
