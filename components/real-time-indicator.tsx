@@ -41,8 +41,8 @@ export function RealtimeIndicator({ className }: RealtimeIndicatorProps) {
     <div className={`flex items-center gap-1 text-xs ${className}`}>
       {hasActivity ? (
         <>
-          <Activity className="h-3 w-3 text-blue-500 animate-pulse" />
-          <span className="text-blue-600">Syncing...</span>
+          <Activity className="h-3 w-3 text-[color:var(--color-primary)] animate-pulse" />
+          <span className="text-[color:var(--color-primary)]">Syncing...</span>
         </>
       ) : isConnected ? (
         <>

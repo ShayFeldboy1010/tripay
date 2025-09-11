@@ -96,7 +96,7 @@ export function OfflineIndicator({ className }: OfflineIndicatorProps) {
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800">
+      <Badge variant="secondary" className="flex items-center gap-1 bg-[color:var(--color-primary50)] text-[color:var(--color-primary)]">
         <Wifi className="h-3 w-3" />
         Online
       </Badge>

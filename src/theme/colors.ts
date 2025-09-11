@@ -1,4 +1,5 @@
-export const BRAND_BLUE = "#2563EB";
+// Primary brand color extracted from the mobile header
+export const TRIPPAY_BLUE_DARK = "#2563EB";
 
 function clamp(value: number) {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -43,15 +44,14 @@ export function alpha(hex: string, a: number) {
 }
 
 export const colors = {
-  primary: BRAND_BLUE,
-  primary600: BRAND_BLUE,
-  primary700: shade(BRAND_BLUE, 8),
-  primary500: tint(BRAND_BLUE, 8),
-  primary50: alpha(BRAND_BLUE, 0.06),
+  primary: TRIPPAY_BLUE_DARK,
+  onPrimary: "#FFFFFF",
+  primary700: shade(TRIPPAY_BLUE_DARK, 8),
+  primary500: tint(TRIPPAY_BLUE_DARK, 8),
+  primary50: alpha(TRIPPAY_BLUE_DARK, 0.06),
   bg: "#FFFFFF",
   surface: "#F7F8FA",
   text: "#0F172A",
-  onPrimary: "#FFFFFF",
   success: "#10B981",
   warning: "#F59E0B",
   error: "#EF4444",
@@ -62,7 +62,7 @@ export const darkColors = {
   bg: "#0B1220",
   surface: "#111827",
   text: "#E5E7EB",
-  primary50: alpha(BRAND_BLUE, 0.12),
+  primary50: alpha(TRIPPAY_BLUE_DARK, 0.12),
 };
 
 export type ThemeColors = typeof colors;

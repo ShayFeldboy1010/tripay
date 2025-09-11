@@ -142,7 +142,7 @@ export default function HomePage() {
             </h2>
             <Button
               onClick={() => resumeTrip(recentTrips[0].id)}
-              className="w-full h-12 rounded-2xl bg-blue-600 text-white font-medium hover:bg-blue-500"
+              className="w-full h-12 rounded-2xl bg-[color:var(--color-primary)] text-[color:var(--color-onPrimary)] font-medium hover:bg-[color:var(--color-primary700)]"
               aria-label="Resume last trip"
             >
               Resume last trip

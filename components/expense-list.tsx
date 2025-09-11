@@ -119,7 +119,7 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
               <Card
                 key={`desktop-${expense.id}`}
                 className={`hidden md:block bg-white/70 backdrop-blur-sm border-white/40 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl ${
-                  editingExpense?.id === expense.id ? "ring-2 ring-blue-400 shadow-lg" : ""
+                  editingExpense?.id === expense.id ? "ring-2 ring-[color:var(--color-primary500)] shadow-lg" : ""
                 }`}
               >
                 <CardContent className="p-5">
@@ -149,7 +149,7 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1">
                             {expense.paid_by === "Both" ? (
-                              <Users className="h-4 w-4 text-blue-600" />
+                              <Users className="h-4 w-4 text-[color:var(--color-primary)]" />
                             ) : (
                               <User className="h-4 w-4 text-gray-500" />
                             )}
@@ -161,7 +161,7 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
                             (() => {
                               const Icon = categoryIcons[expense.category]
                               return (
-                                <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                                <span className="text-sm bg-[color:var(--color-primary50)] text-[color:var(--color-primary)] px-3 py-1 rounded-full font-medium flex items-center gap-1">
                                   <Icon className="h-4 w-4" />
                                   {expense.category}
                                 </span>
