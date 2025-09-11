@@ -7,11 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
-import { Plus, Filter, BarChart3, X, Users, MapPin } from "lucide-react"
+import { X } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
-import { ExpenseReports } from "@/components/expense-reports"
-import { ExpenseFilters } from "@/components/expense-filters"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { MobileNav } from "@/components/mobile-nav"
 import { FAB } from "@/components/fab"
@@ -25,7 +23,6 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
-import { AiAssistant } from "@/components/ai-assistant"
 
 export default function TripPage() {
   const params = useParams()
@@ -34,51 +31,24 @@ export default function TripPage() {
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
-  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const delayedLoading = useDelayedLoading(loading)
   const [showAddForm, setShowAddForm] = useState(false)
-  type Panel = 'none' | 'filter' | 'reports'
-  const [openPanel, setOpenPanel] = useState<Panel>('none')
   const [showParticipants, setShowParticipants] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
   const [showEditTrip, setShowEditTrip] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const reportsRef = useRef<HTMLDivElement>(null)
-  const filtersRef = useRef<HTMLDivElement>(null)
-
-  const toggleFilter = () =>
-    setOpenPanel((prev) => (prev === 'filter' ? 'none' : 'filter'))
-  const toggleReports = () =>
-    setOpenPanel((prev) => (prev === 'reports' ? 'none' : 'reports'))
-
-  useEffect(() => {
-    if (openPanel === 'reports') {
-      reportsRef.current?.focus()
-    } else if (openPanel === 'filter') {
-      filtersRef.current?.focus()
-    }
-  }, [openPanel])
 
   useEffect(() => {
     loadTripData()
     setupRealtimeSubscription()
 
-    // Listen for reports toggle from mobile nav
-    const handleToggleReports = toggleReports
-    const handleShowExpenses = () => setOpenPanel('none')
-    window.addEventListener('toggleReports', handleToggleReports)
-    window.addEventListener('showExpenses', handleShowExpenses)
-
-    // Cleanup subscription on unmount
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
-      window.removeEventListener('toggleReports', handleToggleReports)
-      window.removeEventListener('showExpenses', handleShowExpenses)
     }
   }, [tripId])
 
@@ -104,7 +74,6 @@ export default function TripPage() {
       if (offlineTrip) {
         setTrip(offlineTrip)
         setExpenses(offlineExpenses)
-        setFilteredExpenses(offlineExpenses)
       }
 
       // If online, fetch fresh data and update offline storage
@@ -135,7 +104,6 @@ export default function TripPage() {
           console.error("Error loading expenses:", expensesError)
         } else {
           setExpenses(expensesData || [])
-          setFilteredExpenses(expensesData || [])
 
           // Save to offline storage
           expensesData?.forEach((expense) => {
@@ -220,14 +188,7 @@ export default function TripPage() {
     channelRef.current = channel
   }
 
-  useEffect(() => {
-    // Re-apply filters when expenses change from real-time updates
-    if (openPanel === 'filter') {
-      // Let the filter component handle this
-      return
-    }
-    setFilteredExpenses(expenses)
-  }, [expenses, openPanel])
+  // Removed filter panel; expenses list always shows all expenses
 
   const deleteTrip = async () => {
     if (!confirm("Are you sure you want to delete this trip?")) return
@@ -269,7 +230,6 @@ export default function TripPage() {
       // Add to local state and offline storage immediately
       const updatedExpenses = [newExpense, ...expenses]
       setExpenses(updatedExpenses)
-      setFilteredExpenses(updatedExpenses)
       offlineStorage.saveExpense(newExpense)
       setShowAddForm(false)
     }
@@ -282,7 +242,6 @@ export default function TripPage() {
       // Update local state and offline storage immediately
       const updatedExpenses = expenses.map((expense) => (expense.id === updatedExpense.id ? updatedExpense : expense))
       setExpenses(updatedExpenses)
-      setFilteredExpenses(updatedExpenses)
       offlineStorage.saveExpense(updatedExpense)
     }
   }
@@ -294,14 +253,10 @@ export default function TripPage() {
       // Remove from local state and offline storage immediately
       const updatedExpenses = expenses.filter((expense) => expense.id !== expenseId)
       setExpenses(updatedExpenses)
-      setFilteredExpenses(updatedExpenses)
       offlineStorage.deleteExpense(expenseId)
     }
   }
 
-  const onFiltersChanged = (filtered: Expense[]) => {
-    setFilteredExpenses(filtered)
-  }
 
   if (delayedLoading) {
     return (
@@ -329,7 +284,7 @@ export default function TripPage() {
     )
   }
 
-  const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const totalCount = expenses.length
 
   return (
@@ -361,94 +316,13 @@ export default function TripPage() {
             <p className="text-sm text-gray-500">{totalCount} total expenses</p>
           </div>
         </Card>
-
-        <Button
-          onClick={() => {
-            setShowAddForm(true)
-            setOpenPanel('none')
-          }}
-          className="w-full h-12 rounded-full bg-gray-900 text-white text-base font-medium hover:bg-gray-800 hover:shadow"
-        >
-          <Plus className="h-5 w-5 mr-2" /> Add Expense
-        </Button>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            className="w-full h-12 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
-            onClick={() => setShowParticipants(true)}
-          >
-            <Users className="h-4 w-4 mr-2" /> Add Participants
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full h-12 rounded-2xl border-gray-200 text-gray-900 bg-white hover:bg-gray-50 hover:shadow"
-            onClick={() => setShowLocations(true)}
-          >
-            <MapPin className="h-4 w-4 mr-2" /> Add Locations
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Button
-            variant="secondary"
-            className="w-full h-12 rounded-2xl justify-center"
-            onClick={toggleFilter}
-            aria-expanded={openPanel === 'filter'}
-            aria-controls="filter-panel"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button
-            variant="secondary"
-            className="w-full h-12 rounded-2xl justify-center"
-            onClick={toggleReports}
-            aria-expanded={openPanel === 'reports'}
-            aria-controls="reports-panel"
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Reports
-          </Button>
-        </div>
-
-        <AiAssistant expenses={filteredExpenses} trip={trip} className="mb-3" />
-
-        {openPanel === 'reports' && (
-          <div
-            id="reports-panel"
-            ref={reportsRef}
-            tabIndex={-1}
-            className="mb-8 focus:outline-none"
-          >
-            <ExpenseReports expenses={expenses} />
-          </div>
-        )}
-
-        {openPanel === 'filter' && (
-          <div
-            id="filter-panel"
-            ref={filtersRef}
-            tabIndex={-1}
-            className="mb-8"
-          >
-            <ExpenseFilters
-              expenses={expenses}
-              onFiltersChanged={onFiltersChanged}
-              className="rounded-2xl"
-            />
-          </div>
-        )}
+        {/* Quick add cards removed – use FAB for adding items */}
 
         {showAddForm && (
           <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
         )}
 
-        <ExpenseList
-          expenses={filteredExpenses}
-          onExpenseUpdated={onExpenseUpdated}
-          onExpenseDeleted={onExpenseDeleted}
-        />
+        <ExpenseList expenses={expenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
         {showParticipants && (
           <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
         )}
@@ -502,10 +376,7 @@ export default function TripPage() {
       </Dialog.Root>
       </div>
       <FAB
-        onAddExpense={() => {
-          setShowAddForm(true)
-          setOpenPanel('none')
-        }}
+        onAddExpense={() => setShowAddForm(true)}
         onAddLocation={() => setShowLocations(true)}
         onAddParticipants={() => setShowParticipants(true)}
       />
