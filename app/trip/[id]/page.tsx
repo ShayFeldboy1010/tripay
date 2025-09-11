@@ -23,6 +23,7 @@ import { ManageLocationsModal } from "@/components/manage-locations-modal"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
+import { useDelayedLoading } from "@/hooks/useDelayedLoading"
 
 export default function TripPage() {
   const params = useParams()
@@ -33,6 +34,7 @@ export default function TripPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
+  const delayedLoading = useDelayedLoading(loading)
   const [showAddForm, setShowAddForm] = useState(false)
   type Panel = 'none' | 'filter' | 'reports'
   const [openPanel, setOpenPanel] = useState<Panel>('none')
@@ -299,7 +301,7 @@ export default function TripPage() {
     setFilteredExpenses(filtered)
   }
 
-  if (loading) {
+  if (delayedLoading) {
     return (
       <div className="min-h-screen bg-gray-100 p-4 space-y-4">
         <ExpenseCardSkeleton />

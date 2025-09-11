@@ -19,7 +19,7 @@ const { supabase } = await import("@/lib/supabase/client")
 describe("expenses api", () => {
   it("creates an expense", async () => {
     supabase.single.mockResolvedValue({ data: { id: "1" }, error: null })
-    const data = await createExpense({} as any)
+    const data = await createExpense({ date: "2024-01-01" } as any)
     expect(data).toEqual({ id: "1" })
   })
 
