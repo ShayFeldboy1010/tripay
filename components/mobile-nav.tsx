@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Home, BarChart3, Search } from "lucide-react";
 import clsx from "clsx";
+import { useTheme } from "@/theme/ThemeProvider";
 
 interface MobileNavProps {
   tripId: string;
@@ -10,6 +11,7 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ tripId, active }: MobileNavProps) {
+  const { colors } = useTheme();
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40">
       <div className="max-w-2xl mx-auto px-4 pb-[env(safe-area-inset-bottom)]">
@@ -18,8 +20,9 @@ export function MobileNav({ tripId, active }: MobileNavProps) {
             href={`/trip/${tripId}`}
             className={clsx(
               "flex flex-1 flex-col items-center gap-1 px-2 py-1 rounded-xl text-xs",
-              active === "expenses" ? "bg-gray-900 text-white" : "text-gray-600",
+              active === "expenses" ? "font-medium" : "text-gray-600",
             )}
+            style={active === "expenses" ? { color: colors.primary } : undefined}
           >
             <Home className="h-5 w-5" />
             <span>Expenses</span>
@@ -28,8 +31,9 @@ export function MobileNav({ tripId, active }: MobileNavProps) {
             href={`/trip/${tripId}/summary`}
             className={clsx(
               "flex flex-1 flex-col items-center gap-1 px-2 py-1 rounded-xl text-xs",
-              active === "summary" ? "bg-gray-900 text-white" : "text-gray-600",
+              active === "summary" ? "font-medium" : "text-gray-600",
             )}
+            style={active === "summary" ? { color: colors.primary } : undefined}
           >
             <BarChart3 className="h-5 w-5" />
             <span>Summary</span>
@@ -38,8 +42,9 @@ export function MobileNav({ tripId, active }: MobileNavProps) {
             href={`/trip/${tripId}/search`}
             className={clsx(
               "flex flex-1 flex-col items-center gap-1 px-2 py-1 rounded-xl text-xs",
-              active === "search" ? "bg-gray-900 text-white" : "text-gray-600",
+              active === "search" ? "font-medium" : "text-gray-600",
             )}
+            style={active === "search" ? { color: colors.primary } : undefined}
           >
             <Search className="h-5 w-5" />
             <span>Search</span>

@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown";
 import { AddSplitButton } from "@/components/add-split-button";
+import { useTheme } from "@/theme/ThemeProvider";
 
 interface DesktopShellProps {
   tripId: string;
@@ -29,6 +30,7 @@ export function DesktopShell({
   onEditTrip,
   onDeleteTrip,
 }: DesktopShellProps) {
+  const { colors } = useTheme();
   return (
     <div className="hidden lg:grid grid-cols-[220px_1fr] min-h-screen">
       <aside className="bg-white border-r p-4" aria-label="Sidebar">
@@ -37,8 +39,13 @@ export function DesktopShell({
             href={`/trip/${tripId}`}
             className={clsx(
               "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
-              active === "expenses" ? "bg-gray-200" : "hover:bg-gray-100"
+              active === "expenses" ? "font-medium" : "hover:bg-[color:var(--color-primary50)]"
             )}
+            style={
+              active === "expenses"
+                ? { color: colors.primary, backgroundColor: colors.primary50 }
+                : undefined
+            }
           >
             <Home className="h-5 w-5" />
             <span>Expenses</span>
@@ -47,8 +54,13 @@ export function DesktopShell({
             href={`/trip/${tripId}/summary`}
             className={clsx(
               "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
-              active === "summary" ? "bg-gray-200" : "hover:bg-gray-100"
+              active === "summary" ? "font-medium" : "hover:bg-[color:var(--color-primary50)]"
             )}
+            style={
+              active === "summary"
+                ? { color: colors.primary, backgroundColor: colors.primary50 }
+                : undefined
+            }
           >
             <BarChart3 className="h-5 w-5" />
             <span>Summary</span>
@@ -57,8 +69,13 @@ export function DesktopShell({
             href={`/trip/${tripId}/search`}
             className={clsx(
               "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
-              active === "search" ? "bg-gray-200" : "hover:bg-gray-100"
+              active === "search" ? "font-medium" : "hover:bg-[color:var(--color-primary50)]"
             )}
+            style={
+              active === "search"
+                ? { color: colors.primary, backgroundColor: colors.primary50 }
+                : undefined
+            }
           >
             <SearchIcon className="h-5 w-5" />
             <span>Search</span>
@@ -66,16 +83,23 @@ export function DesktopShell({
         </nav>
       </aside>
       <div className="flex flex-col">
-        <header className="h-14 flex items-center justify-between border-b bg-white px-6" role="banner">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-lg">TripPay</span>
+        <header
+          className="h-14 flex items-center justify-between border-b px-6"
+          role="banner"
+          style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+        >
+          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
+            <span className="font-semibold text-lg" style={{ color: colors.onPrimary }}>
+              TripPay
+            </span>
             <OfflineIndicator />
           </div>
-          <div className="flex items-center gap-2" role="toolbar">
+          <div className="flex items-center gap-2" role="toolbar" style={{ color: colors.onPrimary }}>
             <Link
               href={`/trip/${tripId}/search`}
-              className="p-2 rounded hover:bg-gray-100"
+              className="p-2 rounded hover:bg-[color:var(--color-primary50)]"
               aria-label="Search"
+              style={{ color: colors.onPrimary }}
             >
               <SearchIcon className="h-5 w-5" />
             </Link>

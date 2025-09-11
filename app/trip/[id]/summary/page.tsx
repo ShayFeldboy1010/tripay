@@ -15,6 +15,7 @@ import { ManageParticipantsModal } from "@/components/manage-participants-modal"
 import { ManageLocationsModal } from "@/components/manage-locations-modal";
 import { DesktopShell } from "@/components/desktop-shell";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export default function TripSummaryPage() {
   const params = useParams();
@@ -27,6 +28,7 @@ export default function TripSummaryPage() {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
   const isDesktop = useIsDesktop();
+  const { colors } = useTheme();
 
   useEffect(() => {
     async function load() {
@@ -117,10 +119,15 @@ export default function TripSummaryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
-      <header className="sticky top-0 z-30 bg-gray-900 text-white shadow-sm">
+      <header
+        className="sticky top-0 z-30 shadow-sm"
+        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+      >
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="text-lg font-semibold">TripPay</span>
-          <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold" style={{ color: colors.onPrimary }}>
+            TripPay
+          </span>
+          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
             <OfflineIndicator />
             <TripSettingsDropdown
               tripId={tripId}

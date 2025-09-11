@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { cookies } from 'next/headers'
 import './globals.css'
+import { ThemeProvider } from '@/theme/ThemeProvider'
+import { BRAND_BLUE } from '@/theme/colors'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -35,10 +37,10 @@ export default function RootLayout({
   return (
     <html lang={locale} dir={dir} className={inter.className} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#2563eb" />
+        <meta name="theme-color" content={BRAND_BLUE} />
       </head>
       <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   )

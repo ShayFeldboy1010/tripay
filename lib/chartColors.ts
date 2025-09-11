@@ -1,7 +1,9 @@
 // @/lib/chartColors.ts
 // 1) Named palette for high contrast (12–20 colors). Expandable fallback via HSL.
+import { BRAND_BLUE } from '@/theme/colors';
+
 export const PALETTE = [
-  '#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6',
+  BRAND_BLUE, '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6',
   '#06b6d4', '#f97316', '#22c55e', '#d946ef', '#0ea5e9',
   '#84cc16', '#e11d48', '#a855f7', '#14b8a6', '#ea580c',
   '#60a5fa', '#10b981', '#d97706', '#f43f5e', '#38bdf8'
