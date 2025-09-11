@@ -27,9 +27,9 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
   }, [open]);
 
   const actions = [
-    { icon: Receipt, onClick: onAddExpense, label: "Add Expense" },
-    { icon: MapPin, onClick: onAddLocation, label: "Add Location" },
-    { icon: Users, onClick: onAddParticipants, label: "Add Participants" },
+    { icon: Users, onClick: onAddParticipants, label: "Participants" },
+    { icon: MapPin, onClick: onAddLocation, label: "Location" },
+    { icon: Receipt, onClick: onAddExpense, label: "Expense" },
   ];
 
   return (
@@ -45,27 +45,34 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
           {open && (
             <div className="absolute inset-0">
               {actions.map((a, i) => {
-                const angle = (-90 - i * 30) * (Math.PI / 180);
-                const radius = 80;
+                const angle = (-90 - i * 45) * (Math.PI / 180);
+                const radius = 100;
                 const x = Math.cos(angle) * radius;
                 const y = Math.sin(angle) * radius;
                 const Icon = a.icon;
                 return (
-                  <motion.button
+                  <motion.div
                     key={a.label}
                     initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
                     animate={{ scale: 1, x, y, opacity: 1 }}
                     exit={{ scale: 0, x: 0, y: 0, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    onClick={() => {
-                      a.onClick();
-                      setOpen(false);
-                    }}
-                    aria-label={a.label}
-                    className="absolute h-12 w-12 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-lg"
+                    className="absolute flex flex-col items-center"
                   >
-                    <Icon className="h-5 w-5" />
-                  </motion.button>
+                    <button
+                      onClick={() => {
+                        a.onClick();
+                        setOpen(false);
+                      }}
+                      aria-label={a.label}
+                      className="h-14 w-14 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-lg"
+                    >
+                      <Icon className="h-5 w-5" />
+                    </button>
+                    <span dir="auto" className="mt-1 text-xs text-gray-900 bg-white px-1 rounded">
+                      {a.label}
+                    </span>
+                  </motion.div>
                 );
               })}
             </div>
