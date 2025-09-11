@@ -19,6 +19,10 @@ export type Trip = {
   description: string | null
   created_at: string
   updated_at: string
+  total_budget?: number | null
+  start_date?: string | null
+  end_date?: string | null
+  base_currency?: string | null
 }
 
 export type Expense = {

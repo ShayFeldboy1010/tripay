@@ -24,6 +24,7 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
+import { AiAssistant } from "@/components/ai-assistant"
 
 export default function TripPage() {
   const params = useParams()
@@ -416,6 +417,8 @@ export default function TripPage() {
             Reports
           </Button>
         </div>
+
+        <AiAssistant expenses={filteredExpenses} trip={trip} className="mb-3" />
 
         {openPanel === 'reports' && (
           <div
