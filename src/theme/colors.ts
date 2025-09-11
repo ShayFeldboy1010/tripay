@@ -1,5 +1,5 @@
 // Primary brand color extracted from the mobile header
-export const TRIPPAY_BLUE_DARK = "#2563EB";
+export const TRIPPAY_BLUE_DARK = "#1E40AF";
 
 function clamp(value: number) {
   return Math.max(0, Math.min(255, Math.round(value)));

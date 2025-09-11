@@ -19,6 +19,7 @@ import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
+import { useTheme } from "@/theme/ThemeProvider"
 
 export default function TripSearchPage() {
   const params = useParams()
@@ -35,6 +36,7 @@ export default function TripSearchPage() {
   const [showLocations, setShowLocations] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const isDesktop = useIsDesktop()
+  const { colors } = useTheme()
 
   useEffect(() => {
     loadTripData()
