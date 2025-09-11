@@ -11,7 +11,7 @@ import { composeAnswer } from "@/lib/ai/compose";
 import type { AIQuery, AIFact } from "@/lib/ai/schema";
 import clsx from "clsx";
 
-export function AiAssistant({ expenses, trip, className }: { expenses: Expense[]; trip: Trip; className?: string }) {
+export function AiAssistant({ expenses, trip, className, inputRef }: { expenses: Expense[]; trip: Trip; className?: string; inputRef?: React.RefObject<HTMLInputElement> }) {
   const [text, setText] = useState("");
   const [useGroq, setUseGroq] = useState(false);
   const [answer, setAnswer] = useState<{ text: string; facts: AIFact[] } | null>(null);
@@ -71,13 +71,14 @@ export function AiAssistant({ expenses, trip, className }: { expenses: Expense[]
   return (
     <div className={clsx("space-y-2", className)}>
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <Input
-          aria-label="Ask about your spend"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          dir="auto"
-          className="flex-1"
-        />
+          <Input
+            ref={inputRef}
+            aria-label="Ask about your spend"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            dir="auto"
+            className="flex-1"
+          />
         <Button type="submit" disabled={loading}>
           Ask
         </Button>

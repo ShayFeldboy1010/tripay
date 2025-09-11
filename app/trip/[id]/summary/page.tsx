@@ -9,6 +9,12 @@ import { ExpenseReports } from "@/components/expense-reports";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown";
 import { MobileNav } from "@/components/mobile-nav";
+import { FAB } from "@/components/fab";
+import AddExpenseForm from "@/components/add-expense-form";
+import { ManageParticipantsModal } from "@/components/manage-participants-modal";
+import { ManageLocationsModal } from "@/components/manage-locations-modal";
+import { DesktopShell } from "@/components/desktop-shell";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 export default function TripSummaryPage() {
   const params = useParams();
@@ -17,6 +23,10 @@ export default function TripSummaryPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [showLocations, setShowLocations] = useState(false);
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     async function load() {
@@ -55,8 +65,54 @@ export default function TripSummaryPage() {
     load();
   }, [tripId]);
 
+  const onExpenseAdded = (expense: Expense) => {
+    setExpenses((prev) => [expense, ...prev]);
+  };
+
   if (loading || !trip) {
     return <div className="min-h-screen" />;
+  }
+
+  const content = (
+    <main className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8">
+      <ExpenseReports expenses={expenses} />
+      {showAddForm && (
+        <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
+      )}
+      {showParticipants && (
+        <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
+      )}
+      {showLocations && (
+        <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
+      )}
+    </main>
+  );
+
+  const fab = (
+    <FAB
+      onAddExpense={() => setShowAddForm(true)}
+      onAddLocation={() => setShowLocations(true)}
+      onAddParticipants={() => setShowParticipants(true)}
+    />
+  );
+
+  if (isDesktop) {
+    return (
+      <>
+        <DesktopShell
+          tripId={tripId}
+          active="summary"
+          onAddExpense={() => setShowAddForm(true)}
+          onAddParticipants={() => setShowParticipants(true)}
+          onAddLocation={() => setShowLocations(true)}
+          onEditTrip={() => router.push(`/trip/${tripId}`)}
+          onDeleteTrip={() => router.push("/")}
+        >
+          {content}
+        </DesktopShell>
+        {fab}
+      </>
+    );
   }
 
   return (
@@ -74,9 +130,9 @@ export default function TripSummaryPage() {
           </div>
         </div>
       </header>
-      <main className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8">
-        <ExpenseReports expenses={expenses} />
-      </main>
+
+      {content}
+      {fab}
       <MobileNav tripId={tripId} active="summary" />
     </div>
   );
