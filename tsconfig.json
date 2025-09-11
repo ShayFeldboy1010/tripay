@@ -20,7 +20,10 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/theme/*": ["./src/theme/*"]
+      "@/theme/*": ["./src/theme/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/polyfills": ["./src/polyfills/index"],
+      "@/polyfills/*": ["./src/polyfills/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

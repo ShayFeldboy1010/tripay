@@ -3,7 +3,8 @@ import { Inter } from 'next/font/google'
 import { cookies } from 'next/headers'
 import './globals.css'
 import { ThemeProvider } from '@/theme/ThemeProvider'
-import { BRAND_BLUE } from '@/theme/colors'
+import { TRIPPAY_BLUE_DARK } from '@/theme/colors'
+import { RootClient } from '@/app/RootClient'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -37,10 +38,12 @@ export default function RootLayout({
   return (
     <html lang={locale} dir={dir} className={inter.className} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content={BRAND_BLUE} />
+        <meta name="theme-color" content={TRIPPAY_BLUE_DARK} />
       </head>
-      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] bg-[color:var(--color-bg)]">
+        <RootClient>
+          <ThemeProvider>{children}</ThemeProvider>
+        </RootClient>
       </body>
     </html>
   )

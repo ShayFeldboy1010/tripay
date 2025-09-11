@@ -72,7 +72,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
             onEdit(expense)
             resetSwipe()
           }}
-          className="h-full px-6 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-none"
+          className="h-full px-6 bg-[color:var(--color-primary50)] hover:bg-[color:var(--color-primary500)] text-[color:var(--color-primary)] rounded-none"
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -137,7 +137,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                   {/* Payer */}
                   <div className="flex items-center gap-1 min-w-0">
                     {expense.paid_by === "Both" ? (
-                      <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                      <Users className="h-3 w-3 text-[color:var(--color-primary)] flex-shrink-0" />
                     ) : (
                       <User className="h-3 w-3 text-gray-500 flex-shrink-0" />
                     )}
@@ -148,7 +148,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                   
                   {/* Category */}
                   {expense.category && CategoryIcon && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium flex-shrink-0 flex items-center gap-1">
+                    <span className="text-xs bg-[color:var(--color-primary50)] text-[color:var(--color-primary)] px-2 py-0.5 rounded-full font-medium flex-shrink-0 flex items-center gap-1">
                       <CategoryIcon className="h-3 w-3" />
                       {expense.category}
                     </span>

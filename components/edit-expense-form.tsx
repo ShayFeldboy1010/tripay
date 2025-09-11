@@ -153,7 +153,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm"
+                className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-[color:var(--color-primary)] focus:ring-[color:var(--color-primary50)] transition-all text-base md:text-sm"
                 required
               />
             </div>
@@ -167,7 +167,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm"
+                className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-[color:var(--color-primary)] focus:ring-[color:var(--color-primary50)] transition-all text-base md:text-sm"
                 required
               />
             </div>
@@ -184,7 +184,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                   step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-8 h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm text-end"
+                  className="pl-8 h-12 md:h-11 border-gray-200 rounded-xl focus:border-[color:var(--color-primary)] focus:ring-[color:var(--color-primary50)] transition-all text-base md:text-sm text-end"
                   inputMode="decimal"
                   required
                 />
@@ -196,7 +196,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                 Category *
               </label>
               <Select value={category} onValueChange={setCategory} required>
-                <SelectTrigger className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm">
+                <SelectTrigger className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-[color:var(--color-primary)] focus:ring-[color:var(--color-primary50)] transition-all text-base md:text-sm">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-gray-200 shadow-lg">
@@ -214,7 +214,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                 Location *
               </label>
               <Select value={locationId} onValueChange={setLocationId} required>
-                <SelectTrigger className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all text-base md:text-sm">
+                <SelectTrigger className="h-12 md:h-11 border-gray-200 rounded-xl focus:border-[color:var(--color-primary)] focus:ring-[color:var(--color-primary50)] transition-all text-base md:text-sm">
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-gray-200 shadow-lg">
@@ -271,7 +271,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500/20 transition-all resize-none text-base md:text-sm"
+                className="border-gray-200 rounded-xl focus:border-[color:var(--color-primary)] focus:ring-[color:var(--color-primary50)] transition-all resize-none text-base md:text-sm"
               />
             </div>
           </form>
@@ -294,7 +294,7 @@ export function EditExpenseForm({ expense, onExpenseUpdated, onCancel }: EditExp
                 !locationId ||
                 selectedPayers.length === 0
               }
-              className="flex-1 h-12 md:h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-base md:text-sm"
+              className="flex-1 h-12 md:h-11 bg-[color:var(--color-primary)] hover:bg-[color:var(--color-primary700)] text-[color:var(--color-onPrimary)] font-medium rounded-xl shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-base md:text-sm"
               onClick={handleSubmit}
             >
               {isSubmitting ? "Updating..." : "Update Expense"}

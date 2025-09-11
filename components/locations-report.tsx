@@ -76,7 +76,7 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle dir="auto" className="text-lg">{location}</CardTitle>
-              <span className="text-xl font-bold text-blue-600">₪{total.toFixed(2)}</span>
+              <span className="text-xl font-bold text-[color:var(--color-primary)]">₪{total.toFixed(2)}</span>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
