@@ -14,6 +14,7 @@ import { ExpenseReports } from "@/components/expense-reports"
 import { ExpenseFilters } from "@/components/expense-filters"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { MobileNav } from "@/components/mobile-nav"
+import { FAB } from "@/components/fab"
 import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
@@ -329,6 +330,7 @@ export default function TripPage() {
   }
 
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const totalCount = expenses.length
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
@@ -346,25 +348,17 @@ export default function TripPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 pb-32 md:pb-8 space-y-6">
+      <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
         <Card className="rounded-2xl shadow-md p-5 sm:p-6">
           <div>
             <h2 dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
               {trip.name}
             </h2>
-            {trip.description && (
-              <p dir="auto" className="text-gray-500 mt-1">
-                {trip.description}
-              </p>
-            )}
+            <p className="text-gray-500 mt-1">Have Fun!</p>
           </div>
           <div className="mt-4 text-end space-y-1">
             <p className="text-4xl font-bold text-green-600">₪{totalAmount.toFixed(2)}</p>
-            <p className="text-sm text-gray-500">
-              {filteredExpenses.length !== expenses.length
-                ? `${filteredExpenses.length} of ${expenses.length} expenses`
-                : `${expenses.length} total expenses`}
-            </p>
+            <p className="text-sm text-gray-500">{totalCount} total expenses</p>
           </div>
         </Card>
 
@@ -373,7 +367,7 @@ export default function TripPage() {
             setShowAddForm(true)
             setOpenPanel('none')
           }}
-          className="w-full h-12 rounded-2xl bg-gray-900 text-white text-base font-medium hover:bg-gray-800 hover:shadow"
+          className="w-full h-12 rounded-full bg-gray-900 text-white text-base font-medium hover:bg-gray-800 hover:shadow"
         >
           <Plus className="h-5 w-5 mr-2" /> Add Expense
         </Button>
@@ -505,9 +499,17 @@ export default function TripPage() {
               </Card>
             </Dialog.Content>
           </Dialog.Portal>
-        </Dialog.Root>
+      </Dialog.Root>
       </div>
-      <MobileNav tripId={tripId} />
+      <FAB
+        onAddExpense={() => {
+          setShowAddForm(true)
+          setOpenPanel('none')
+        }}
+        onAddLocation={() => setShowLocations(true)}
+        onAddParticipants={() => setShowParticipants(true)}
+      />
+      <MobileNav tripId={tripId} active="expenses" />
     </div>
   )
 }
