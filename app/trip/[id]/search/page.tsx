@@ -9,6 +9,12 @@ import { ExpenseList } from "@/components/expense-list"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { MobileNav } from "@/components/mobile-nav"
+import { FAB } from "@/components/fab"
+import AddExpenseForm from "@/components/add-expense-form"
+import { ManageParticipantsModal } from "@/components/manage-participants-modal"
+import { ManageLocationsModal } from "@/components/manage-locations-modal"
+import { DesktopShell } from "@/components/desktop-shell"
+import { useIsDesktop } from "@/hooks/useIsDesktop"
 import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
@@ -24,6 +30,11 @@ export default function TripSearchPage() {
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [showParticipants, setShowParticipants] = useState(false)
+  const [showLocations, setShowLocations] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const isDesktop = useIsDesktop()
 
   useEffect(() => {
     loadTripData()
@@ -34,6 +45,18 @@ export default function TripSearchPage() {
       }
     }
   }, [tripId])
+
+  useEffect(() => {
+    function handleSlash(e: KeyboardEvent) {
+      const target = e.target as HTMLElement
+      if (e.key === "/" && target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener("keydown", handleSlash)
+    return () => window.removeEventListener("keydown", handleSlash)
+  }, [])
 
   const loadTripData = async () => {
     try {
@@ -114,6 +137,11 @@ export default function TripSearchPage() {
     offlineStorage.deleteExpense(id)
   }
 
+  const onExpenseAdded = (expense: Expense) => {
+    setExpenses((prev) => [expense, ...prev])
+    setFilteredExpenses((prev) => [expense, ...prev])
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 p-4 space-y-4">
@@ -128,6 +156,50 @@ export default function TripSearchPage() {
     return <div className="min-h-screen" />
   }
 
+  const content = (
+    <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
+      <AiAssistant expenses={filteredExpenses} trip={trip} className="mb-3" inputRef={inputRef} />
+      <ExpenseFilters expenses={expenses} onFiltersChanged={setFilteredExpenses} className="rounded-2xl" />
+      <ExpenseList expenses={filteredExpenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
+      {showAddForm && (
+        <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
+      )}
+      {showParticipants && (
+        <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
+      )}
+      {showLocations && (
+        <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
+      )}
+    </div>
+  )
+
+  const fab = (
+    <FAB
+      onAddExpense={() => setShowAddForm(true)}
+      onAddLocation={() => setShowLocations(true)}
+      onAddParticipants={() => setShowParticipants(true)}
+    />
+  )
+
+  if (isDesktop) {
+    return (
+      <>
+        <DesktopShell
+          tripId={tripId}
+          active="search"
+          onAddExpense={() => setShowAddForm(true)}
+          onAddParticipants={() => setShowParticipants(true)}
+          onAddLocation={() => setShowLocations(true)}
+          onEditTrip={() => router.push(`/trip/${tripId}`)}
+          onDeleteTrip={() => router.push("/")}
+        >
+          {content}
+        </DesktopShell>
+        {fab}
+      </>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
       <header className="sticky top-0 z-30 bg-gray-900 text-white shadow-sm">
@@ -140,12 +212,8 @@ export default function TripSearchPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
-        {/* Filter and AI search relocated from home screen */}
-        <AiAssistant expenses={filteredExpenses} trip={trip} className="mb-3" />
-        <ExpenseFilters expenses={expenses} onFiltersChanged={setFilteredExpenses} className="rounded-2xl" />
-        <ExpenseList expenses={filteredExpenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
-      </div>
+      {content}
+      {fab}
       <MobileNav tripId={tripId} active="search" />
     </div>
   )
