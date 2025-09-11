@@ -5,16 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { Expense, Trip } from "@/lib/supabase/client";
-import { parseAIQuery } from "@/lib/ai/parse-intent";
-import { executeAIQuery } from "@/lib/ai/execute";
-import { composeAnswer } from "@/lib/ai/compose";
-import type { AIQuery, AIFact } from "@/lib/ai/schema";
+import { answerQuestion } from "@/services/nlq/answerQuestion";
+import type { Answer } from "@/services/nlq/dsl";
 import clsx from "clsx";
 
 export function AiAssistant({ expenses, trip, className, inputRef }: { expenses: Expense[]; trip: Trip; className?: string; inputRef?: React.RefObject<HTMLInputElement> }) {
   const [text, setText] = useState("");
   const [useGroq, setUseGroq] = useState(false);
-  const [answer, setAnswer] = useState<{ text: string; facts: AIFact[] } | null>(null);
+  const [answer, setAnswer] = useState<Answer | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -31,33 +29,16 @@ export function AiAssistant({ expenses, trip, className, inputRef }: { expenses:
     if (!text.trim() || loading) return;
     setLoading(true);
     try {
-      let plan: AIQuery | null = null;
-      if (useGroq) {
-        try {
-          const res = await fetch("/api/ai-query", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, tripId: trip.id }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            plan = data.plan as AIQuery;
-          } else {
-            console.error("Groq error", await res.text());
-            toast("AI parsing failed, using local rules");
-          }
-        } catch (err) {
-          console.error(err);
-          toast("AI parsing failed, using local rules");
-        }
-      }
-      if (!plan) {
-        plan = parseAIQuery(text);
-      }
-      const ans = executeAIQuery(plan, { expenses, trip });
-      const text = composeAnswer(plan, ans, { currency: trip.base_currency || undefined });
-      setAnswer({ text, facts: ans.facts });
+      const ans = await answerQuestion(text, {
+        baseCurrency: trip.base_currency || undefined,
+        expenses,
+        useGroq,
+      });
+      setAnswer(ans);
       setShowDetails(false);
+      if (ans.warnings && ans.warnings.length) {
+        ans.warnings.forEach((w) => toast(w));
+      }
     } finally {
       setLoading(false);
     }
@@ -98,7 +79,7 @@ export function AiAssistant({ expenses, trip, className, inputRef }: { expenses:
         {answer && (
           <div>
             <p dir="auto" dangerouslySetInnerHTML={{ __html: answer.text }} />
-            {answer.facts.length > 0 && (
+            {answer.details && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -107,14 +88,10 @@ export function AiAssistant({ expenses, trip, className, inputRef }: { expenses:
                 {showDetails ? "Hide details" : "Show details"}
               </Button>
             )}
-            {showDetails && answer.facts.length > 0 && (
-              <ul className="mt-2 list-disc ml-4 text-sm space-y-1">
-                {answer.facts.map((f) => (
-                  <li key={f.label} dir="auto">
-                    {f.label}: <span dir="ltr">{f.value}</span>
-                  </li>
-                ))}
-              </ul>
+            {showDetails && answer.details && (
+              <pre className="mt-2 text-xs overflow-auto max-h-40">
+                {JSON.stringify(answer.details, null, 2)}
+              </pre>
             )}
           </div>
         )}
