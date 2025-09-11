@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Receipt, MapPin, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import clsx from "clsx";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { useTheme } from "@/theme/ThemeProvider";
 
 interface FABProps {
   onAddExpense: () => void;
@@ -17,6 +17,7 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
+  const { colors } = useTheme();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -71,12 +72,17 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
                             setOpen(false);
                           }}
                           aria-label={a.label}
-                          className="h-14 w-14 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-lg"
+                          className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
+                          style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
                         >
                           <Icon className="h-5 w-5" />
                         </button>
                       </Tooltip.Trigger>
-                      <Tooltip.Content side="top" className="rounded bg-gray-900 px-2 py-1 text-xs text-white">
+                      <Tooltip.Content
+                        side="top"
+                        className="rounded px-2 py-1 text-xs"
+                        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+                      >
                         {a.label}
                       </Tooltip.Content>
                     </Tooltip.Root>
@@ -92,10 +98,11 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
         <button
           aria-label="Open menu"
           onClick={() => setOpen((p) => !p)}
-          className={clsx(
-            "h-14 w-14 rounded-full flex items-center justify-center shadow-lg text-white",
-            open ? "bg-gray-700" : "bg-gray-900"
-          )}
+          className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
+          style={{
+            backgroundColor: open ? colors.primary700 : colors.primary,
+            color: colors.onPrimary,
+          }}
         >
           <Plus className="h-6 w-6" />
         </button>

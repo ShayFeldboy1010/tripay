@@ -202,12 +202,21 @@ export default function TripSearchPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
-      <header className="sticky top-0 z-30 bg-gray-900 text-white shadow-sm">
+      <header
+        className="sticky top-0 z-30 shadow-sm"
+        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+      >
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="text-lg font-semibold">TripPay</span>
-          <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold" style={{ color: colors.onPrimary }}>
+            TripPay
+          </span>
+          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
             <OfflineIndicator />
-            <TripSettingsDropdown tripId={tripId} onEdit={() => router.push(`/trip/${tripId}`)} onDelete={() => router.push("/")} />
+            <TripSettingsDropdown
+              tripId={tripId}
+              onEdit={() => router.push(`/trip/${tripId}`)}
+              onDelete={() => router.push("/")}
+            />
           </div>
         </div>
       </header>

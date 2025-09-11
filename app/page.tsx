@@ -205,7 +205,7 @@ export default function HomePage() {
               <Button
                 onClick={createTrip}
                 disabled={!tripName.trim() || isCreating}
-                className="w-full h-12 rounded-2xl bg-gray-900 text-white font-medium hover:bg-gray-800 hover:shadow"
+                className="w-full h-12 rounded-2xl font-medium hover:shadow"
               >
                 {isCreating ? "Creating..." : "Create Trip"}
               </Button>
@@ -239,7 +239,7 @@ export default function HomePage() {
               <Button
                 onClick={joinTrip}
                 disabled={!tripId.trim() || isJoining}
-                className="w-full h-12 rounded-2xl bg-gray-900 text-white font-medium hover:bg-gray-800 hover:shadow"
+                className="w-full h-12 rounded-2xl font-medium hover:shadow"
               >
                 {isJoining ? "Joining..." : "Join Trip"}
               </Button>

@@ -25,6 +25,7 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
+import { useTheme } from "@/theme/ThemeProvider"
 
 export default function TripPage() {
   const params = useParams()
@@ -43,6 +44,7 @@ export default function TripPage() {
   const [editDescription, setEditDescription] = useState("")
   const channelRef = useRef<RealtimeChannel | null>(null)
   const isDesktop = useIsDesktop()
+  const { colors } = useTheme()
 
   useEffect(() => {
     loadTripData()
@@ -276,12 +278,7 @@ export default function TripPage() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-700 mb-6 font-medium">Trip not found</p>
-          <Button
-            onClick={() => router.push("/")}
-            className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-xl shadow-sm transition-all"
-          >
-            Go Home
-          </Button>
+          <Button onClick={() => router.push("/")}>Go Home</Button>
         </div>
       </div>
     )
@@ -394,10 +391,15 @@ export default function TripPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
-      <header className="sticky top-0 z-30 bg-gray-900 text-white shadow-sm">
+      <header
+        className="sticky top-0 z-30 shadow-sm"
+        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+      >
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="text-lg font-semibold">TripPay</span>
-          <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold" style={{ color: colors.onPrimary }}>
+            TripPay
+          </span>
+          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
             <OfflineIndicator />
             <TripSettingsDropdown
               tripId={tripId}
