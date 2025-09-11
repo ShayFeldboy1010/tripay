@@ -100,12 +100,15 @@ export function executeAIQuery(q: AIQuery, data: { expenses: Expense[]; trip: Tr
     case "TotalByCategory": {
       if (q.category) {
         const aliases = CATEGORY_ALIASES[q.category] || [q.category];
-        const sum = aliases.reduce((s, a) => s + (totals[a] || 0), 0);
+        const relevant = filtered.filter((e) => aliases.includes(e.category));
+        const sum = relevant.reduce((s, e) => s + e.amount, 0);
         facts.push({ label: q.category, value: fmt(sum) });
+        facts.push({ label: "count", value: String(relevant.length) });
         text = `Spent ${fmt(sum)} on ${q.category}`;
       } else {
         const sum = filtered.reduce((s, e) => s + e.amount, 0);
         facts.push({ label: "Total", value: fmt(sum) });
+        facts.push({ label: "count", value: String(filtered.length) });
         text = `Total spend ${fmt(sum)}`;
       }
       break;
@@ -138,12 +141,28 @@ export function executeAIQuery(q: AIQuery, data: { expenses: Expense[]; trip: Tr
         text = "No budget configured";
         break;
       }
-      const spent = filtered.reduce((s, e) => s + e.amount, 0);
-      const remaining = trip.total_budget - spent;
-      facts.push({ label: "Budget", value: fmt(trip.total_budget) });
-      facts.push({ label: "Spent", value: fmt(spent) });
-      facts.push({ label: "Remaining", value: fmt(remaining) });
-      text = remaining >= 0 ? `Remaining ${fmt(remaining)}` : `Over budget by ${fmt(Math.abs(remaining))}`;
+      const daysTotal = trip.start_date && trip.end_date
+        ? Math.max(
+            1,
+            Math.ceil(
+              (new Date(trip.end_date).getTime() -
+                new Date(trip.start_date).getTime()) /
+                86400000
+            ) + 1
+          )
+        : 1;
+      const target = trip.total_budget / daysTotal;
+      const todayStr = now.toISOString().slice(0, 10);
+      const todaySpent = expenses
+        .filter((e) => e.date === todayStr)
+        .reduce((s, e) => s + e.amount, 0);
+      const left = target - todaySpent;
+      facts.push({ label: "target", value: fmt(target) });
+      facts.push({ label: "today", value: fmt(todaySpent) });
+      facts.push({ label: "left", value: fmt(left) });
+      facts.push({ label: "Remaining", value: fmt(left) });
+      facts.push({ label: "state", value: left >= 0 ? "במסגרת" : "חריגה" });
+      text = left >= 0 ? `Remaining ${fmt(left)}` : `Over ${fmt(Math.abs(left))}`;
       break;
     }
   }

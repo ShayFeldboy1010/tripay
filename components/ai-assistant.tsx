@@ -7,22 +7,23 @@ import { toast } from "sonner";
 import type { Expense, Trip } from "@/lib/supabase/client";
 import { parseAIQuery } from "@/lib/ai/parse-intent";
 import { executeAIQuery } from "@/lib/ai/execute";
-import type { AIAnswer, AIQuery } from "@/lib/ai/schema";
+import { composeAnswer } from "@/lib/ai/compose";
+import type { AIQuery, AIFact } from "@/lib/ai/schema";
 import clsx from "clsx";
 
 export function AiAssistant({ expenses, trip, className }: { expenses: Expense[]; trip: Trip; className?: string }) {
   const [text, setText] = useState("");
   const [useGroq, setUseGroq] = useState(false);
-  const [answer, setAnswer] = useState<AIAnswer | null>(null);
+  const [answer, setAnswer] = useState<{ text: string; facts: AIFact[] } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const suggestions = [
-    "Which is higher: hotels or transportation this month?",
-    "How much on food yesterday?",
-    "Top categories last week",
-    "Daily spend this month",
-    "Budget status today",
+    "מלונות או תחבורה?",
+    "כמה על אוכל אתמול?",
+    "Top categories",
+    "Daily spend",
+    "מצב התקציב היום",
   ];
 
   async function handleSubmit(e?: React.FormEvent) {
@@ -54,7 +55,8 @@ export function AiAssistant({ expenses, trip, className }: { expenses: Expense[]
         plan = parseAIQuery(text);
       }
       const ans = executeAIQuery(plan, { expenses, trip });
-      setAnswer(ans);
+      const text = composeAnswer(plan, ans, { currency: trip.base_currency || undefined });
+      setAnswer({ text, facts: ans.facts });
       setShowDetails(false);
     } finally {
       setLoading(false);
@@ -94,30 +96,24 @@ export function AiAssistant({ expenses, trip, className }: { expenses: Expense[]
       <div className="min-h-[4rem] mt-2">
         {answer && (
           <div>
-            <p dir="auto">{answer.text}</p>
-            <Button variant="ghost" size="sm" onClick={() => setShowDetails((p) => !p)}>
-              {showDetails ? "Hide details" : "Show details"}
-            </Button>
-            {showDetails && (
-              <div className="mt-2 space-y-2">
-                {answer.facts.length > 0 && (
-                  <table className="text-sm">
-                    <tbody>
-                      {answer.facts.map((f) => (
-                        <tr key={f.label}>
-                          <td className="pr-2 text-gray-500" dir="auto">
-                            {f.label}
-                          </td>
-                          <td dir="ltr">{f.value}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto">
-                  {JSON.stringify(answer.plan, null, 2)}
-                </pre>
-              </div>
+            <p dir="auto" dangerouslySetInnerHTML={{ __html: answer.text }} />
+            {answer.facts.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDetails((p) => !p)}
+              >
+                {showDetails ? "Hide details" : "Show details"}
+              </Button>
+            )}
+            {showDetails && answer.facts.length > 0 && (
+              <ul className="mt-2 list-disc ml-4 text-sm space-y-1">
+                {answer.facts.map((f) => (
+                  <li key={f.label} dir="auto">
+                    {f.label}: <span dir="ltr">{f.value}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}
