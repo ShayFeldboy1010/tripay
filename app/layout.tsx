@@ -5,6 +5,8 @@ import './globals.css'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 import { TRIPPAY_BLUE_DARK } from '@/theme/colors'
 import { RootClient } from '@/app/RootClient'
+import { AIChatProvider } from '@/components/AIChatStore'
+import { AIChatWidget } from '@/components/AIChatWidget'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -42,7 +44,12 @@ export default function RootLayout({
       </head>
       <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] bg-[color:var(--color-bg)]">
         <RootClient>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <AIChatProvider>
+              {children}
+              <AIChatWidget />
+            </AIChatProvider>
+          </ThemeProvider>
         </RootClient>
       </body>
     </html>

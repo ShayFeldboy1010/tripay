@@ -19,7 +19,6 @@ import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
 import { useTheme } from "@/theme/ThemeProvider"
-import { AIChatBubble } from "@/components/AIChatBubble"
 
 export default function TripSearchPage() {
   const params = useParams()
@@ -171,8 +170,6 @@ export default function TripSearchPage() {
     />
   )
 
-  const chatBubble = <AIChatBubble tripId={tripId} />
-
   if (isDesktop) {
     return (
       <>
@@ -188,7 +185,7 @@ export default function TripSearchPage() {
           {content}
         </DesktopShell>
         {fab}
-        {chatBubble}
+        
       </>
     )
   }
@@ -216,7 +213,6 @@ export default function TripSearchPage() {
 
       {content}
       {fab}
-      {chatBubble}
       <MobileNav tripId={tripId} active="search" />
     </div>
   )
