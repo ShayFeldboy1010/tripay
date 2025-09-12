@@ -16,11 +16,11 @@ function fmtCurrency(n: number, currency: string, lang: string) {
 
 export async function answerQuestion(
   text: string,
-  opts: { baseCurrency?: string; expenses?: Expense[]; useGroq?: boolean } = {}
+  opts: { baseCurrency?: string; expenses?: Expense[] } = {}
 ): Promise<Answer> {
   const normalized = text.trim();
   const lang = detectLang(normalized);
-  let dsl: DSL | null = await textToDSL(normalized, { useGroq: opts.useGroq });
+  let dsl: DSL | null = await textToDSL(normalized);
   if (!dsl) {
     dsl = {
       intent: "total_spend",

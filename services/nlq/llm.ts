@@ -1,5 +1,5 @@
-import Groq from "groq-sdk";
 import { DSL, validateDSL } from "./dsl";
+import { createLLM, LLMProvider } from "@/src/server/llm/provider";
 
 const SYSTEM_PROMPT = `You convert a user’s question about their expenses into a strict JSON DSL.
 - Think about: intent, time range, filters (category, location, participants), grouping, and currency.
@@ -20,36 +20,35 @@ function safeJSON(text: string): unknown {
   }
 }
 
-async function callGroq(prompt: string): Promise<string | null> {
-  if (!process.env.GROQ_API_KEY) return null;
+async function callLLM(prompt: string): Promise<string | null> {
+  const provider = (process.env.LLM_PROVIDER as LLMProvider) || "mock";
+  const model = process.env.LLM_MODEL || "";
+  const baseUrl =
+    provider === "moonshot" ? process.env.MOONSHOT_BASE_URL : process.env.GROQ_BASE_URL;
+  const apiKey =
+    provider === "moonshot" ? process.env.MOONSHOT_API_KEY : process.env.GROQ_API_KEY;
+  if (!apiKey || !model) return null;
   try {
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const res = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0,
+    const llm = createLLM({ provider, model, baseUrl, apiKey });
+    const res = await llm.chatCompletion({
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
     });
-    return res.choices[0]?.message?.content ?? null;
+    return res;
   } catch (err) {
-    console.error("Groq error", err);
+    console.error("LLM error", err);
     return null;
   }
 }
 
-export async function textToDSL(text: string, opts?: { useGroq?: boolean }): Promise<DSL | null> {
-  const useGroq = opts?.useGroq ?? false;
-  if (useGroq) {
-    let prompt = text;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const out = await callGroq(prompt);
-      const parsed = safeJSON(out || "");
-      const valid = parsed && validateDSL(parsed);
-      if (valid) return valid;
-      prompt = `Please fix the JSON and respond with JSON only. Original query: ${text}`;
-    }
+export async function textToDSL(text: string): Promise<DSL | null> {
+  let prompt = text;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const out = await callLLM(prompt);
+    const parsed = safeJSON(out || "");
+    const valid = parsed && validateDSL(parsed);
+    if (valid) return valid;
+    prompt = `Please fix the JSON and respond with JSON only. Original query: ${text}`;
   }
   return fallbackParse(text);
 }
