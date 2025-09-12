@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
 import { ExpenseFilters } from "@/components/expense-filters"
-import { AiAssistant } from "@/components/ai-assistant"
 import { ExpenseList } from "@/components/expense-list"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
@@ -20,6 +19,7 @@ import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
 import { useTheme } from "@/theme/ThemeProvider"
+import { AIChatBubble } from "@/components/AIChatBubble"
 
 export default function TripSearchPage() {
   const params = useParams()
@@ -34,7 +34,6 @@ export default function TripSearchPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
   const isDesktop = useIsDesktop()
   const { colors } = useTheme()
 
@@ -48,17 +47,7 @@ export default function TripSearchPage() {
     }
   }, [tripId])
 
-  useEffect(() => {
-    function handleSlash(e: KeyboardEvent) {
-      const target = e.target as HTMLElement
-      if (e.key === "/" && target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
-        e.preventDefault()
-        inputRef.current?.focus()
-      }
-    }
-    window.addEventListener("keydown", handleSlash)
-    return () => window.removeEventListener("keydown", handleSlash)
-  }, [])
+
 
   const loadTripData = async () => {
     try {
@@ -160,7 +149,6 @@ export default function TripSearchPage() {
 
   const content = (
     <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
-      <AiAssistant expenses={filteredExpenses} trip={trip} className="mb-3" inputRef={inputRef} />
       <ExpenseFilters expenses={expenses} onFiltersChanged={setFilteredExpenses} className="rounded-2xl" />
       <ExpenseList expenses={filteredExpenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
       {showAddForm && (
@@ -183,6 +171,8 @@ export default function TripSearchPage() {
     />
   )
 
+  const chatBubble = <AIChatBubble tripId={tripId} />
+
   if (isDesktop) {
     return (
       <>
@@ -198,6 +188,7 @@ export default function TripSearchPage() {
           {content}
         </DesktopShell>
         {fab}
+        {chatBubble}
       </>
     )
   }
@@ -225,6 +216,7 @@ export default function TripSearchPage() {
 
       {content}
       {fab}
+      {chatBubble}
       <MobileNav tripId={tripId} active="search" />
     </div>
   )
