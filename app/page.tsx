@@ -13,7 +13,7 @@ import {
   removeRecentTrip,
   type RecentTrip,
 } from "@/lib/recent-trips"
-import { Plus, Users } from "lucide-react"
+import { ArrowRight, Plus, Users } from "lucide-react"
 import { toast } from "sonner"
 
 const AUTO_RESUME =
@@ -127,136 +127,189 @@ export default function HomePage() {
     }
   }
 
+  const topTrip = recentTrips[0]
+  const additionalTrips = topTrip ? recentTrips.slice(1, 5) : []
+
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="max-w-md mx-auto pt-8 md:pt-16 space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">TripPay</h1>
-          <p className="text-gray-500">Share expenses with friends instantly</p>
-        </div>
-
-        {recentTrips.length > 0 && (
-          <div className="space-y-4" aria-label="Recent trips">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Recent Trips
-            </h2>
-            <Button
-              onClick={() => resumeTrip(recentTrips[0].id)}
-              className="w-full h-12 rounded-2xl bg-[color:var(--color-primary)] text-[color:var(--color-onPrimary)] font-medium hover:bg-[color:var(--color-primary700)]"
-              aria-label="Resume last trip"
-            >
-              Resume last trip
-            </Button>
-            <div className="flex flex-col gap-2">
-              {recentTrips.slice(1, 5).map((t) => (
-                <Button
-                  key={t.id}
-                  variant="outline"
-                  onClick={() => resumeTrip(t.id)}
-                  className="h-11 justify-start rounded-xl"
-                  aria-label={`Open trip ${t.name ?? t.id}`}
-                >
-                  {t.name || t.id}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-6">
-          {/* Create Trip Card */}
-          <Card className="rounded-2xl shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
-                Create New Trip
-              </CardTitle>
-              <CardDescription className="text-gray-500">Start a new trip and get a shareable Trip ID</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label htmlFor="tripName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Trip Name
-                </label>
-                <Input
-                  id="tripName"
-                  placeholder="Weekend getaway"
-                  value={tripName}
-                  dir="auto"
-                  onChange={(e) => setTripName(e.target.value)}
-                  className="h-12 text-base"
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label htmlFor="tripDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <Textarea
-                  id="tripDescription"
-                  placeholder="Fun weekend with friends"
-                  value={tripDescription}
-                  dir="auto"
-                  onChange={(e) => setTripDescription(e.target.value)}
-                  rows={2}
-                  className="text-base"
-                />
-              </div>
-              <Button
-                onClick={createTrip}
-                disabled={!tripName.trim() || isCreating}
-                className="w-full h-12 rounded-2xl font-medium hover:shadow"
-              >
-                {isCreating ? "Creating..." : "Create Trip"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Join Trip Card */}
-          <Card className="rounded-2xl shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Join Existing Trip
-              </CardTitle>
-              <CardDescription className="text-gray-500">Enter a Trip ID shared by a friend</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label htmlFor="tripId" className="block text-sm font-medium text-gray-700 mb-1">
-                  Trip ID
-                </label>
-                <Input
-                  id="tripId"
-                  placeholder="550e8400-e29b-41d4-a716-446655440000"
-                  value={tripId}
-                  dir="auto"
-                  onChange={(e) => setTripId(e.target.value)}
-                  className="h-12 text-base"
-                  autoComplete="off"
-                />
-              </div>
-              <Button
-                onClick={joinTrip}
-                disabled={!tripId.trim() || isJoining}
-                className="w-full h-12 rounded-2xl font-medium hover:shadow"
-              >
-                {isJoining ? "Joining..." : "Join Trip"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sample Trip ID for testing */}
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-gray-700 space-y-2">
-          <p className="text-sm">
-            <strong>For testing:</strong> Use this sample Trip ID:
-          </p>
-          <code className="text-xs bg-yellow-100 px-2 py-1 rounded font-mono break-all">
-            550e8400-e29b-41d4-a716-446655440000
-          </code>
-        </div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-x-0 top-[-25%] h-[420px] bg-gradient-to-b from-sky-500/40 via-slate-900/40 to-transparent blur-3xl" />
+        <div className="absolute right-[-12%] top-[20%] size-[420px] rounded-full bg-sky-400/20 blur-3xl" />
+        <div className="absolute left-[-20%] bottom-[-10%] size-[360px] rounded-full bg-indigo-500/20 blur-3xl" />
       </div>
+
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
+        <header className="max-w-2xl space-y-6">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm font-medium uppercase tracking-[0.35em] text-slate-100/80">
+            TripPay
+          </span>
+          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+            Plan adventures, split costs, stay in sync
+          </h1>
+          <p className="text-lg text-slate-200/80 md:text-xl">
+            Kick off a brand new journey or jump back into a trip a friend shared — all from one welcoming hub.
+          </p>
+        </header>
+
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <section className="space-y-6" aria-label="Recent trips">
+            {topTrip ? (
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_40px_110px_-70px_rgba(15,23,42,1)] backdrop-blur-2xl">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-200/70">
+                    Recent trips
+                  </p>
+                  <h2 className="text-2xl font-semibold text-white">Pick up where you left off</h2>
+                  <p className="text-sm text-slate-200/75">
+                    Reopen a recent adventure or explore another journey in seconds.
+                  </p>
+                </div>
+                <div className="mt-6 space-y-5">
+                  <Button
+                    onClick={() => resumeTrip(topTrip.id)}
+                    className="group flex h-auto items-center justify-between rounded-2xl bg-white px-5 py-4 text-left text-slate-900 shadow-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
+                    aria-label={`Resume trip ${topTrip.name ?? topTrip.id}`}
+                  >
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-slate-500">Resume</p>
+                      <p className="mt-1 text-lg font-semibold leading-tight">
+                        {topTrip.name || "Last trip"}
+                      </p>
+                      <p className="text-xs text-slate-500">{topTrip.id}</p>
+                    </div>
+                    <ArrowRight className="size-5 shrink-0 text-slate-400 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Button>
+
+                  {additionalTrips.length > 0 && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {additionalTrips.map((t) => (
+                        <Button
+                          key={t.id}
+                          variant="ghost"
+                          onClick={() => resumeTrip(t.id)}
+                          className="h-auto items-start justify-between rounded-2xl bg-white/5 px-4 py-3 text-left text-white backdrop-blur transition duration-200 hover:bg-white/10"
+                          aria-label={`Open trip ${t.name ?? t.id}`}
+                        >
+                          <div className="space-y-1">
+                            <span className="block text-sm font-semibold leading-tight">
+                              {t.name || "Unnamed trip"}
+                            </span>
+                            <span className="block text-xs text-slate-200/80">{t.id}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-white/20 bg-white/5 p-6 text-slate-200/80 backdrop-blur-2xl">
+                <p className="text-lg font-medium text-white">No trips yet</p>
+                <p className="mt-2 text-sm text-slate-200/70">
+                  Create your first trip to see it appear here for quick access later.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-6" aria-label="Trip actions">
+            <Card className="relative overflow-hidden rounded-3xl border-none bg-white/95 text-slate-900 shadow-[0_45px_120px_-60px_rgba(15,23,42,0.9)]">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-sky-100 via-sky-50 to-transparent" />
+              <CardHeader className="relative z-10 pb-0">
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
+                    <Plus className="size-5" />
+                  </span>
+                  Create a trip
+                </CardTitle>
+                <CardDescription className="relative z-10 text-base text-slate-500">
+                  Start a new shared wallet and instantly get a Trip ID to send to your friends.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10 space-y-5 pb-8 pt-6">
+                <div className="space-y-2">
+                  <label htmlFor="tripName" className="block text-sm font-medium text-slate-700">
+                    Trip name
+                  </label>
+                  <Input
+                    id="tripName"
+                    placeholder="Weekend getaway"
+                    value={tripName}
+                    onChange={(e) => setTripName(e.target.value)}
+                    className="h-12 rounded-2xl border-slate-200 bg-white px-4 text-base shadow-sm focus-visible:border-sky-300 focus-visible:ring-sky-200"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="tripDescription" className="block text-sm font-medium text-slate-700">
+                    Description (optional)
+                  </label>
+                  <Textarea
+                    id="tripDescription"
+                    placeholder="Fun weekend with friends"
+                    value={tripDescription}
+                    onChange={(e) => setTripDescription(e.target.value)}
+                    rows={2}
+                    className="rounded-2xl border-slate-200 bg-white px-4 text-base shadow-sm focus-visible:border-sky-300 focus-visible:ring-sky-200"
+                  />
+                </div>
+                <Button
+                  onClick={createTrip}
+                  disabled={!tripName.trim() || isCreating}
+                  className="w-full h-12 rounded-2xl text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  {isCreating ? "Creating..." : "Create trip"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 text-white shadow-[0_45px_120px_-60px_rgba(15,23,42,1)] backdrop-blur-2xl">
+              <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25),transparent_65%)]" />
+              <CardHeader className="relative z-10 pb-0">
+                <CardTitle className="flex items-center gap-3 text-2xl text-white">
+                  <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+                    <Users className="size-5" />
+                  </span>
+                  Join a trip
+                </CardTitle>
+                <CardDescription className="text-base text-slate-200/80">
+                  Enter a Trip ID shared by friends to access the shared expenses instantly.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10 space-y-5 pb-8 pt-6">
+                <div className="space-y-2">
+                  <label htmlFor="tripId" className="block text-sm font-medium text-slate-200/90">
+                    Trip ID
+                  </label>
+                  <Input
+                    id="tripId"
+                    placeholder="550e8400-e29b-41d4-a716-446655440000"
+                    value={tripId}
+                    onChange={(e) => setTripId(e.target.value)}
+                    className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-slate-200/70 focus-visible:border-white/60 focus-visible:ring-sky-300/40"
+                    autoComplete="off"
+                  />
+                </div>
+                <Button
+                  onClick={joinTrip}
+                  disabled={!tripId.trim() || isJoining}
+                  className="w-full h-12 rounded-2xl bg-white/90 text-slate-900 text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
+                >
+                  {isJoining ? "Joining..." : "Join trip"}
+                </Button>
+                <div className="rounded-2xl border border-white/15 bg-white/5 p-4 text-xs text-slate-200/80">
+                  <p className="font-semibold uppercase tracking-[0.35em] text-slate-200/70">
+                    Try it out
+                  </p>
+                  <p className="mt-2 font-mono text-[11px] break-all">
+                    550e8400-e29b-41d4-a716-446655440000
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
+      </main>
     </div>
   )
 }

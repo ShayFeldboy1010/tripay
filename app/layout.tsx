@@ -30,12 +30,13 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const locale = (cookies().get('locale')?.value as 'he' | 'en') || 'en'
+  const cookieStore = await cookies()
+  const locale = (cookieStore.get('locale')?.value as 'he' | 'en') || 'en'
   const dir = locale === 'he' ? 'rtl' : 'ltr'
   return (
     <html lang={locale} dir={dir} className={inter.className} suppressHydrationWarning>
