@@ -58,27 +58,41 @@ export async function answerQuestion(
       if (!result.item) {
         textOut = lang === "he" ? "לא נמצאו נתונים בטווח המבוקש." : "No data in range.";
       } else {
+        const convertedAmount =
+          typeof (result as any).amount === "number"
+            ? (result as any).amount
+            : result.item.amount;
+        const amountStr = fmtCurrency(convertedAmount, currency, lang);
+        const title = result.item.title || (lang === "he" ? "הוצאה" : "Expense");
+        const dateStr = fmtDate(result.item.date || result.item.created_at);
         textOut =
           lang === "he"
-            ? `ההוצאה הכי גדולה: ${fmtCurrency(result.item.amount, currency, lang)} — '${result.item.title}' (${fmtDate(result.item.date || result.item.created_at)})`
-            : `Biggest expense: ${fmtCurrency(result.item.amount, currency, lang)} — '${result.item.title}' (${fmtDate(result.item.date || result.item.created_at)})`;
+            ? `ההוצאה הכי גדולה: ${amountStr} — '${title}' (${dateStr})`
+            : `Biggest expense: ${amountStr} — '${title}' (${dateStr})`;
       }
       break;
     case "top_categories":
       if (!result.categories || result.categories.length === 0) {
         textOut = lang === "he" ? "לא נמצאו נתונים בטווח המבוקש." : "No data in range.";
       } else {
-        textOut =
-          lang === "he"
-            ? "קטגוריות מובילות:"
-            : "Top categories:";
+        const lines = result.categories.map((c: any) => {
+          const amountStr = fmtCurrency(c.total, currency, lang);
+          return lang === "he" ? `• ${c.category}: ${amountStr}` : `• ${c.category}: ${amountStr}`;
+        });
+        const header = lang === "he" ? "קטגוריות מובילות:" : "Top categories:";
+        textOut = [header, ...lines].join("\n");
       }
       break;
     case "daily_spend":
       if (!result.days || result.days.length === 0) {
         textOut = lang === "he" ? "לא נמצאו נתונים בטווח המבוקש." : "No data in range.";
       } else {
-        textOut = lang === "he" ? "הוצאה יומית:" : "Daily spend:";
+        const lines = result.days.map((d: any) => {
+          const amountStr = fmtCurrency(d.total, currency, lang);
+          return lang === "he" ? `• ${fmtDate(d.day)}: ${amountStr}` : `• ${fmtDate(d.day)}: ${amountStr}`;
+        });
+        const header = lang === "he" ? "הוצאה יומית:" : "Daily spend:";
+        textOut = [header, ...lines].join("\n");
       }
       break;
     case "count_transactions":

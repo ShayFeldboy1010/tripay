@@ -68,14 +68,23 @@ export function executeStructuredQuery(q: DSL, store: Expense[]): { result: any;
       return { result: { intent: q.intent, total }, warnings };
     }
     case "biggest_expense": {
-      if (data.length === 0) return { result: { intent: q.intent, item: null }, warnings };
-      const item = data.reduce((max, e) =>
-        convert(e.amount, (e as any).currency, currency, warnings) >
-        convert(max.amount, (max as any).currency, currency, warnings)
-          ? e
-          : max
-      );
-      return { result: { intent: q.intent, item }, warnings };
+      if (data.length === 0) {
+        return { result: { intent: q.intent, item: null, amount: null }, warnings };
+      }
+      const best = data.reduce<
+        | { expense: Expense; amount: number }
+        | null
+      >((current, expense) => {
+        const amount = convert(expense.amount, (expense as any).currency, currency, warnings);
+        if (!current || amount > current.amount) {
+          return { expense, amount };
+        }
+        return current;
+      }, null);
+      return {
+        result: { intent: q.intent, item: best?.expense ?? null, amount: best?.amount ?? null },
+        warnings,
+      };
     }
     case "top_categories": {
       const map: Record<string, number> = {};
