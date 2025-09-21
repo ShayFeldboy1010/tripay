@@ -17,11 +17,47 @@ export interface LLMClient {
 import { MoonshotLLM } from "./moonshot";
 import Groq from "groq-sdk";
 
+const DEFAULT_MODELS: Record<LLMProvider, string> = {
+  moonshot: "moonshotai/kimi-k2-instruct-0905",
+  groq: "llama-3.1-8b-instant",
+  mock: "mock-model",
+};
+
+export function resolveLLMConfig(): LLMConfig {
+  const envProvider = process.env.LLM_PROVIDER as LLMProvider | undefined;
+  let provider: LLMProvider;
+  if (envProvider) {
+    provider = envProvider;
+  } else if (process.env.GROQ_API_KEY) {
+    provider = "groq";
+  } else if (process.env.MOONSHOT_API_KEY) {
+    provider = "moonshot";
+  } else {
+    provider = "mock";
+  }
+
+  const envModel = process.env.LLM_MODEL?.trim();
+  const model = envModel && envModel.length > 0 ? envModel : DEFAULT_MODELS[provider];
+
+  const baseUrl =
+    provider === "moonshot" ? process.env.MOONSHOT_BASE_URL : process.env.GROQ_BASE_URL;
+  const apiKey =
+    provider === "moonshot"
+      ? process.env.MOONSHOT_API_KEY
+      : provider === "groq"
+      ? process.env.GROQ_API_KEY
+      : undefined;
+
+  return { provider, model, baseUrl, apiKey };
+}
+
 class GroqLLM implements LLMClient {
   private client: Groq;
   private model: string;
   constructor(cfg: LLMConfig) {
-    this.client = new Groq({ apiKey: cfg.apiKey });
+    const options: { apiKey?: string; baseURL?: string } = { apiKey: cfg.apiKey };
+    if (cfg.baseUrl) options.baseURL = cfg.baseUrl;
+    this.client = new Groq(options);
     this.model = cfg.model;
   }
   async chatCompletion(payload: {

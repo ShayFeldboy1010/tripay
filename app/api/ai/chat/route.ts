@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { answerQuestion } from "@/services/nlq/answerQuestion";
-import { createLLM, LLMProvider } from "@/src/server/llm/provider";
+import { createLLM, resolveLLMConfig } from "@/src/server/llm/provider";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -12,14 +12,15 @@ export async function POST(req: NextRequest) {
     .select("*")
     .eq("trip_id", tripId);
 
-  const provider = (process.env.LLM_PROVIDER as LLMProvider) || "moonshot";
-  const model = process.env.LLM_MODEL || "moonshotai/kimi-k2-instruct-0905";
-  const baseUrl = provider === "moonshot" ? process.env.MOONSHOT_BASE_URL : process.env.GROQ_BASE_URL;
-  const apiKey = provider === "moonshot" ? process.env.MOONSHOT_API_KEY : process.env.GROQ_API_KEY;
-  const _llm = createLLM({ provider, model, baseUrl, apiKey });
+  const llmConfig = resolveLLMConfig();
+  if (llmConfig.provider !== "mock" && llmConfig.apiKey) {
+    createLLM(llmConfig);
+  }
 
   const promptHash = crypto.createHash("sha256").update(question).digest("hex").slice(0, 8);
-  console.log(`ai-chat provider=${provider} model=${model} prompt=${promptHash}`);
+  console.log(
+    `ai-chat provider=${llmConfig.provider} model=${llmConfig.model} prompt=${promptHash}`
+  );
 
   const ans = await answerQuestion(question, {
     baseCurrency: trip?.base_currency || undefined,
@@ -28,10 +29,15 @@ export async function POST(req: NextRequest) {
 
   const requestId = crypto.randomUUID();
   const headers = new Headers();
-  headers.set("X-LLM-Provider", provider);
-  headers.set("X-LLM-Model", model);
+  headers.set("X-LLM-Provider", llmConfig.provider);
+  headers.set("X-LLM-Model", llmConfig.model);
   return new NextResponse(
-    JSON.stringify({ answer: ans.text, modelUsed: model, provider, requestId }),
+    JSON.stringify({
+      answer: ans.text,
+      modelUsed: llmConfig.model,
+      provider: llmConfig.provider,
+      requestId,
+    }),
     { headers }
   );
 }
