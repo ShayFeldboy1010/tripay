@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveLLMConfig } from "@/src/server/llm/provider";
 
 export async function GET() {
-  const provider = process.env.LLM_PROVIDER || "moonshot";
-  const model = process.env.LLM_MODEL || "moonshotai/kimi-k2-instruct-0905";
-  return NextResponse.json({ provider, model, ok: true });
+  const cfg = resolveLLMConfig();
+  return NextResponse.json({ provider: cfg.provider, model: cfg.model, ok: true });
 }

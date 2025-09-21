@@ -39,7 +39,7 @@ Continue building your app on:
 ## Configuring Groq AI
 
 - Set `GROQ_API_KEY` in both `.env.local` and the Vercel project to enable Groq-powered parsing.
-- The backend automatically selects Groq when an API key is present and defaults to the `llama-3.1-8b-instant` model. Override with `LLM_MODEL` if you prefer a different Groq deployment.
+- The backend automatically selects Groq when an API key is present and defaults to the `openai/gpt-oss-120b` model. Override with `LLM_MODEL` if you prefer a different Groq deployment.
 - You no longer need to set `LLM_PROVIDER`; the server falls back to Moonshot or a mock implementation only if no Groq key is available.
 - Make sure the Supabase environment variables above are configured so the answers the API returns are grounded in your trip data.
 
