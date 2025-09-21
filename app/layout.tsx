@@ -36,14 +36,13 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const cookieStore = await cookies()
-  const locale = (cookieStore.get('locale')?.value as 'he' | 'en') || 'en'
-  const dir = locale === 'he' ? 'rtl' : 'ltr'
+  const locale = (cookieStore.get('locale')?.value as 'he' | 'en') || 'he'
   return (
-    <html lang={locale} dir={dir} className={inter.className} suppressHydrationWarning>
+    <html lang={locale} dir="rtl" className={inter.className} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content={TRIPPAY_BLUE_DARK} />
       </head>
-      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] bg-[color:var(--color-bg)]">
+      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] min-h-screen">
         <RootClient>
           <ThemeProvider>
             <AIChatProvider>
