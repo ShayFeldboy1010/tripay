@@ -1,5 +1,5 @@
 import { DSL, validateDSL } from "./dsl";
-import { createLLM, LLMProvider } from "@/src/server/llm/provider";
+import { createLLM, resolveLLMConfig } from "@/src/server/llm/provider";
 
 const SYSTEM_PROMPT = `You convert a user’s question about their expenses into a strict JSON DSL.
 - Think about: intent, time range, filters (category, location, participants), grouping, and currency.
@@ -21,15 +21,12 @@ function safeJSON(text: string): unknown {
 }
 
 async function callLLM(prompt: string): Promise<string | null> {
-  const provider = (process.env.LLM_PROVIDER as LLMProvider) || "mock";
-  const model = process.env.LLM_MODEL || "";
-  const baseUrl =
-    provider === "moonshot" ? process.env.MOONSHOT_BASE_URL : process.env.GROQ_BASE_URL;
-  const apiKey =
-    provider === "moonshot" ? process.env.MOONSHOT_API_KEY : process.env.GROQ_API_KEY;
-  if (!apiKey || !model) return null;
+  const cfg = resolveLLMConfig();
+  if (cfg.provider === "mock" || !cfg.apiKey) {
+    return null;
+  }
   try {
-    const llm = createLLM({ provider, model, baseUrl, apiKey });
+    const llm = createLLM(cfg);
     const res = await llm.chatCompletion({
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
