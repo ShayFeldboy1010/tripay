@@ -131,22 +131,16 @@ export default function HomePage() {
   const additionalTrips = topTrip ? recentTrips.slice(1, 5) : []
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-x-0 top-[-25%] h-[420px] bg-gradient-to-b from-sky-500/40 via-slate-900/40 to-transparent blur-3xl" />
-        <div className="absolute right-[-12%] top-[20%] size-[420px] rounded-full bg-sky-400/20 blur-3xl" />
-        <div className="absolute left-[-20%] bottom-[-10%] size-[360px] rounded-full bg-indigo-500/20 blur-3xl" />
-      </div>
-
+    <div className="relative min-h-screen overflow-hidden app-bg antialiased text-white">
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
         <header className="max-w-2xl space-y-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm font-medium uppercase tracking-[0.35em] text-slate-100/80">
+          <span className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1 text-sm font-medium uppercase tracking-[0.35em] text-white/80">
             TripPay
           </span>
           <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
             Plan adventures, split costs, stay in sync
           </h1>
-          <p className="text-lg text-slate-200/80 md:text-xl">
+          <p className="text-lg text-white/70 md:text-xl">
             Kick off a brand new journey or jump back into a trip a friend shared — all from one welcoming hub.
           </p>
         </header>
@@ -154,30 +148,30 @@ export default function HomePage() {
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <section className="space-y-6" aria-label="Recent trips">
             {topTrip ? (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_40px_110px_-70px_rgba(15,23,42,1)] backdrop-blur-2xl">
+              <div className="glass rounded-[28px] p-6">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-200/70">
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
                     Recent trips
                   </p>
                   <h2 className="text-2xl font-semibold text-white">Pick up where you left off</h2>
-                  <p className="text-sm text-slate-200/75">
+                  <p className="text-sm text-white/70">
                     Reopen a recent adventure or explore another journey in seconds.
                   </p>
                 </div>
                 <div className="mt-6 space-y-5">
                   <Button
                     onClick={() => resumeTrip(topTrip.id)}
-                    className="group flex h-auto items-center justify-between rounded-2xl bg-white px-5 py-4 text-left text-slate-900 shadow-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
+                    className="group flex h-auto items-center justify-between rounded-[22px] glass-sm px-5 py-4 text-left text-white/90 transition duration-200 hover:-translate-y-0.5 hover:text-white"
                     aria-label={`Resume trip ${topTrip.name ?? topTrip.id}`}
                   >
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-slate-500">Resume</p>
-                      <p className="mt-1 text-lg font-semibold leading-tight">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-white/60">Resume</p>
+                      <p className="mt-1 text-lg font-semibold leading-tight text-white">
                         {topTrip.name || "Last trip"}
                       </p>
-                      <p className="text-xs text-slate-500">{topTrip.id}</p>
+                      <p className="text-xs text-white/60">{topTrip.id}</p>
                     </div>
-                    <ArrowRight className="size-5 shrink-0 text-slate-400 transition-transform duration-200 group-hover:translate-x-1" />
+                    <ArrowRight className="size-5 shrink-0 text-white/60 transition-transform duration-200 group-hover:translate-x-1" />
                   </Button>
 
                   {additionalTrips.length > 0 && (
@@ -187,14 +181,14 @@ export default function HomePage() {
                           key={t.id}
                           variant="ghost"
                           onClick={() => resumeTrip(t.id)}
-                          className="h-auto items-start justify-between rounded-2xl bg-white/5 px-4 py-3 text-left text-white backdrop-blur transition duration-200 hover:bg-white/10"
+                          className="h-auto items-start justify-between rounded-[22px] glass-sm px-4 py-3 text-left text-white transition duration-200 hover:text-white"
                           aria-label={`Open trip ${t.name ?? t.id}`}
                         >
-                          <div className="space-y-1">
-                            <span className="block text-sm font-semibold leading-tight">
+                          <div className="space-y-1 text-white/80">
+                            <span className="block text-sm font-semibold leading-tight text-white">
                               {t.name || "Unnamed trip"}
                             </span>
-                            <span className="block text-xs text-slate-200/80">{t.id}</span>
+                            <span className="block text-xs text-white/60">{t.id}</span>
                           </div>
                         </Button>
                       ))}
@@ -203,9 +197,9 @@ export default function HomePage() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-3xl border border-dashed border-white/20 bg-white/5 p-6 text-slate-200/80 backdrop-blur-2xl">
+              <div className="glass rounded-[28px] border border-dashed border-white/25 p-6 text-white/70">
                 <p className="text-lg font-medium text-white">No trips yet</p>
-                <p className="mt-2 text-sm text-slate-200/70">
+                <p className="mt-2 text-sm text-white/60">
                   Create your first trip to see it appear here for quick access later.
                 </p>
               </div>
@@ -213,22 +207,22 @@ export default function HomePage() {
           </section>
 
           <section className="space-y-6" aria-label="Trip actions">
-            <Card className="relative overflow-hidden rounded-3xl border-none bg-white/95 text-slate-900 shadow-[0_45px_120px_-60px_rgba(15,23,42,0.9)]">
-              <div aria-hidden className="absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-sky-100 via-sky-50 to-transparent" />
+            <Card className="relative overflow-hidden glass text-white">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-white/20 via-white/5 to-transparent" />
               <CardHeader className="relative z-10 pb-0">
                 <CardTitle className="flex items-center gap-3 text-2xl">
-                  <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
+                  <span className="inline-flex size-11 items-center justify-center rounded-2xl glass-sm">
                     <Plus className="size-5" />
                   </span>
                   Create a trip
                 </CardTitle>
-                <CardDescription className="relative z-10 text-base text-slate-500">
+                <CardDescription className="relative z-10 text-base text-white/70">
                   Start a new shared wallet and instantly get a Trip ID to send to your friends.
                 </CardDescription>
               </CardHeader>
               <CardContent className="relative z-10 space-y-5 pb-8 pt-6">
                 <div className="space-y-2">
-                  <label htmlFor="tripName" className="block text-sm font-medium text-slate-700">
+                  <label htmlFor="tripName" className="block text-sm font-medium text-white/70">
                     Trip name
                   </label>
                   <Input
@@ -236,12 +230,12 @@ export default function HomePage() {
                     placeholder="Weekend getaway"
                     value={tripName}
                     onChange={(e) => setTripName(e.target.value)}
-                    className="h-12 rounded-2xl border-slate-200 bg-white px-4 text-base shadow-sm focus-visible:border-sky-300 focus-visible:ring-sky-200"
+                    className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/50 focus-visible:ring-white/40"
                     autoComplete="off"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="tripDescription" className="block text-sm font-medium text-slate-700">
+                  <label htmlFor="tripDescription" className="block text-sm font-medium text-white/70">
                     Description (optional)
                   </label>
                   <Textarea
@@ -250,35 +244,35 @@ export default function HomePage() {
                     value={tripDescription}
                     onChange={(e) => setTripDescription(e.target.value)}
                     rows={2}
-                    className="rounded-2xl border-slate-200 bg-white px-4 text-base shadow-sm focus-visible:border-sky-300 focus-visible:ring-sky-200"
+                    className="rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/50 focus-visible:ring-white/40"
                   />
                 </div>
                 <Button
                   onClick={createTrip}
                   disabled={!tripName.trim() || isCreating}
-                  className="w-full h-12 rounded-2xl text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+                  className="h-12 w-full rounded-2xl bg-white/90 text-slate-900 text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
                 >
                   {isCreating ? "Creating..." : "Create trip"}
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 text-white shadow-[0_45px_120px_-60px_rgba(15,23,42,1)] backdrop-blur-2xl">
-              <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25),transparent_65%)]" />
+            <Card className="relative overflow-hidden glass text-white">
+              <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),transparent_70%)]" />
               <CardHeader className="relative z-10 pb-0">
                 <CardTitle className="flex items-center gap-3 text-2xl text-white">
-                  <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+                  <span className="inline-flex size-11 items-center justify-center rounded-2xl glass-sm">
                     <Users className="size-5" />
                   </span>
                   Join a trip
                 </CardTitle>
-                <CardDescription className="text-base text-slate-200/80">
+                <CardDescription className="text-base text-white/70">
                   Enter a Trip ID shared by friends to access the shared expenses instantly.
                 </CardDescription>
               </CardHeader>
               <CardContent className="relative z-10 space-y-5 pb-8 pt-6">
                 <div className="space-y-2">
-                  <label htmlFor="tripId" className="block text-sm font-medium text-slate-200/90">
+                  <label htmlFor="tripId" className="block text-sm font-medium text-white/70">
                     Trip ID
                   </label>
                   <Input
@@ -286,22 +280,22 @@ export default function HomePage() {
                     placeholder="550e8400-e29b-41d4-a716-446655440000"
                     value={tripId}
                     onChange={(e) => setTripId(e.target.value)}
-                    className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-slate-200/70 focus-visible:border-white/60 focus-visible:ring-sky-300/40"
+                    className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/50 focus-visible:ring-white/40"
                     autoComplete="off"
                   />
                 </div>
                 <Button
                   onClick={joinTrip}
                   disabled={!tripId.trim() || isJoining}
-                  className="w-full h-12 rounded-2xl bg-white/90 text-slate-900 text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
+                  className="h-12 w-full rounded-2xl bg-white/90 text-slate-900 text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
                 >
                   {isJoining ? "Joining..." : "Join trip"}
                 </Button>
-                <div className="rounded-2xl border border-white/15 bg-white/5 p-4 text-xs text-slate-200/80">
-                  <p className="font-semibold uppercase tracking-[0.35em] text-slate-200/70">
+                <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-xs text-white/70">
+                  <p className="font-semibold uppercase tracking-[0.35em] text-white/60">
                     Try it out
                   </p>
-                  <p className="mt-2 font-mono text-[11px] break-all">
+                  <p className="mt-2 break-all font-mono text-[11px] text-white/80">
                     550e8400-e29b-41d4-a716-446655440000
                   </p>
                 </div>

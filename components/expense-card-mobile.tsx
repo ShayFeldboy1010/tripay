@@ -72,7 +72,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
             onEdit(expense)
             resetSwipe()
           }}
-          className="h-full px-6 bg-[color:var(--color-primary50)] hover:bg-[color:var(--color-primary500)] text-[color:var(--color-primary)] rounded-none"
+          className="h-full px-6 text-white/80 transition hover:bg-white/15 rounded-none"
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -83,7 +83,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
             resetSwipe()
           }}
           disabled={isDeleting}
-          className="h-full px-6 bg-red-100 hover:bg-red-200 text-red-700 rounded-none"
+          className="h-full px-6 rounded-none text-red-200 transition hover:bg-red-500/20"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -92,7 +92,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
       {/* Main card */}
       <Card
         ref={cardRef}
-        className={`bg-white/70 backdrop-blur-sm border-white/40 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl relative ${
+        className={`glass relative transition-all duration-200 ${
           isDragging ? 'transition-none' : 'transition-transform duration-300'
         }`}
         style={{
@@ -103,91 +103,91 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
         onTouchEnd={handleTouchEnd}
         onClick={resetSwipe}
       >
-        <CardContent className="p-4">
+        <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0 pr-3">
               {/* Title and Amount Row */}
-              <div className="flex items-start justify-between mb-2">
+              <div className="mb-2 flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h4 dir="auto" className="font-semibold text-gray-900 text-base leading-tight truncate">
+                  <h4 dir="auto" className="text-base font-semibold leading-tight text-white truncate">
                     {expense.title || "Untitled Expense"}
                   </h4>
                   {expense.description && (
-                    <p dir="auto" className="text-sm text-gray-600 mt-0.5 line-clamp-1">
+                    <p dir="auto" className="mt-1 text-sm text-white/70 line-clamp-1">
                       {expense.description}
                     </p>
                   )}
                 </div>
-                <div className="text-end ms-3 flex-shrink-0">
-                  <p className="text-xl font-bold text-gray-900">₪{expense.amount.toFixed(2)}</p>
+                <div className="ms-3 flex-shrink-0 text-end">
+                  <p className="grad-text text-2xl font-bold">₪{expense.amount.toFixed(2)}</p>
                 </div>
               </div>
 
               {/* Location */}
               {expense.location && (
-                <div className="flex items-center gap-1 mb-2">
-                  <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                  <span dir="auto" className="text-sm text-gray-600 truncate">{expense.location}</span>
+                <div className="mb-2 flex items-center gap-1 text-white/70">
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span dir="auto" className="truncate text-sm">{expense.location}</span>
                 </div>
               )}
 
               {/* Bottom row with payer, category, and time */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="flex flex-1 min-w-0 items-center gap-3">
                   {/* Payer */}
-                  <div className="flex items-center gap-1 min-w-0">
+                  <div className="flex min-w-0 items-center gap-1 text-white/80">
                     {expense.paid_by === "Both" ? (
-                      <Users className="h-3 w-3 text-[color:var(--color-primary)] flex-shrink-0" />
+                      <Users className="h-3 w-3 flex-shrink-0 text-white/80" />
                     ) : (
-                      <User className="h-3 w-3 text-gray-500 flex-shrink-0" />
+                      <User className="h-3 w-3 flex-shrink-0 text-white/80" />
                     )}
-                    <span dir="auto" className="text-xs font-medium text-gray-700 truncate">
+                    <span dir="auto" className="truncate text-xs font-medium">
                       {expense.paid_by === "Both" ? "Both" : expense.paid_by}
                     </span>
                   </div>
-                  
+
                   {/* Category */}
                   {expense.category && CategoryIcon && (
-                    <span className="text-xs bg-[color:var(--color-primary50)] text-[color:var(--color-primary)] px-2 py-0.5 rounded-full font-medium flex-shrink-0 flex items-center gap-1">
+                    <span className="glass-sm flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs text-white/90">
                       <CategoryIcon className="h-3 w-3" />
                       {expense.category}
                     </span>
                   )}
                   {expense.is_shared_payment && (
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                    <span className="glass-sm flex-shrink-0 rounded-full px-2 py-0.5 text-xs text-white">
                       Shared
                     </span>
                   )}
                 </div>
 
                 {/* Time and Menu */}
-                <div className="flex items-center gap-2 flex-shrink-0 ms-2">
-                  <span className="text-xs text-gray-500 font-medium">
+                <div className="ms-2 flex flex-shrink-0 items-center gap-2">
+                  <span className="text-xs font-medium text-white/60">
                     {formatDistanceToNow(new Date(expense.created_at), { addSuffix: true })}
                   </span>
-                  
+
                   {/* Kebab menu for desktop */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 hover:bg-gray-100 rounded-lg transition-colors md:opacity-100 opacity-60"
+                        className="glass-sm h-8 w-8 rounded-full p-0 text-white/80 transition hover:text-white md:opacity-100 opacity-60"
                       >
-                        <MoreVertical className="h-4 w-4 text-gray-500" />
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl border-gray-200 shadow-lg">
+                    <DropdownMenuContent align="end" className="glass-sm border-none bg-transparent backdrop-blur">
                       <DropdownMenuItem
                         onClick={() => onEdit(expense)}
-                        className="flex items-center gap-2 rounded-lg"
+                        className="flex items-center gap-2 rounded-lg text-white/90 focus:text-white"
                       >
                         <Edit className="h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => onDelete(expense)}
-                        className="flex items-center gap-2 text-red-600 rounded-lg"
+                        className="flex items-center gap-2 rounded-lg text-red-300 focus:text-red-200"
                         disabled={isDeleting}
                       >
                         <Trash2 className="h-4 w-4" />

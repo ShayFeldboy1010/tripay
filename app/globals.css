@@ -198,3 +198,65 @@
     background-color: var(--skeleton-base);
   }
 }
+
+:root{
+  /* Deep navy gradient */
+  --bg-start: #0B1020;   /* top */
+  --bg-mid:   #0E1730;   /* middle */
+  --bg-end:   #0A0F1F;   /* bottom */
+
+  /* Glows */
+  --glow-indigo: rgba(99,102,241,0.12);  /* #6366F1 @12% */
+  --glow-teal:   rgba(45,212,191,0.10);  /* #2DD4BF @10% */
+
+  /* Glass */
+  --glass-fill-1: rgba(255,255,255,0.08);
+  --glass-fill-2: rgba(255,255,255,0.06);
+  --glass-stroke: rgba(255,255,255,0.14);
+  --glass-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --radius-xxl: 28px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Rubik", system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans Hebrew", sans-serif;
+  color: #FFFFFF;
+  background:
+    radial-gradient(1200px circle at -10% -20%, var(--glow-indigo), transparent 40%),
+    radial-gradient(900px circle at 110% 10%, var(--glow-teal), transparent 35%),
+    linear-gradient(180deg, var(--bg-start) 0%, var(--bg-mid) 50%, var(--bg-end) 100%);
+}
+
+/* Helpers */
+.app-bg { /* use on the page container instead of Tailwind grays */
+  background:
+    radial-gradient(1200px circle at -10% -20%, var(--glow-indigo), transparent 40%),
+    radial-gradient(900px circle at 110% 10%, var(--glow-teal), transparent 35%),
+    linear-gradient(180deg, var(--bg-start) 0%, var(--bg-mid) 50%, var(--bg-end) 100%);
+}
+
+.glass {
+  background: linear-gradient(180deg, var(--glass-fill-1), var(--glass-fill-2));
+  border: 1px solid var(--glass-stroke);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: var(--radius-xxl);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-sm {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.04));
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(14px);
+  border-radius: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+}
+
+/* Gradient text for large amounts */
+.grad-text {
+  background: linear-gradient(90deg, #ffffff, #f3f4f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+}

@@ -5,7 +5,6 @@ import { Plus, Receipt, MapPin, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { useTheme } from "@/theme/ThemeProvider";
 
 interface FABProps {
   onAddExpense: () => void;
@@ -17,7 +16,6 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
-  const { colors } = useTheme();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -72,21 +70,19 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
                             setOpen(false);
                           }}
                           aria-label={a.label}
-                          className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
-                          style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+                          className="glass-sm flex h-14 w-14 items-center justify-center rounded-full text-white/90 transition hover:text-white"
                         >
                           <Icon className="h-5 w-5" />
                         </button>
                       </Tooltip.Trigger>
                       <Tooltip.Content
                         side="top"
-                        className="rounded px-2 py-1 text-xs"
-                        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+                        className="glass-sm rounded px-2 py-1 text-xs text-white/90"
                       >
                         {a.label}
                       </Tooltip.Content>
                     </Tooltip.Root>
-                    <span dir="auto" className="mt-1 text-xs text-gray-900 bg-white px-1 rounded">
+                    <span dir="auto" className="mt-1 rounded bg-white/10 px-2 text-xs text-white">
                       {a.label}
                     </span>
                   </motion.div>
@@ -98,11 +94,7 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
         <button
           aria-label="Open menu"
           onClick={() => setOpen((p) => !p)}
-          className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
-          style={{
-            backgroundColor: open ? colors.primary700 : colors.primary,
-            color: colors.onPrimary,
-          }}
+          className="glass flex h-14 w-14 items-center justify-center rounded-full text-white transition hover:text-white"
         >
           <Plus className="h-6 w-6" />
         </button>

@@ -1,14 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
-import { cookies } from 'next/headers'
 import './globals.css'
 import { ThemeProvider } from '@/theme/ThemeProvider'
-import { TRIPPAY_BLUE_DARK } from '@/theme/colors'
 import { RootClient } from '@/app/RootClient'
 import { AIChatProvider } from '@/components/AIChatStore'
 import { AIChatWidget } from '@/components/AIChatWidget'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Trip Expenses',
@@ -30,20 +25,22 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const cookieStore = await cookies()
-  const locale = (cookieStore.get('locale')?.value as 'he' | 'en') || 'en'
-  const dir = locale === 'he' ? 'rtl' : 'ltr'
   return (
-    <html lang={locale} dir={dir} className={inter.className} suppressHydrationWarning>
+    <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content={TRIPPAY_BLUE_DARK} />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+        <meta name="theme-color" content="#0B1020" />
       </head>
-      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] bg-[color:var(--color-bg)]">
+      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] min-h-screen app-bg">
         <RootClient>
           <ThemeProvider>
             <AIChatProvider>
