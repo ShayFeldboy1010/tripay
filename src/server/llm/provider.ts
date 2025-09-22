@@ -19,7 +19,7 @@ import Groq from "groq-sdk";
 
 const DEFAULT_MODELS: Record<LLMProvider, string> = {
   moonshot: "moonshotai/kimi-k2-instruct-0905",
-  groq: "openai/gpt-oss-120b",
+  groq: "llama-3.1-8b-instant",
   mock: "mock-model",
 };
 

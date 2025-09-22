@@ -123,10 +123,10 @@ describe("ai chat API", () => {
       expenses: expensesData,
     });
     expect(json.provider).toBe("groq");
-    expect(json.modelUsed).toBe("openai/gpt-oss-120b");
+    expect(json.modelUsed).toBe("llama-3.1-8b-instant");
     expect(json.answer).toBe("answer");
     expect(createLLMMock).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: "groq", model: "openai/gpt-oss-120b" })
+      expect.objectContaining({ provider: "groq", model: "llama-3.1-8b-instant" })
     );
   });
 });
