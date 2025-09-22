@@ -1,5 +1,5 @@
-// Primary brand color extracted from the refreshed hero card
-export const TRIPPAY_BLUE_DARK = "#6C63FF";
+// Primary brand color extracted from the mobile header
+export const TRIPPAY_BLUE_DARK = "#1E40AF";
 
 function clamp(value: number) {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -45,21 +45,24 @@ export function alpha(hex: string, a: number) {
 
 export const colors = {
   primary: TRIPPAY_BLUE_DARK,
-  onPrimary: "#EEF1FF",
-  primary700: shade(TRIPPAY_BLUE_DARK, 12),
-  primary500: tint(TRIPPAY_BLUE_DARK, 10),
-  primary50: alpha(TRIPPAY_BLUE_DARK, 0.12),
-  bg: "#0B1220",
-  surface: "#15223D",
-  text: "#EEF1FF",
-  success: alpha(TRIPPAY_BLUE_DARK, 0.65),
-  warning: alpha(TRIPPAY_BLUE_DARK, 0.45),
-  error: alpha(TRIPPAY_BLUE_DARK, 0.35),
+  onPrimary: "#FFFFFF",
+  primary700: shade(TRIPPAY_BLUE_DARK, 8),
+  primary500: tint(TRIPPAY_BLUE_DARK, 8),
+  primary50: alpha(TRIPPAY_BLUE_DARK, 0.06),
+  bg: "#FFFFFF",
+  surface: "#F7F8FA",
+  text: "#0F172A",
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
 };
 
 export const darkColors = {
   ...colors,
-  primary50: alpha(TRIPPAY_BLUE_DARK, 0.18),
+  bg: "#0B1220",
+  surface: "#111827",
+  text: "#E5E7EB",
+  primary50: alpha(TRIPPAY_BLUE_DARK, 0.12),
 };
 
 export type ThemeColors = typeof colors;

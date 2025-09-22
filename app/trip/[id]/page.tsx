@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
-import { CalendarRange, LineChart, Receipt, X } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { X } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
 import { OfflineIndicator } from "@/components/offline-indicator"
@@ -46,15 +45,6 @@ export default function TripPage() {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const isDesktop = useIsDesktop()
   const { colors } = useTheme()
-  const amountFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("he-IL", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-    [],
-  )
-  const integerFormatter = useMemo(() => new Intl.NumberFormat("he-IL"), [])
 
   useEffect(() => {
     loadTripData()
@@ -275,23 +265,20 @@ export default function TripPage() {
 
   if (delayedLoading) {
     return (
-      <div className="min-h-screen px-4 py-10 text-white">
-        <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
-          <ExpenseCardSkeleton />
-          <ExpenseCardSkeleton />
-          <ExpenseCardSkeleton />
-        </div>
+      <div className="min-h-screen bg-gray-100 p-4 space-y-4">
+        <ExpenseCardSkeleton />
+        <ExpenseCardSkeleton />
+        <ExpenseCardSkeleton />
       </div>
     )
   }
 
   if (!trip) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 text-white/80">
-        <div className="glass rounded-3xl px-8 py-10 text-center">
-          <p className="text-lg font-semibold text-white/90">הטיול לא נמצא</p>
-          <p className="mt-2 text-sm text-white/60">נחזיר אתכם למסך הראשי כדי להתחיל מחדש.</p>
-          <Button className="mt-6" onClick={() => router.push("/")}>חזרה למסך הבית</Button>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-700 mb-6 font-medium">Trip not found</p>
+          <Button onClick={() => router.push("/")}>Go Home</Button>
         </div>
       </div>
     )
@@ -299,106 +286,28 @@ export default function TripPage() {
 
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const totalCount = expenses.length
-  const heroAmount = amountFormatter.format(totalAmount)
-  const averageExpense = totalCount > 0 ? totalAmount / totalCount : 0
-  const averageAmount = amountFormatter.format(averageExpense)
-  const activeDays = expenses.length
-    ? new Set(expenses.map((expense) => new Date(expense.created_at).toISOString().split("T")[0])).size
-    : 0
-  const lastExpenseTimestamp = expenses.reduce((latest, expense) => {
-    const timestamp = new Date(expense.created_at).getTime()
-    return timestamp > latest ? timestamp : latest
-  }, 0)
-  const lastUpdatedLabel = lastExpenseTimestamp
-    ? new Date(lastExpenseTimestamp).toLocaleDateString("he-IL", { day: "numeric", month: "long" })
-    : "—"
-
-  const metrics: { label: string; value: string; unit?: string; icon: LucideIcon }[] = [
-    {
-      label: "הוצאה ממוצעת",
-      value: averageAmount,
-      unit: "₪",
-      icon: LineChart,
-    },
-    {
-      label: "סה\"כ הוצאות",
-      value: integerFormatter.format(totalCount),
-      icon: Receipt,
-    },
-    {
-      label: "ימים פעילים",
-      value: integerFormatter.format(activeDays),
-      icon: CalendarRange,
-    },
-  ]
 
   const content = (
-    <div className="relative mx-auto max-w-[1180px] space-y-8 px-4 pb-36 pt-8 sm:space-y-10 sm:px-6">
-      <section className="glass rounded-3xl p-8 sm:p-10 relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-y-0 right-[45%] left-0 bg-white/5 mix-blend-overlay opacity-60" />
-          <div className="absolute inset-y-0 left-[55%] right-0 bg-white/10 mix-blend-overlay opacity-40" />
+    <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
+      <Card className="rounded-2xl shadow-md p-5 sm:p-6">
+        <div>
+          <h2 dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            {trip.name}
+          </h2>
+          <p className="text-gray-500 mt-1">Have Fun!</p>
         </div>
-        <div className="relative flex flex-col gap-8">
-          <header className="relative">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white/95" dir="auto">
-              {trip.name}
-            </h1>
-            <p className="mt-1 text-sm text-white/60" dir="auto">
-              {trip.description || "כל ההוצאות והחלוקות של הצוות במקום אחד."}
-            </p>
-          </header>
-
-          <div className="relative">
-            <div className="flex flex-row-reverse items-baseline justify-between gap-4 sm:gap-6">
-              <div className="flex items-baseline gap-2 justify-end" dir="ltr">
-                <span className="text-6xl sm:text-7xl font-black tracking-tight tabular-nums">{heroAmount}</span>
-                <span className="text-3xl font-extrabold text-white/95">₪</span>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-white/60 text-end">
-              {integerFormatter.format(totalCount)} הוצאות בסך הכול · עודכן {lastUpdatedLabel}
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            {metrics.map((metric) => {
-              const Icon = metric.icon
-              return (
-                <div
-                  key={metric.label}
-                  className="pill bg-primary-100 flex items-center gap-4 text-white/90 ring-1 ring-white/5 hover:ring-white/10 transition"
-                >
-                  <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-200 text-white/90">
-                    <Icon className="size-5" />
-                  </span>
-                  <div className="space-y-1">
-                    <span className="text-xs text-white/60">{metric.label}</span>
-                    <span className="flex items-baseline gap-1 text-sm font-semibold text-white/90" dir={metric.unit ? "ltr" : "rtl"}>
-                      <span>{metric.value}</span>
-                      {metric.unit ? <span className="text-xs font-semibold">{metric.unit}</span> : null}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+        <div className="mt-4 text-end space-y-1">
+          <p className="text-4xl font-bold text-green-600">₪{totalAmount.toFixed(2)}</p>
+          <p className="text-sm text-gray-500">{totalCount} total expenses</p>
         </div>
-      </section>
+      </Card>
+      {/* Quick add cards removed – use FAB for adding items */}
 
       {showAddForm && (
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
       )}
 
-      <section className="space-y-4">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-white/90">ההוצאות האחרונות</h2>
-          <p className="text-sm text-white/55">
-            מסודר לפי ימים עם סיכום יומי כדי להבין את הדופק של הטיול.
-          </p>
-        </header>
-        <ExpenseList expenses={expenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
-      </section>
+      <ExpenseList expenses={expenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
       {showParticipants && (
         <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
       )}
@@ -407,37 +316,32 @@ export default function TripPage() {
       )}
       <Dialog.Root open={showEditTrip} onOpenChange={setShowEditTrip}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 w-full outline-none md:left-1/2 md:top-1/2 md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2">
-            <Card className="glass rounded-t-3xl border-0 bg-base-800/90 text-white/90 md:rounded-3xl">
-              <CardHeader className="flex flex-row items-center justify-between px-4 pb-4 pt-4 text-white/90 md:px-6 md:pt-6">
-                <CardTitle className="text-lg font-semibold text-white/95">עריכת פרטי הטיול</CardTitle>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+          <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
+            <Card className="rounded-t-2xl md:rounded-2xl border-0 shadow-2xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 px-4 md:px-6 pt-4 md:pt-6">
+                <CardTitle>Edit Trip</CardTitle>
                 <Dialog.Close asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 w-9 p-0 rounded-full text-white/70 hover:bg-white/10 hover:text-white/95"
-                  >
+                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full hover:bg-gray-100">
                     <X className="h-5 w-5" />
                   </Button>
                 </Dialog.Close>
               </CardHeader>
-              <CardContent className="space-y-4 px-4 pb-5 text-white/80 md:px-6">
+              <CardContent className="px-4 md:px-6 pb-4 space-y-4">
                 <div>
-                  <label htmlFor="edit-name" className="mb-1 block text-sm font-medium text-white/70">
-                    שם הטיול
+                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Trip Name
                   </label>
                   <Input
                     id="edit-name"
                     dir="auto"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="rounded-2xl border-white/20 bg-white/5 text-white placeholder:text-white/40 focus-visible:border-primary-400 focus-visible:ring-primary-400/40"
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-description" className="mb-1 block text-sm font-medium text-white/70">
-                    תיאור
+                  <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
                   </label>
                   <Textarea
                     id="edit-description"
@@ -445,11 +349,10 @@ export default function TripPage() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
-                    className="rounded-2xl border-white/20 bg-white/5 text-white placeholder:text-white/35 focus-visible:border-primary-400 focus-visible:ring-primary-400/40"
                   />
                 </div>
-                <Button onClick={saveTrip} disabled={!editName.trim()} className="w-full rounded-2xl font-semibold">
-                  שמירה
+                <Button onClick={saveTrip} disabled={!editName.trim()} className="w-full">
+                  Save
                 </Button>
               </CardContent>
             </Card>
