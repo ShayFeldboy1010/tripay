@@ -63,7 +63,7 @@ describe("textToDSL Groq integration", () => {
     const result = await textToDSL("כמה הוצאתי?");
 
     expect(createLLMMock).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: "groq", model: "openai/gpt-oss-120b" })
+      expect.objectContaining({ provider: "groq", model: "llama-3.1-8b-instant" })
     );
     expect(result).toEqual(sample);
   });
