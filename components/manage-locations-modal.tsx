@@ -96,7 +96,10 @@ export function ManageLocationsModal({ tripId, onClose }: ManageLocationsModalPr
               </div>
               <div className="space-y-2">
                 {locations.map((l) => (
-                  <div key={l.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div
+                    key={l.id}
+                    className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-white/90 backdrop-blur-sm"
+                  >
                     {editingId === l.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <Input
