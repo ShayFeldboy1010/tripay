@@ -15,7 +15,7 @@ import { ManageParticipantsModal } from "@/components/manage-participants-modal"
 import { ManageLocationsModal } from "@/components/manage-locations-modal";
 import { DesktopShell } from "@/components/desktop-shell";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { useTheme } from "@/theme/ThemeProvider";
+import { TotalBalance } from "@/components/total-balance";
 
 export default function TripSummaryPage() {
   const params = useParams();
@@ -28,7 +28,6 @@ export default function TripSummaryPage() {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
   const isDesktop = useIsDesktop();
-  const { colors } = useTheme();
 
   useEffect(() => {
     async function load() {
@@ -75,9 +74,29 @@ export default function TripSummaryPage() {
     return <div className="min-h-screen" />;
   }
 
+  const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalExpenses = expenses.length;
+  const participantSet = new Set<string>();
+  expenses.forEach((expense) => {
+    expense.payers?.forEach((payer) => participantSet.add(payer));
+    if (expense.paid_by && expense.paid_by !== "Both") {
+      participantSet.add(expense.paid_by);
+    }
+  });
+  const participantCount = participantSet.size || 1;
+  const averageExpense = totalExpenses > 0 ? totalAmount / totalExpenses : 0;
+
   const content = (
-    <main className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8">
-      <ExpenseReports expenses={expenses} />
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 pb-32 pt-6 text-white lg:pb-12">
+      <TotalBalance
+        amount={totalAmount}
+        totalExpenses={totalExpenses}
+        participantCount={participantCount}
+        averageExpense={averageExpense}
+      />
+      <div className="glass rounded-[28px] p-6">
+        <ExpenseReports expenses={expenses} />
+      </div>
       {showAddForm && (
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
       )}
@@ -87,7 +106,7 @@ export default function TripSummaryPage() {
       {showLocations && (
         <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
       )}
-    </main>
+    </div>
   );
 
   const fab = (
@@ -118,16 +137,11 @@ export default function TripSummaryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
-      <header
-        className="sticky top-0 z-30 shadow-sm"
-        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
-      >
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="text-lg font-semibold" style={{ color: colors.onPrimary }}>
-            TripPay
-          </span>
-          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
+    <div className="min-h-screen app-bg pb-[env(safe-area-inset-bottom)] text-white">
+      <header className="sticky top-0 z-30 px-4 pt-4">
+        <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
+          <span className="text-lg font-semibold tracking-tight">TripPay</span>
+          <div className="flex items-center gap-2">
             <OfflineIndicator />
             <TripSettingsDropdown
               tripId={tripId}
