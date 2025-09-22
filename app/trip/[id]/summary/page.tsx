@@ -76,7 +76,7 @@ export default function TripSummaryPage() {
   }
 
   const content = (
-    <main className="max-w-3xl mx-auto space-y-6 px-4 pb-40 pt-6 lg:pb-8">
+    <main className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8">
       <ExpenseReports expenses={expenses} />
       {showAddForm && (
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
@@ -118,10 +118,7 @@ export default function TripSummaryPage() {
   }
 
   return (
-    <div
-      className="relative min-h-screen pb-[env(safe-area-inset-bottom)]"
-      style={{ color: colors.text }}
-    >
+    <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
       <header
         className="sticky top-0 z-30 shadow-sm"
         style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
