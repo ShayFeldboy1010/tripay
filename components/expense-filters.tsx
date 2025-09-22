@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import type { Expense } from "@/lib/supabase/client"
 import { X } from "lucide-react"
 import { categoryIcons } from "@/lib/category-icons"
+import { cn } from "@/lib/utils"
 
 interface ExpenseFiltersProps {
   expenses: Expense[]
@@ -100,11 +101,16 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
     searchTerm || selectedCategory || selectedPayer || minAmount || maxAmount || startDate || endDate
 
   return (
-    <Card className={className}>
+    <Card className={cn("gap-4 px-5 sm:px-6", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg">Filters</CardTitle>
+        <CardTitle className="text-lg text-white">Filters</CardTitle>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="flex items-center gap-1">
+          <Button
+            variant="ghostLight"
+            size="sm"
+            onClick={clearFilters}
+            className="flex items-center gap-1 text-white/80 hover:text-white"
+          >
             <X className="h-3 w-3" />
             Clear
           </Button>
@@ -113,7 +119,7 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
       <CardContent className="space-y-4">
         {/* Search */}
         <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search" className="mb-1 block text-sm font-medium text-white/70">
             Search description
           </label>
           <Input
@@ -121,13 +127,14 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
             placeholder="Search expenses..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-11 rounded-2xl border-white/20 bg-white/10 px-3 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
           />
         </div>
 
         {/* Amount Range */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label htmlFor="minAmount" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="minAmount" className="mb-1 block text-sm font-medium text-white/70">
               Min amount
             </label>
             <Input
@@ -137,11 +144,11 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
               placeholder="0.00"
               value={minAmount}
               onChange={(e) => setMinAmount(e.target.value)}
-              className="text-end"
+              className="h-11 rounded-2xl border-white/20 bg-white/10 px-3 text-end text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
             />
           </div>
           <div>
-            <label htmlFor="maxAmount" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="maxAmount" className="mb-1 block text-sm font-medium text-white/70">
               Max amount
             </label>
             <Input
@@ -151,7 +158,7 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
               placeholder="999.99"
               value={maxAmount}
               onChange={(e) => setMaxAmount(e.target.value)}
-              className="text-end"
+              className="h-11 rounded-2xl border-white/20 bg-white/10 px-3 text-end text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
             />
           </div>
         </div>
@@ -159,23 +166,35 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
         {/* Date Range */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="startDate" className="mb-1 block text-sm font-medium text-white/70">
               From date
             </label>
-            <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input
+              id="startDate"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-11 rounded-2xl border-white/20 bg-white/10 px-3 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
+            />
           </div>
           <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="endDate" className="mb-1 block text-sm font-medium text-white/70">
               To date
             </label>
-            <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input
+              id="endDate"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-11 rounded-2xl border-white/20 bg-white/10 px-3 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
+            />
           </div>
         </div>
 
         {/* Categories */}
         {categories.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+            <label className="mb-2 block text-sm font-medium text-white/70">Categories</label>
             <div className="flex flex-wrap gap-2">
               {categories.map((category) => {
                 const Icon = categoryIcons[category as keyof typeof categoryIcons]
@@ -183,7 +202,10 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
                   <Badge
                     key={category}
                     variant={selectedCategory === category ? "default" : "outline"}
-                    className="cursor-pointer flex items-center gap-1"
+                    className={cn(
+                      "glass-sm flex cursor-pointer items-center gap-1 px-3 text-white/80",
+                      selectedCategory === category ? "text-white shadow-lg" : "hover:text-white"
+                    )}
                     onClick={() => setSelectedCategory(selectedCategory === category ? "" : category)}
                     dir="auto"
                   >
@@ -198,13 +220,16 @@ export function ExpenseFilters({ expenses, onFiltersChanged, className }: Expens
 
         {/* Payers */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Paid by</label>
+          <label className="mb-2 block text-sm font-medium text-white/70">Paid by</label>
           <div className="flex flex-wrap gap-2">
             {payers.map((payer) => (
               <Badge
                 key={payer}
                 variant={selectedPayer === payer ? "default" : "outline"}
-                className="cursor-pointer"
+                className={cn(
+                  "glass-sm cursor-pointer px-3 text-white/80",
+                  selectedPayer === payer ? "text-white shadow-lg" : "hover:text-white"
+                )}
                 onClick={() => setSelectedPayer(selectedPayer === payer ? "" : payer)}
                 dir="auto"
               >

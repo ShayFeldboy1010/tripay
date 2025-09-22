@@ -131,8 +131,12 @@ export default function HomePage() {
   const additionalTrips = topTrip ? recentTrips.slice(1, 5) : []
 
   return (
-    <div className="relative min-h-screen overflow-hidden app-bg antialiased text-white">
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
+    <div className="min-h-screen app-bg antialiased">
+      <div className="relative min-h-screen overflow-hidden text-white">
+        <div
+          className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
+        >
+          <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
         <header className="max-w-2xl space-y-6">
           <span className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1 text-sm font-medium uppercase tracking-[0.35em] text-white/80">
             TripPay
@@ -250,7 +254,8 @@ export default function HomePage() {
                 <Button
                   onClick={createTrip}
                   disabled={!tripName.trim() || isCreating}
-                  className="h-12 w-full rounded-2xl bg-white/90 text-slate-900 text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
+                  variant="glass"
+                  className="h-12 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
                 >
                   {isCreating ? "Creating..." : "Create trip"}
                 </Button>
@@ -287,11 +292,12 @@ export default function HomePage() {
                 <Button
                   onClick={joinTrip}
                   disabled={!tripId.trim() || isJoining}
-                  className="h-12 w-full rounded-2xl bg-white/90 text-slate-900 text-base font-semibold shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
+                  variant="glass"
+                  className="h-12 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
                 >
                   {isJoining ? "Joining..." : "Join trip"}
                 </Button>
-                <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-xs text-white/70">
+                <div className="glass-sm rounded-2xl p-4 text-xs text-white/70">
                   <p className="font-semibold uppercase tracking-[0.35em] text-white/60">
                     Try it out
                   </p>
@@ -303,7 +309,9 @@ export default function HomePage() {
             </Card>
           </section>
         </div>
-      </main>
+          </main>
+        </div>
+      </div>
     </div>
   )
 }

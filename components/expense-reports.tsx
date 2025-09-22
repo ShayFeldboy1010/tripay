@@ -96,9 +96,9 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   if (expenses.length === 0) {
     return (
       <Card className={className}>
-        <CardContent className="text-center py-8">
-          <p className="text-gray-500">No expenses to analyze</p>
-          <p className="text-sm text-gray-400 mt-1">Add some expenses to see reports</p>
+        <CardContent className="py-8 text-center">
+          <p className="text-white/60">No expenses to analyze</p>
+          <p className="mt-1 text-sm text-white/50">Add some expenses to see reports</p>
         </CardContent>
       </Card>
     )
@@ -182,7 +182,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         >
                           {category}
                         </Badge>
-                        <span className="text-sm text-gray-600">{data.count} expenses</span>
+                        <span className="text-sm text-white/70">{data.count} expenses</span>
                       </div>
                       <span className="font-semibold">₪{data.total.toFixed(2)}</span>
                     </div>
@@ -224,20 +224,17 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
             </CardHeader>
             <CardContent>
               {balances.length === 0 ? (
-                <p className="text-center text-gray-500 py-4">All balanced! No outstanding debts.</p>
+                <p className="py-4 text-center text-white/60">All balanced! No outstanding debts.</p>
               ) : (
                 <div className="space-y-3">
                   {balances.map((balance, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg"
-                    >
+                    <div key={index} className="glass-sm flex items-center justify-between rounded-2xl p-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{balance.from}</span>
-                        <span className="text-gray-600">owes</span>
-                        <span className="font-medium text-gray-900">{balance.to}</span>
+                        <span className="font-medium text-white">{balance.from}</span>
+                        <span className="text-white/70">owes</span>
+                        <span className="font-medium text-white">{balance.to}</span>
                       </div>
-                      <span className="font-bold text-orange-600">₪{balance.amount.toFixed(2)}</span>
+                      <span className="grad-text text-lg font-bold">₪{balance.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -254,23 +251,23 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByPayer)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .map(([payer, data]) => (
-                    <div key={payer} className="border rounded-lg p-4">
+                    <div key={payer} className="glass-sm space-y-2 rounded-2xl p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div
                             className="w-4 h-4 rounded-full"
                             style={{ backgroundColor: colorForKey(payer) }}
                           />
-                          <h4 dir="auto" className="font-semibold">
+                          <h4 dir="auto" className="font-semibold text-white">
                             {payer}
                           </h4>
                         </div>
                         <div className="text-end">
-                          <p className="font-bold text-lg">₪{data.total.toFixed(2)}</p>
-                          <p className="text-sm text-gray-600">{data.count} expenses</p>
+                          <p className="grad-text text-lg font-bold">₪{data.total.toFixed(2)}</p>
+                          <p className="text-sm text-white/70">{data.count} expenses</p>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-white/70">
                         Average: ₪{(data.total / data.count).toFixed(2)} per expense
                       </div>
                     </div>
@@ -319,20 +316,20 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByCategory)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .map(([category, data]) => (
-                    <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={category} className="glass-sm flex items-center justify-between rounded-2xl p-3">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: colorForKey(category) }}
                         />
                         <div>
-                          <p dir="auto" className="font-medium">{category}</p>
-                          <p className="text-sm text-gray-600">{data.count} expenses</p>
+                          <p dir="auto" className="font-medium text-white">{category}</p>
+                          <p className="text-sm text-white/70">{data.count} expenses</p>
                         </div>
                       </div>
                       <div className="text-end">
-                        <p className="font-semibold">₪{data.total.toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">{((data.total / totalAmount) * 100).toFixed(1)}%</p>
+                        <p className="grad-text font-semibold">₪{data.total.toFixed(2)}</p>
+                        <p className="text-sm text-white/70">{((data.total / totalAmount) * 100).toFixed(1)}%</p>
                       </div>
                     </div>
                   ))}
@@ -381,18 +378,18 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByDate)
                   .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                   .map(([date, data]) => (
-                    <div key={date} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={date} className="glass-sm flex items-center justify-between rounded-2xl p-3">
                       <div>
-                        <p className="font-medium">
+                        <p className="font-medium text-white">
                           {new Date(date).toLocaleDateString("en-US", {
                             weekday: "long",
                             month: "short",
                             day: "numeric",
                           })}
                         </p>
-                        <p className="text-sm text-gray-600">{data.count} expenses</p>
+                        <p className="text-sm text-white/70">{data.count} expenses</p>
                       </div>
-                      <p className="font-semibold">₪{data.total.toFixed(2)}</p>
+                      <p className="grad-text font-semibold">₪{data.total.toFixed(2)}</p>
                     </div>
                   ))}
               </div>

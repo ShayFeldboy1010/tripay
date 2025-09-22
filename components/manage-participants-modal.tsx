@@ -70,66 +70,66 @@ export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsM
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
         <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
-          <Card className="rounded-t-2xl md:rounded-2xl border-0 shadow-2xl max-h-[90vh] flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 px-4 md:px-6 pt-4 md:pt-6">
-              <CardTitle className="text-lg font-semibold">Manage Participants</CardTitle>
+          <Card className="max-h-[90vh] flex flex-col rounded-t-[28px] border-none py-0 md:rounded-[28px]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 px-6 pb-4 pt-6">
+              <CardTitle className="text-lg font-semibold text-white">Manage Participants</CardTitle>
               <Dialog.Close asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full hover:bg-gray-100">
+                <Button variant="ghostLight" size="sm" className="h-9 w-9 rounded-full p-0 text-white/70 hover:text-white">
                   <X className="h-5 w-5" />
                 </Button>
               </Dialog.Close>
             </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4 overflow-y-auto flex-1">
-              <div className="flex gap-2 mb-4">
+            <CardContent className="flex-1 overflow-y-auto px-6 pb-4">
+              <div className="mb-4 flex gap-2">
                 <Input
                   dir="auto"
                   placeholder="Add new participant..."
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addParticipant()}
-                  className="flex-1 h-10"
+                  className="flex-1 h-10 rounded-2xl border-white/20 bg-white/10 px-3 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
                   autoComplete="off"
                 />
-                <Button size="sm" onClick={addParticipant} className="h-10">
+                <Button size="sm" onClick={addParticipant} variant="glass" className="h-10 rounded-2xl px-4 text-white/90">
                   Add
                 </Button>
               </div>
               <div className="space-y-2">
                 {participants.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div key={p.id} className="flex items-center justify-between rounded-2xl p-3 text-white/80 glass-sm">
                     {editingId === p.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <Input
                           dir="auto"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
-                          className="h-8 flex-1"
+                          className="h-9 flex-1 rounded-2xl border-white/20 bg-white/10 px-3 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
                         />
-                        <Button variant="ghost" size="sm" onClick={() => saveParticipant(p.id)} className="h-8 w-8 p-0">
+                        <Button variant="ghostLight" size="sm" onClick={() => saveParticipant(p.id)} className="h-8 w-8 p-0 text-white/80 hover:text-white">
                           <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     ) : (
                       <>
-                        <span dir="auto" className="font-medium flex-1 truncate">
+                        <span dir="auto" className="flex-1 truncate font-medium text-white">
                           {p.name}
                         </span>
                         <div className="flex items-center gap-1">
                           <Button
-                            variant="ghost"
+                            variant="ghostLight"
                             size="sm"
                             onClick={() => {
                               setEditingId(p.id)
                               setEditingName(p.name)
                             }}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 text-white/80 hover:text-white"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="ghostLight"
                             size="sm"
-                            className="text-red-600 h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
                             onClick={() => deleteParticipant(p.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -140,7 +140,7 @@ export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsM
                   </div>
                 ))}
                 {participants.length === 0 && (
-                  <p className="text-center text-gray-500 py-4">No participants yet</p>
+                  <p className="py-4 text-center text-white/60">No participants yet</p>
                 )}
               </div>
             </CardContent>
