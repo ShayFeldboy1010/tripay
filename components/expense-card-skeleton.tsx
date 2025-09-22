@@ -3,12 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export function ExpenseCardSkeleton() {
   return (
-    <Card
-      role="status"
-      aria-label="Loading expense"
-      className="bg-white/70 backdrop-blur-sm border-white/40 shadow-sm rounded-xl"
-    >
-      <CardContent className="p-4 space-y-3">
+    <Card role="status" aria-label="Loading expense" className="rounded-[28px] border-none">
+      <CardContent className="space-y-3 p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4" radius="sm" />

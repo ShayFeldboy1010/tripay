@@ -33,15 +33,15 @@ export function TripSettingsDropdown({ tripId, onEdit, onDelete }: TripSettingsD
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant="ghostLight"
           size="icon"
-          className="text-white hover:bg-gray-800 rounded-full"
+          className="rounded-full text-white/80 hover:text-white"
           aria-label="Open settings"
         >
           <Settings className="h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 rounded-2xl">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onClick={copyTripId} className="gap-2">
           <Copy className="h-4 w-4" /> Copy Trip ID
         </DropdownMenuItem>
@@ -60,7 +60,8 @@ export function TripSettingsDropdown({ tripId, onEdit, onDelete }: TripSettingsD
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onDelete}
-          className="gap-2 text-red-600 focus:text-red-600"
+          variant="destructive"
+          className="gap-2"
         >
           <Trash2 className="h-4 w-4" /> Delete Trip
         </DropdownMenuItem>

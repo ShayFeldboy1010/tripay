@@ -18,7 +18,6 @@ import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
-import { useTheme } from "@/theme/ThemeProvider"
 
 export default function TripSearchPage() {
   const params = useParams()
@@ -34,7 +33,6 @@ export default function TripSearchPage() {
   const [showParticipants, setShowParticipants] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
   const isDesktop = useIsDesktop()
-  const { colors } = useTheme()
 
   useEffect(() => {
     loadTripData()
@@ -134,20 +132,24 @@ export default function TripSearchPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 p-4 space-y-4">
-        <ExpenseCardSkeleton />
-        <ExpenseCardSkeleton />
-        <ExpenseCardSkeleton />
+      <div className="min-h-screen app-bg antialiased text-white">
+        <div
+          className="space-y-4 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
+        >
+          <ExpenseCardSkeleton />
+          <ExpenseCardSkeleton />
+          <ExpenseCardSkeleton />
+        </div>
       </div>
     )
   }
 
   if (!trip) {
-    return <div className="min-h-screen" />
+    return <div className="min-h-screen app-bg" />
   }
 
   const content = (
-    <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-40 pt-4 text-white lg:pb-8">
       <ExpenseFilters expenses={expenses} onFiltersChanged={setFilteredExpenses} className="rounded-2xl" />
       <ExpenseList expenses={filteredExpenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
       {showAddForm && (
@@ -191,27 +193,26 @@ export default function TripSearchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
-      <header
-        className="sticky top-0 z-30 shadow-sm"
-        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+    <div className="min-h-screen app-bg antialiased text-white">
+      <div
+        className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="text-lg font-semibold" style={{ color: colors.onPrimary }}>
-            TripPay
-          </span>
-          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
-            <OfflineIndicator />
-            <TripSettingsDropdown
-              tripId={tripId}
-              onEdit={() => router.push(`/trip/${tripId}`)}
-              onDelete={() => router.push("/")}
-            />
+        <header className="sticky top-0 z-30">
+          <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
+            <span className="text-lg font-semibold tracking-tight">TripPay</span>
+            <div className="flex items-center gap-2 text-white/80">
+              <OfflineIndicator />
+              <TripSettingsDropdown
+                tripId={tripId}
+                onEdit={() => router.push(`/trip/${tripId}`)}
+                onDelete={() => router.push("/")}
+              />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {content}
+        {content}
+      </div>
       {fab}
       <MobileNav tripId={tripId} active="search" />
     </div>

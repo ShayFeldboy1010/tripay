@@ -33,22 +33,25 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
+        <meta name="color-scheme" content="dark" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap"
           rel="stylesheet"
         />
         <meta name="theme-color" content="#0B1020" />
       </head>
-      <body className="antialiased touch-manipulation pb-[env(safe-area-inset-bottom)] min-h-screen app-bg">
-        <RootClient>
-          <ThemeProvider>
-            <AIChatProvider>
-              {children}
-              <AIChatWidget />
-            </AIChatProvider>
-          </ThemeProvider>
-        </RootClient>
+      <body className="antialiased touch-manipulation">
+        <div className="min-h-screen app-bg antialiased pb-[env(safe-area-inset-bottom)]">
+          <RootClient>
+            <ThemeProvider>
+              <AIChatProvider>
+                {children}
+                <AIChatWidget />
+              </AIChatProvider>
+            </ThemeProvider>
+          </RootClient>
+        </div>
       </body>
     </html>
   )

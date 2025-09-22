@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { syncManager } from "@/lib/sync-manager"
 import { offlineStorage } from "@/lib/offline-storage"
 import { Wifi, WifiOff, RefreshCw, AlertCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface OfflineIndicatorProps {
   className?: string
@@ -71,8 +71,8 @@ export function OfflineIndicator({ className }: OfflineIndicatorProps) {
 
   if (isOnline && pendingCount === 0) {
     return (
-      <div className={`flex items-center gap-1 text-xs text-green-600 ${className}`}>
-        <Wifi className="h-3 w-3" />
+      <div className={cn("flex items-center gap-1 text-xs text-white/70", className)}>
+        <Wifi className="h-3 w-3 text-white/70" />
         <span>Online</span>
       </div>
     )
@@ -80,33 +80,40 @@ export function OfflineIndicator({ className }: OfflineIndicatorProps) {
 
   if (!isOnline) {
     return (
-      <div className={`flex items-center gap-2 ${className}`}>
-        <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800">
+      <div className={cn("flex items-center gap-2 text-xs text-white/80", className)}>
+        <span className="glass-sm inline-flex items-center gap-1 rounded-full px-3 py-1 text-white/90">
           <WifiOff className="h-3 w-3" />
           Offline
-        </Badge>
+        </span>
         {pendingCount > 0 && (
-          <Badge variant="outline" className="text-xs">
+          <span className="glass-sm inline-flex items-center gap-1 rounded-full px-3 py-1 text-white/80">
+            <AlertCircle className="h-3 w-3" />
             {pendingCount} pending
-          </Badge>
+          </span>
         )}
       </div>
     )
   }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <Badge variant="secondary" className="flex items-center gap-1 bg-[color:var(--color-primary50)] text-[color:var(--color-primary)]">
+    <div className={cn("flex items-center gap-2 text-xs text-white/80", className)}>
+      <span className="glass-sm inline-flex items-center gap-1 rounded-full px-3 py-1 text-white/90">
         <Wifi className="h-3 w-3" />
         Online
-      </Badge>
+      </span>
       {pendingCount > 0 && (
         <>
-          <Badge variant="outline" className="flex items-center gap-1 text-orange-600">
+          <span className="glass-sm inline-flex items-center gap-1 rounded-full px-3 py-1 text-white/80">
             <AlertCircle className="h-3 w-3" />
             {pendingCount} pending
-          </Badge>
-          <Button variant="ghost" size="sm" onClick={handleSync} disabled={syncing} className="h-6 px-2 text-xs">
+          </span>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncing}
+            className="h-8 rounded-xl px-3 text-xs text-white/80 hover:text-white"
+          >
             {syncing ? (
               <>
                 <RefreshCw className="h-3 w-3 me-1 animate-spin" />

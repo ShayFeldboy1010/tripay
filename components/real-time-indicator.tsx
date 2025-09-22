@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { Wifi, WifiOff, Activity } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface RealtimeIndicatorProps {
   className?: string
@@ -38,21 +39,21 @@ export function RealtimeIndicator({ className }: RealtimeIndicatorProps) {
   }, [])
 
   return (
-    <div className={`flex items-center gap-1 text-xs ${className}`}>
+    <div className={cn("flex items-center gap-1 text-xs text-white/70", className)}>
       {hasActivity ? (
         <>
-          <Activity className="h-3 w-3 text-[color:var(--color-primary)] animate-pulse" />
-          <span className="text-[color:var(--color-primary)]">Syncing...</span>
+          <Activity className="h-3 w-3 text-white/80 animate-pulse" />
+          <span>Syncing...</span>
         </>
       ) : isConnected ? (
         <>
-          <Wifi className="h-3 w-3 text-green-500" />
-          <span className="text-green-600">Live</span>
+          <Wifi className="h-3 w-3 text-white/70" />
+          <span>Live</span>
         </>
       ) : (
         <>
-          <WifiOff className="h-3 w-3 text-red-500" />
-          <span className="text-red-600">Offline</span>
+          <WifiOff className="h-3 w-3 text-white/60" />
+          <span className="text-white/60">Offline</span>
         </>
       )}
     </div>

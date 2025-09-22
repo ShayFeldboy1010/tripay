@@ -25,7 +25,6 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
-import { useTheme } from "@/theme/ThemeProvider"
 
 export default function TripPage() {
   const params = useParams()
@@ -44,7 +43,6 @@ export default function TripPage() {
   const [editDescription, setEditDescription] = useState("")
   const channelRef = useRef<RealtimeChannel | null>(null)
   const isDesktop = useIsDesktop()
-  const { colors } = useTheme()
 
   useEffect(() => {
     loadTripData()
@@ -265,20 +263,30 @@ export default function TripPage() {
 
   if (delayedLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 p-4 space-y-4">
-        <ExpenseCardSkeleton />
-        <ExpenseCardSkeleton />
-        <ExpenseCardSkeleton />
+      <div className="min-h-screen app-bg antialiased text-white">
+        <div
+          className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)] space-y-4"
+        >
+          <ExpenseCardSkeleton />
+          <ExpenseCardSkeleton />
+          <ExpenseCardSkeleton />
+        </div>
       </div>
     )
   }
 
   if (!trip) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-700 mb-6 font-medium">Trip not found</p>
-          <Button onClick={() => router.push("/")}>Go Home</Button>
+      <div className="min-h-screen app-bg antialiased flex items-center justify-center text-white">
+        <div className="space-y-6 text-center">
+          <p className="text-lg font-medium text-white/80">Trip not found</p>
+          <Button
+            onClick={() => router.push("/")}
+            variant="glass"
+            className="h-11 rounded-2xl px-5 text-white/90 hover:text-white"
+          >
+            Go Home
+          </Button>
         </div>
       </div>
     )
@@ -288,20 +296,19 @@ export default function TripPage() {
   const totalCount = expenses.length
 
   const content = (
-    <div className="max-w-2xl mx-auto px-4 pb-40 pt-4 lg:pb-8 space-y-6">
-      <Card className="rounded-2xl shadow-md p-5 sm:p-6">
-        <div>
-          <h2 dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-40 pt-4 text-white lg:pb-8">
+      <Card className="gap-4 px-5 sm:px-6">
+        <div className="space-y-1">
+          <h2 dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
             {trip.name}
           </h2>
-          <p className="text-gray-500 mt-1">Have Fun!</p>
+          <p className="text-sm text-white/70">Have Fun!</p>
         </div>
-        <div className="mt-4 text-end space-y-1">
-          <p className="text-4xl font-bold text-green-600">₪{totalAmount.toFixed(2)}</p>
-          <p className="text-sm text-gray-500">{totalCount} total expenses</p>
+        <div className="space-y-1 text-end">
+          <p className="grad-text text-4xl font-bold leading-tight md:text-5xl">₪{totalAmount.toFixed(2)}</p>
+          <p className="text-sm text-white/60">{totalCount} total expenses</p>
         </div>
       </Card>
-      {/* Quick add cards removed – use FAB for adding items */}
 
       {showAddForm && (
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
@@ -318,18 +325,18 @@ export default function TripPage() {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
-            <Card className="rounded-t-2xl md:rounded-2xl border-0 shadow-2xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-4 px-4 md:px-6 pt-4 md:pt-6">
+            <Card className="rounded-t-[28px] border-none shadow-lg md:rounded-[28px]">
+              <CardHeader className="flex flex-row items-center justify-between px-4 pb-4 pt-4 md:px-6 md:pt-6">
                 <CardTitle>Edit Trip</CardTitle>
                 <Dialog.Close asChild>
-                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full hover:bg-gray-100">
+                  <Button variant="ghostLight" size="sm" className="h-9 w-9 p-0 rounded-full">
                     <X className="h-5 w-5" />
                   </Button>
                 </Dialog.Close>
               </CardHeader>
-              <CardContent className="px-4 md:px-6 pb-4 space-y-4">
+              <CardContent className="space-y-4 px-4 pb-4 md:px-6">
                 <div>
-                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="edit-name" className="mb-1 block text-sm font-medium text-white/70">
                     Trip Name
                   </label>
                   <Input
@@ -337,10 +344,11 @@ export default function TripPage() {
                     dir="auto"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
+                    className="h-11 rounded-2xl border-white/20 bg-white/10 px-4 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="edit-description" className="mb-1 block text-sm font-medium text-white/70">
                     Description
                   </label>
                   <Textarea
@@ -349,9 +357,15 @@ export default function TripPage() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
+                    className="rounded-2xl border-white/20 bg-white/10 px-4 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
                   />
                 </div>
-                <Button onClick={saveTrip} disabled={!editName.trim()} className="w-full">
+                <Button
+                  onClick={saveTrip}
+                  disabled={!editName.trim()}
+                  variant="glass"
+                  className="h-11 w-full rounded-2xl px-4 text-white/90 hover:text-white"
+                >
                   Save
                 </Button>
               </CardContent>
@@ -390,27 +404,26 @@ export default function TripPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
-      <header
-        className="sticky top-0 z-30 shadow-sm"
-        style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+    <div className="min-h-screen app-bg antialiased text-white">
+      <div
+        className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="text-lg font-semibold" style={{ color: colors.onPrimary }}>
-            TripPay
-          </span>
-          <div className="flex items-center gap-2" style={{ color: colors.onPrimary }}>
-            <OfflineIndicator />
-            <TripSettingsDropdown
-              tripId={tripId}
-              onEdit={() => setShowEditTrip(true)}
-              onDelete={deleteTrip}
-            />
+        <header className="sticky top-0 z-30">
+          <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
+            <span className="text-lg font-semibold tracking-tight">TripPay</span>
+            <div className="flex items-center gap-2 text-white/80">
+              <OfflineIndicator />
+              <TripSettingsDropdown
+                tripId={tripId}
+                onEdit={() => setShowEditTrip(true)}
+                onDelete={deleteTrip}
+              />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {content}
+        {content}
+      </div>
       {fab}
       <MobileNav tripId={tripId} active="expenses" />
     </div>

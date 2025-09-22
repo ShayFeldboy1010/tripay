@@ -71,7 +71,7 @@ export default function TripSummaryPage() {
   };
 
   if (loading || !trip) {
-    return <div className="min-h-screen" />;
+    return <div className="min-h-screen app-bg" />;
   }
 
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -137,22 +137,26 @@ export default function TripSummaryPage() {
   }
 
   return (
-    <div className="min-h-screen app-bg pb-[env(safe-area-inset-bottom)] text-white">
-      <header className="sticky top-0 z-30 px-4 pt-4">
-        <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
-          <span className="text-lg font-semibold tracking-tight">TripPay</span>
-          <div className="flex items-center gap-2">
-            <OfflineIndicator />
-            <TripSettingsDropdown
-              tripId={tripId}
-              onEdit={() => router.push(`/trip/${tripId}`)}
-              onDelete={() => router.push("/")}
-            />
+    <div className="min-h-screen app-bg antialiased text-white">
+      <div
+        className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
+      >
+        <header className="sticky top-0 z-30">
+          <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
+            <span className="text-lg font-semibold tracking-tight">TripPay</span>
+            <div className="flex items-center gap-2 text-white/80">
+              <OfflineIndicator />
+              <TripSettingsDropdown
+                tripId={tripId}
+                onEdit={() => router.push(`/trip/${tripId}`)}
+                onDelete={() => router.push("/")}
+              />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {content}
+        {content}
+      </div>
       {fab}
       <MobileNav tripId={tripId} active="summary" />
     </div>
