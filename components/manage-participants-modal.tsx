@@ -96,10 +96,7 @@ export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsM
               </div>
               <div className="space-y-2">
                 {participants.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-white/90 backdrop-blur-sm"
-                  >
+                  <div key={p.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                     {editingId === p.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <Input

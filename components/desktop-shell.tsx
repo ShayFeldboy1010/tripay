@@ -32,21 +32,18 @@ export function DesktopShell({
 }: DesktopShellProps) {
   const { colors } = useTheme();
   return (
-    <div className="hidden lg:grid grid-cols-[240px_1fr] min-h-screen" style={{ color: colors.text }}>
-      <aside
-        className="glass flex flex-col gap-6 border-r border-white/10 bg-base-800/80 p-6 text-white/70"
-        aria-label="Sidebar"
-      >
+    <div className="hidden lg:grid grid-cols-[220px_1fr] min-h-screen">
+      <aside className="bg-white border-r p-4" aria-label="Sidebar">
         <nav className="flex flex-col gap-2">
           <Link
             href={`/trip/${tripId}`}
             className={clsx(
-              "flex items-center gap-2 rounded-2xl px-3 py-2 text-sm transition-colors",
-              active === "expenses" ? "font-semibold" : "text-white/60 hover:text-white/80"
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+              active === "expenses" ? "font-medium" : "hover:bg-[color:var(--color-primary50)]"
             )}
             style={
               active === "expenses"
-                ? { backgroundColor: colors.primary500, color: colors.onPrimary }
+                ? { color: colors.primary, backgroundColor: colors.primary50 }
                 : undefined
             }
           >
@@ -56,12 +53,12 @@ export function DesktopShell({
           <Link
             href={`/trip/${tripId}/summary`}
             className={clsx(
-              "flex items-center gap-2 rounded-2xl px-3 py-2 text-sm transition-colors",
-              active === "summary" ? "font-semibold" : "text-white/60 hover:text-white/80"
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+              active === "summary" ? "font-medium" : "hover:bg-[color:var(--color-primary50)]"
             )}
             style={
               active === "summary"
-                ? { backgroundColor: colors.primary500, color: colors.onPrimary }
+                ? { color: colors.primary, backgroundColor: colors.primary50 }
                 : undefined
             }
           >
@@ -71,12 +68,12 @@ export function DesktopShell({
           <Link
             href={`/trip/${tripId}/search`}
             className={clsx(
-              "flex items-center gap-2 rounded-2xl px-3 py-2 text-sm transition-colors",
-              active === "search" ? "font-semibold" : "text-white/60 hover:text-white/80"
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+              active === "search" ? "font-medium" : "hover:bg-[color:var(--color-primary50)]"
             )}
             style={
               active === "search"
-                ? { backgroundColor: colors.primary500, color: colors.onPrimary }
+                ? { color: colors.primary, backgroundColor: colors.primary50 }
                 : undefined
             }
           >
