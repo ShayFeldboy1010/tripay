@@ -487,7 +487,10 @@ export default function TripPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-[env(safe-area-inset-bottom)]">
+    <div
+      className="relative min-h-screen pb-[env(safe-area-inset-bottom)]"
+      style={{ color: colors.text }}
+    >
       <header
         className="sticky top-0 z-30 shadow-sm"
         style={{ backgroundColor: colors.primary, color: colors.onPrimary }}

@@ -10,6 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, Users, Banknote, Calendar } from "lucide-react"
 import { LocationsReport } from "@/components/locations-report"
 import { colorForKey } from "@/lib/chartColors"
+import { useTheme } from "@/theme/ThemeProvider"
 
 interface ExpenseReportsProps {
   expenses: Expense[]
@@ -18,6 +19,14 @@ interface ExpenseReportsProps {
 
 export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   const [selectedTab, setSelectedTab] = useState("overview")
+  const { colors } = useTheme()
+  const axisTickColor = "rgba(238, 241, 255, 0.75)"
+  const gridStroke = "rgba(238, 241, 255, 0.18)"
+  const tooltipStyle = {
+    backgroundColor: "rgba(21, 34, 61, 0.92)",
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    color: colors.text,
+  }
 
   // Calculate summary statistics
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
@@ -96,9 +105,9 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   if (expenses.length === 0) {
     return (
       <Card className={className}>
-        <CardContent className="text-center py-8">
-          <p className="text-gray-500">No expenses to analyze</p>
-          <p className="text-sm text-gray-400 mt-1">Add some expenses to see reports</p>
+        <CardContent className="py-8 text-center text-white/70">
+          <p>No expenses to analyze</p>
+          <p className="mt-1 text-sm text-white/60">Add some expenses to see reports</p>
         </CardContent>
       </Card>
     )
@@ -182,7 +191,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         >
                           {category}
                         </Badge>
-                        <span className="text-sm text-gray-600">{data.count} expenses</span>
+                        <span className="text-sm text-white/70">{data.count} expenses</span>
                       </div>
                       <span className="font-semibold">₪{data.total.toFixed(2)}</span>
                     </div>
@@ -202,10 +211,23 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={payerChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: axisTickColor }}
+                      axisLine={{ stroke: gridStroke }}
+                      tickLine={{ stroke: gridStroke }}
+                    />
+                    <YAxis
+                      tick={{ fill: axisTickColor }}
+                      axisLine={{ stroke: gridStroke }}
+                      tickLine={{ stroke: gridStroke }}
+                    />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      itemStyle={{ color: colors.text }}
+                      formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]}
+                    />
                     <Bar dataKey="amount">
                       {payerChartData.map((entry) => (
                         <Cell key={entry.name} fill={colorForKey(entry.name)} />
@@ -224,20 +246,22 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
             </CardHeader>
             <CardContent>
               {balances.length === 0 ? (
-                <p className="text-center text-gray-500 py-4">All balanced! No outstanding debts.</p>
+                <p className="py-4 text-center text-white/70">All balanced! No outstanding debts.</p>
               ) : (
                 <div className="space-y-3">
                   {balances.map((balance, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/90 backdrop-blur-sm"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{balance.from}</span>
-                        <span className="text-gray-600">owes</span>
-                        <span className="font-medium text-gray-900">{balance.to}</span>
+                        <span className="font-medium text-white">{balance.from}</span>
+                        <span className="text-white/70">owes</span>
+                        <span className="font-medium text-white">{balance.to}</span>
                       </div>
-                      <span className="font-bold text-orange-600">₪{balance.amount.toFixed(2)}</span>
+                      <span className="font-semibold" style={{ color: colors.primary500 }}>
+                        ₪{balance.amount.toFixed(2)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -254,7 +278,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByPayer)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .map(([payer, data]) => (
-                    <div key={payer} className="border rounded-lg p-4">
+                    <div
+                      key={payer}
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/90 backdrop-blur-sm"
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div
@@ -267,10 +294,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         </div>
                         <div className="text-end">
                           <p className="font-bold text-lg">₪{data.total.toFixed(2)}</p>
-                          <p className="text-sm text-gray-600">{data.count} expenses</p>
+                          <p className="text-sm text-white/70">{data.count} expenses</p>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-white/70">
                         Average: ₪{(data.total / data.count).toFixed(2)} per expense
                       </div>
                     </div>
@@ -303,7 +330,11 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         <Cell key={entry.name} fill={colorForKey(entry.name)} strokeWidth={1} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      itemStyle={{ color: colors.text }}
+                      formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -319,7 +350,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByCategory)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .map(([category, data]) => (
-                    <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={category}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/90 backdrop-blur-sm"
+                    >
                       <div className="flex items-center gap-3">
                         <div
                           className="w-4 h-4 rounded-full"
@@ -327,12 +361,12 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         />
                         <div>
                           <p dir="auto" className="font-medium">{category}</p>
-                          <p className="text-sm text-gray-600">{data.count} expenses</p>
+                          <p className="text-sm text-white/70">{data.count} expenses</p>
                         </div>
                       </div>
                       <div className="text-end">
                         <p className="font-semibold">₪{data.total.toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">{((data.total / totalAmount) * 100).toFixed(1)}%</p>
+                        <p className="text-sm text-white/70">{((data.total / totalAmount) * 100).toFixed(1)}%</p>
                       </div>
                     </div>
                   ))}
@@ -355,10 +389,21 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={timelineData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: axisTickColor }}
+                      axisLine={{ stroke: gridStroke }}
+                      tickLine={{ stroke: gridStroke }}
+                    />
+                    <YAxis
+                      tick={{ fill: axisTickColor }}
+                      axisLine={{ stroke: gridStroke }}
+                      tickLine={{ stroke: gridStroke }}
+                    />
                     <Tooltip
+                      contentStyle={tooltipStyle}
+                      itemStyle={{ color: colors.text }}
                       formatter={(value, name) => [
                         /* Changed $ to ₪ in tooltip formatter */
                         name === "amount" ? `₪${Number(value).toFixed(2)}` : value,
@@ -381,7 +426,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 {Object.entries(expensesByDate)
                   .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                   .map(([date, data]) => (
-                    <div key={date} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={date}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/90 backdrop-blur-sm"
+                    >
                       <div>
                         <p className="font-medium">
                           {new Date(date).toLocaleDateString("en-US", {
@@ -390,7 +438,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                             day: "numeric",
                           })}
                         </p>
-                        <p className="text-sm text-gray-600">{data.count} expenses</p>
+                        <p className="text-sm text-white/70">{data.count} expenses</p>
                       </div>
                       <p className="font-semibold">₪{data.total.toFixed(2)}</p>
                     </div>
