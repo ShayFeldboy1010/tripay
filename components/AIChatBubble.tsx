@@ -1,35 +1,17 @@
 "use client";
 import { MessageCircle } from "lucide-react";
-import { useTheme } from "@/theme/ThemeProvider";
 import { useAIChat } from "./AIChatStore";
-
-const BUBBLE_SIZE = 56;
 
 export function AIChatBubble({ tripId }: { tripId: string }) {
   const { openForTrip } = useAIChat();
-  const { colors } = useTheme();
   return (
     <button
       aria-label="Open AI chat"
       onClick={() => openForTrip(tripId)}
-      style={{
-        position: "fixed",
-        left: 16,
-        bottom: "calc(env(safe-area-inset-bottom) + 88px)",
-        width: BUBBLE_SIZE,
-        height: BUBBLE_SIZE,
-        borderRadius: BUBBLE_SIZE / 2,
-        backgroundColor: colors.primary,
-        color: colors.onPrimary,
-        zIndex: 9999,
-        pointerEvents: "auto",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        boxShadow: "0 4px 6px rgba(0,0,0,0.2)",
-      }}
+      className="btn-glass fixed bottom-24 left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full ring-1 ring-white/15 text-white/90 transition active:scale-95 md:left-6"
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}
     >
-      <MessageCircle className="w-6 h-6" />
+      <MessageCircle className="h-6 w-6" />
     </button>
   );
 }
