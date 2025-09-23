@@ -34,21 +34,21 @@ export function TotalBalance({ amount, totalExpenses, participantCount, averageE
           <p className="text-base text-white/70">סכום מצטבר של כל ההוצאות ששויכו לטיול הזה</p>
         </div>
 
-        <div className="mt-8 grid grid-cols-3 gap-2">
-          <div className="glass-sm rounded-2xl px-3 py-3 text-center">
-            <Receipt className="mx-auto h-4 w-4 text-white/70" />
-            <p className="mt-2 text-[11px] text-white/70 truncate-1 leading-4">סה״כ הוצאות</p>
-            <p className="mt-1 text-base font-semibold leading-tight grad-text md:text-lg">{totalExpenses}</p>
+        <div className="grid grid-cols-3 gap-3 mt-8">
+          <div className="text-center glass-sm p-4">
+            <Receipt className="mx-auto h-5 w-5 text-white/70" />
+            <p className="mt-2 text-xs text-white/60">סה״כ הוצאות</p>
+            <p className="mt-1 text-lg font-semibold text-white">{totalExpenses}</p>
           </div>
-          <div className="glass-sm rounded-2xl px-3 py-3 text-center">
-            <Users className="mx-auto h-4 w-4 text-white/70" />
-            <p className="mt-2 text-[11px] text-white/70 truncate-1 leading-4">משתתפים</p>
-            <p className="mt-1 text-base font-semibold leading-tight grad-text md:text-lg">{participantCount}</p>
+          <div className="text-center glass-sm p-4">
+            <Users className="mx-auto h-5 w-5 text-white/70" />
+            <p className="mt-2 text-xs text-white/60">משתתפים</p>
+            <p className="mt-1 text-lg font-semibold text-white">{participantCount}</p>
           </div>
-          <div className="glass-sm rounded-2xl px-3 py-3 text-center">
-            <TrendingUp className="mx-auto h-4 w-4 text-white/70" />
-            <p className="mt-2 text-[11px] text-white/70 truncate-1 leading-4">ממוצע הוצאה</p>
-            <p className="mt-1 text-base font-semibold leading-tight grad-text md:text-lg">{averageFormatted}</p>
+          <div className="text-center glass-sm p-4">
+            <TrendingUp className="mx-auto h-5 w-5 text-white/70" />
+            <p className="mt-2 text-xs text-white/60">ממוצע הוצאה</p>
+            <p className="mt-1 text-lg font-semibold text-white">{averageFormatted}</p>
           </div>
         </div>
       </div>
