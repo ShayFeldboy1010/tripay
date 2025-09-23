@@ -104,100 +104,98 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
         onClick={resetSwipe}
       >
         <CardContent className="p-5">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="shrink-min">
-                <h4
-                  dir="auto"
-                  className="truncate-1 text-balance text-base font-semibold leading-tight text-white"
-                >
-                  {expense.title || "Untitled Expense"}
-                </h4>
-                {expense.description && (
-                  <p
-                    dir="auto"
-                    className="mt-1 truncate-2 text-sm text-white/70 leading-tight"
-                  >
-                    {expense.description}
-                  </p>
-                )}
-              </div>
-              <div className="flex-none text-right">
-                <p className="grad-text text-2xl font-bold">₪{expense.amount.toFixed(2)}</p>
-              </div>
-            </div>
-
-            {expense.location && (
-              <div className="flex items-center gap-1 text-white/70">
-                <MapPin className="h-3 w-3 flex-none" />
-                <span dir="auto" className="shrink-min truncate-1 text-sm">
-                  {expense.location}
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex items-center gap-1 text-white/80 shrink-min">
-                  {expense.paid_by === "Both" ? (
-                    <Users className="h-3 w-3 flex-none text-white/80" />
-                  ) : (
-                    <User className="h-3 w-3 flex-none text-white/80" />
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0 pr-3">
+              {/* Title and Amount Row */}
+              <div className="mb-2 flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h4 dir="auto" className="text-base font-semibold leading-tight text-white truncate">
+                    {expense.title || "Untitled Expense"}
+                  </h4>
+                  {expense.description && (
+                    <p dir="auto" className="mt-1 text-sm text-white/70 line-clamp-1">
+                      {expense.description}
+                    </p>
                   )}
-                  <span dir="auto" className="truncate-1 text-xs font-medium">
-                    {expense.paid_by === "Both" ? "Both" : expense.paid_by}
-                  </span>
+                </div>
+                <div className="ms-3 flex-shrink-0 text-end">
+                  <p className="grad-text text-2xl font-bold">₪{expense.amount.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Location */}
+              {expense.location && (
+                <div className="mb-2 flex items-center gap-1 text-white/70">
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span dir="auto" className="truncate text-sm">{expense.location}</span>
+                </div>
+              )}
+
+              {/* Bottom row with payer, category, and time */}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-1 min-w-0 items-center gap-3">
+                  {/* Payer */}
+                  <div className="flex min-w-0 items-center gap-1 text-white/80">
+                    {expense.paid_by === "Both" ? (
+                      <Users className="h-3 w-3 flex-shrink-0 text-white/80" />
+                    ) : (
+                      <User className="h-3 w-3 flex-shrink-0 text-white/80" />
+                    )}
+                    <span dir="auto" className="truncate text-xs font-medium">
+                      {expense.paid_by === "Both" ? "Both" : expense.paid_by}
+                    </span>
+                  </div>
+
+                  {/* Category */}
+                  {expense.category && CategoryIcon && (
+                    <span className="glass-sm flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs text-white/90">
+                      <CategoryIcon className="h-3 w-3" />
+                      {expense.category}
+                    </span>
+                  )}
+                  {expense.is_shared_payment && (
+                    <span className="glass-sm flex-shrink-0 rounded-full px-2 py-0.5 text-xs text-white">
+                      Shared
+                    </span>
+                  )}
                 </div>
 
-                {expense.category && CategoryIcon && (
-                  <span className="glass-sm flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs text-white/90">
-                    <CategoryIcon className="h-3 w-3" />
-                    {expense.category}
+                {/* Time and Menu */}
+                <div className="ms-2 flex flex-shrink-0 items-center gap-2">
+                  <span className="text-xs font-medium text-white/60">
+                    {formatDistanceToNow(new Date(expense.created_at), { addSuffix: true })}
                   </span>
-                )}
-                {expense.is_shared_payment && (
-                  <span className="glass-sm shrink-0 rounded-full px-2 py-0.5 text-xs text-white">
-                    Shared
-                  </span>
-                )}
-              </div>
 
-              <div className="flex flex-none items-center gap-2 text-right">
-                <span className="whitespace-nowrap text-xs font-medium text-white/60">
-                  {formatDistanceToNow(new Date(expense.created_at), { addSuffix: true })}
-                </span>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="glass-sm h-8 w-8 rounded-full p-0 text-white/80 transition hover:text-white md:opacity-100 opacity-60"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="glass-sm border-none bg-transparent backdrop-blur"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => onEdit(expense)}
-                      className="flex items-center gap-2 rounded-lg text-white/90 focus:text-white"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onDelete(expense)}
-                      className="flex items-center gap-2 rounded-lg text-red-300 focus:text-red-200"
-                      disabled={isDeleting}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {isDeleting ? "Deleting..." : "Delete"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  {/* Kebab menu for desktop */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="glass-sm h-8 w-8 rounded-full p-0 text-white/80 transition hover:text-white md:opacity-100 opacity-60"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="glass-sm border-none bg-transparent backdrop-blur">
+                      <DropdownMenuItem
+                        onClick={() => onEdit(expense)}
+                        className="flex items-center gap-2 rounded-lg text-white/90 focus:text-white"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onDelete(expense)}
+                        className="flex items-center gap-2 rounded-lg text-red-300 focus:text-red-200"
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {isDeleting ? "Deleting..." : "Delete"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </div>
