@@ -1,6 +1,25 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Stronger modal glass (less transparent) */
+.glass-strong{
+  background: linear-gradient(180deg, rgba(20,24,38,.72), rgba(20,24,38,.68));
+  border: 1px solid rgba(255,255,255,.16);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border-radius: 28px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.5);
+}
+.btn-glass-strong{
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.08));
+  border: 1px solid rgba(255,255,255,.18);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: #fff;
+}
+
+.overlay-dim{ background: radial-gradient(1200px at 30% 0%, rgba(8,10,18,.72), rgba(8,10,18,.72)); }
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useId, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { parseFile, toNormalized, type Mapping } from "../../lib/import/parsers";
 import { dedupe } from "../../lib/import/dedupe";
 import type { NormalizedExpense, SupportedCurrency } from "../../types/import";
+
+const MAX_FILE_MB = 8;
+const ACCEPT = ".csv,.xlsx,.xls,.ofx,.qfx";
 
 // TODO: wire to your real participants store:
 function useParticipants() {
@@ -29,84 +32,153 @@ export default function ImportDialog({
   const [preview, setPreview] = useState<NormalizedExpense[]>([]);
   const [stats, setStats] = useState<{ unique: number; dupes: number } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [fileKey, setFileKey] = useState(0);
+  const [error, setError] = useState<string>("");
+  const parseTokenRef = useRef(0);
 
   const [mapping, setMapping] = useState<Mapping>({});
   const [defaultCurrency, setDefaultCurrency] = useState<SupportedCurrency>("ILS");
   const { list: participants, add: addParticipant } = useParticipants();
   const [paidBy, setPaidBy] = useState<string>("");
-  const fileInputId = useId();
 
   const columns = useMemo(() => (rows[0] ? Object.keys(rows[0]) : []), [rows]);
 
-  async function handleFile(f: File) {
-    setFile(f);
-    setLoading(true);
-    setRows([]);
-    setPreview([]);
-    setStats(null);
+  const scheduleReset = () => {
+    setTimeout(() => {
+      parseTokenRef.current += 1;
+      setFile(null);
+      setRows([]);
+      setPreview([]);
+      setStats(null);
+      setError("");
+      setLoading(false);
+      setFileKey((k) => k + 1);
+      setPaidBy("");
+    }, 0);
+  };
+
+  const handleDialogClose = () => {
+    onClose();
+    scheduleReset();
+  };
+
+  function buildPreview(){
+    if (!rows.length) {
+      setError("לא נטענו נתונים. בחר/י קובץ קודם.");
+      setStats(null);
+      setPreview([]);
+      return;
+    }
+    if (!paidBy) {
+      setError("בחר/י למי לשייך את ההוצאות (paidBy).");
+      return;
+    }
     try {
-      const parsed = await parseFile(f);
-      setRows(parsed);
-    } finally {
+      setError("");
+      const norm = toNormalized(rows, file?.name, { mapping, defaultCurrency, paidBy });
+      const { unique, dupes } = dedupe(norm, existing);
+      setPreview(unique);
+      setStats({ unique: unique.length, dupes: dupes.length });
+    } catch (err: any) {
+      setError(`שגיאת תצוגה מוקדמת: ${err?.message || err}`);
+      setPreview([]);
+      setStats(null);
+    }
+  }
+
+  async function handleImport(){
+    if (!preview.length) return;
+    setLoading(true);
+    setError("");
+    try{
+      await onImport(preview);
+      handleDialogClose();
+    }catch(err: any){
+      setError(`ייבוא נכשל: ${err?.message || err}`);
+    }finally{
       setLoading(false);
     }
   }
 
-  function buildPreview() {
-    if (!rows.length || !paidBy) return;
-    const norm = toNormalized(rows, file?.name, { mapping, defaultCurrency, paidBy });
-    const { unique, dupes } = dedupe(norm, existing);
-    setPreview(unique);
-    setStats({ unique: unique.length, dupes: dupes.length });
-  }
-
-  async function handleImport() {
-    if (!preview.length || !paidBy || importing) return;
-    setImporting(true);
-    try {
-      await onImport(preview);
-      onClose();
-    } finally {
-      setImporting(false);
-    }
-  }
-
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="glass m-4 w-full max-h-[86vh] overflow-hidden rounded-[28px] border border-white/20 bg-slate-950/80 p-4 md:w-[760px]">
+  return open ? (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+      <div className="absolute inset-0 overlay-dim" onClick={handleDialogClose} />
+      <div className="glass-strong w-full md:w-[760px] max-h-[86vh] overflow-hidden rounded-[28px] m-4 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold">ייבוא דוח אשראי</h2>
-          <button onClick={onClose} className="glass-sm rounded-full px-3 py-1.5">
+          <button onClick={handleDialogClose} className="glass-sm rounded-full px-3 py-1.5">
             סגור
           </button>
         </div>
 
         {/* Step 1: file */}
 
-        <input
-          id={fileInputId}
-          type="file"
-          accept=".csv,.xlsx,.xls,.ofx,.qfx"
-          className="sr-only"
-          onChange={(event) => {
-            const selected = event.target.files?.[0];
-            if (selected) {
-              void handleFile(selected);
-              event.target.value = "";
-            }
-          }}
-        />
-        <label
-          htmlFor={fileInputId}
-          className="glass-sm block cursor-pointer rounded-2xl border border-white/20 bg-slate-900/75 p-4 text-center transition hover:bg-slate-900/85"
-        >
-          {file ? <p className="text-white/90">{file.name}</p> : <p className="text-white/80">בחר/י קובץ CSV/XLSX/OFX</p>}
-
+        <label className="block glass-sm cursor-pointer rounded-2xl border border-white/20 bg-slate-900/75 p-4 text-center transition hover:bg-slate-900/85">
+          <input
+            key={fileKey}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.currentTarget.value = "";
+              setError("");
+              setFile(null);
+              setRows([]);
+              setPreview([]);
+              setStats(null);
+              if (!f) return;
+              const mb = f.size / (1024 * 1024);
+              if (mb > MAX_FILE_MB) {
+                setError(`הקובץ גדול מדי (${mb.toFixed(1)}MB). המקסימום ${MAX_FILE_MB}MB.`);
+                setFileKey((k) => k + 1);
+                return;
+              }
+              if (!ACCEPT.split(",").some((ext) => f.name.toLowerCase().endsWith(ext.trim()))) {
+                setError("סוג קובץ לא נתמך. יש לבחור CSV/XLSX/OFX/QFX.");
+                setFileKey((k) => k + 1);
+                return;
+              }
+              const token = ++parseTokenRef.current;
+              setLoading(true);
+              try {
+                const parsed = await parseFile(f);
+                if (token !== parseTokenRef.current) {
+                  return;
+                }
+                if (!parsed || parsed.length === 0) {
+                  setError("לא זוהו שורות בקובץ. בדקו שהכותרות בשורה הראשונה ושאין קידוד חריג.");
+                  setFileKey((k) => k + 1);
+                  setLoading(false);
+                  return;
+                }
+                setFile(f);
+                setRows(parsed);
+              } catch (err: any) {
+                if (token === parseTokenRef.current) {
+                  setError(`שגיאת קריאה/פענוח: ${err?.message || err}`);
+                  setFileKey((k) => k + 1);
+                }
+              } finally {
+                if (token === parseTokenRef.current) {
+                  setLoading(false);
+                }
+              }
+            }}
+          />
+          {file ? (
+            <p className="text-white/85">{file.name}</p>
+          ) : (
+            <p className="text-white/75">בחר/י קובץ דוח: CSV / XLSX / OFX</p>
+          )}
         </label>
-        {loading && <p className="mt-3 text-white/70">טוען…</p>}
+
+        {loading && (
+          <p className="mt-3 text-white/70">
+            {preview.length ? "מייבא את ההוצאות…" : "טוען ומפרש את הקובץ…"}
+          </p>
+        )}
+        {!!error && <p className="mt-3 text-red-300">{error}</p>}
 
         {/* Step 2: mapping + defaults (only after file parsed) */}
         {rows.length > 0 && (
@@ -190,9 +262,9 @@ export default function ImportDialog({
 
             <div className="mt-3 flex justify-end">
               <button
-                className="btn-glass h-10 rounded-2xl px-4 disabled:opacity-50"
+                className="btn-glass-strong h-10 rounded-2xl px-4 disabled:opacity-50"
                 onClick={buildPreview}
-                disabled={!rows.length || !paidBy}
+                disabled={!rows.length || !paidBy || loading}
               >
                 תצוגה מוקדמת + בדיקת כפולים
               </button>
@@ -237,13 +309,13 @@ export default function ImportDialog({
         <div className="mt-4 flex justify-between">
           <p className="text-xs text-white/60">* מיקום נשאר ריק; ניתן לערוך לאחר הייבוא.</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="h-10 rounded-2xl bg-transparent px-4 text-white/80 hover:bg-white/5">
+            <button onClick={handleDialogClose} className="h-10 rounded-2xl bg-transparent px-4 text-white/80 hover:bg-white/5">
               ביטול
             </button>
             <button
               onClick={handleImport}
-              disabled={!preview.length || !paidBy || importing}
-              className="btn-glass h-10 rounded-2xl px-4 disabled:opacity-50"
+              disabled={!preview.length || loading || !paidBy}
+              className="btn-glass-strong h-10 rounded-2xl px-4 disabled:opacity-50"
             >
               הוסף {preview.length} הוצאות
             </button>
@@ -251,5 +323,5 @@ export default function ImportDialog({
         </div>
       </div>
     </div>
-  );
+  ) : null;
 }
