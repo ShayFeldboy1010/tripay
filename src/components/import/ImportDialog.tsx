@@ -85,6 +85,7 @@ export default function ImportDialog({
         </div>
 
         {/* Step 1: file */}
+
         <input
           id={fileInputId}
           type="file"
@@ -103,6 +104,7 @@ export default function ImportDialog({
           className="glass-sm block cursor-pointer rounded-2xl border border-white/20 bg-slate-900/75 p-4 text-center transition hover:bg-slate-900/85"
         >
           {file ? <p className="text-white/90">{file.name}</p> : <p className="text-white/80">בחר/י קובץ CSV/XLSX/OFX</p>}
+
         </label>
         {loading && <p className="mt-3 text-white/70">טוען…</p>}
 
