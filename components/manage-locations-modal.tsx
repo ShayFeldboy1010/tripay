@@ -11,9 +11,10 @@ import { supabase, type Location } from "@/lib/supabase/client"
 interface ManageLocationsModalProps {
   tripId: string
   onClose: () => void
+  onLocationsChange?: (locations: Location[]) => void
 }
 
-export function ManageLocationsModal({ tripId, onClose }: ManageLocationsModalProps) {
+export function ManageLocationsModal({ tripId, onClose, onLocationsChange }: ManageLocationsModalProps) {
   const [locations, setLocations] = useState<Location[]>([])
   const [newName, setNewName] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -29,7 +30,9 @@ export function ManageLocationsModal({ tripId, onClose }: ManageLocationsModalPr
       .select("*")
       .eq("trip_id", tripId)
       .order("name")
-    setLocations(data || [])
+    const list = data || []
+    setLocations(list)
+    onLocationsChange?.(list)
   }
 
   const addLocation = async () => {
@@ -40,7 +43,9 @@ export function ManageLocationsModal({ tripId, onClose }: ManageLocationsModalPr
       .select()
       .single()
     if (!error && data) {
-      setLocations([...locations, data])
+      const updated = [...locations, data]
+      setLocations(updated)
+      onLocationsChange?.(updated)
       setNewName("")
     }
   }
@@ -52,7 +57,9 @@ export function ManageLocationsModal({ tripId, onClose }: ManageLocationsModalPr
       .update({ name: editingName.trim() })
       .eq("id", id)
     if (!error) {
-      setLocations(locations.map(l => (l.id === id ? { ...l, name: editingName.trim() } : l)))
+      const updated = locations.map((l) => (l.id === id ? { ...l, name: editingName.trim() } : l))
+      setLocations(updated)
+      onLocationsChange?.(updated)
       setEditingId(null)
       setEditingName("")
     }
@@ -61,7 +68,9 @@ export function ManageLocationsModal({ tripId, onClose }: ManageLocationsModalPr
   const deleteLocation = async (id: string) => {
     const { error } = await supabase.from("locations").delete().eq("id", id)
     if (!error) {
-      setLocations(locations.filter(l => l.id !== id))
+      const updated = locations.filter((l) => l.id !== id)
+      setLocations(updated)
+      onLocationsChange?.(updated)
     }
   }
 
