@@ -1,4 +1,4 @@
-import Papa from "papaparse";
+import { readCsvRows, type CsvOptions } from "./csv";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import type { SupportedCurrency, NormalizedExpense } from "../../types/import";
@@ -42,20 +42,6 @@ export function parseDateGuess(v: any): string {
   return (guess.isValid() ? guess.toDate() : new Date()).toISOString();
 }
 
-export async function parseCSV(file: File){
-  return new Promise<any[]>((resolve, reject)=>{
-    Papa.parse(file, {
-      worker: true,
-      header: true,
-      skipEmptyLines: "greedy",
-      dynamicTyping: false,
-      encoding: "utf-8",
-      transformHeader: (h)=> (h || "").replace(/^\uFEFF/, "").trim(),
-      complete: (res)=> resolve((res.data as any[]) || []),
-      error: (err)=> reject(err)
-    });
-  });
-}
 export async function parseXLSX(file: File) {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
@@ -74,10 +60,10 @@ export async function parseOFX(file: File) {
   }));
   return tx;
 }
-export async function parseFile(file: File){
+export async function parseFile(file: File, csvOptions?: CsvOptions){
   try{
     const ext = file.name.toLowerCase().split(".").pop()!;
-    if (ext === "csv")  return await parseCSV(file);
+    if (ext === "csv")  return await readCsvRows(file, csvOptions);
     if (ext === "xlsx" || ext === "xls") return await parseXLSX(file);
     if (ext === "ofx"  || ext === "qfx") return await parseOFX(file);
     return [];
@@ -117,6 +103,8 @@ export type Mapping = {
   currency?: string;
   last4?: string;
 };
+
+export type { CsvOptions } from "./csv";
 
 export function toNormalized(
   rows: any[],

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { parseFile, toNormalized, type Mapping } from "../../lib/import/parsers";
 import { dedupe } from "../../lib/import/dedupe";
 import type { NormalizedExpense, SupportedCurrency } from "../../types/import";
@@ -41,6 +41,9 @@ export default function ImportDialog({
   const { list: participants, add: addParticipant } = useParticipants();
   const [paidBy, setPaidBy] = useState<string>("");
 
+  const [csvDelimiter, setCsvDelimiter] = useState<"auto" | ";" | "," | "tab">("auto");
+  const [csvHasHeader, setCsvHasHeader] = useState<boolean>(true);
+
   const columns = useMemo(() => (rows[0] ? Object.keys(rows[0]) : []), [rows]);
 
   const scheduleReset = () => {
@@ -54,6 +57,8 @@ export default function ImportDialog({
       setLoading(false);
       setFileKey((k) => k + 1);
       setPaidBy("");
+      setCsvDelimiter("auto");
+      setCsvHasHeader(true);
     }, 0);
   };
 
@@ -62,7 +67,42 @@ export default function ImportDialog({
     scheduleReset();
   };
 
-  function buildPreview(){
+  useEffect(() => {
+    if (!file) return;
+    const token = ++parseTokenRef.current;
+    setLoading(true);
+    setError("");
+    setRows([]);
+    setPreview([]);
+    setStats(null);
+
+    const run = async () => {
+      try {
+        const options = file.name.toLowerCase().endsWith(".csv")
+          ? { delimiter: csvDelimiter, hasHeader: csvHasHeader }
+          : undefined;
+        const parsed = await parseFile(file, options);
+        if (token !== parseTokenRef.current) return;
+        if (!parsed || parsed.length === 0) {
+          setError("לא זוהו שורות בקובץ. נסו לשנות את ה-Delimiter או את סימון הכותרות ולנסות שוב.");
+          return;
+        }
+        setRows(parsed);
+      } catch (err: any) {
+        if (token === parseTokenRef.current) {
+          setError(`שגיאת קריאה/פענוח: ${err?.message || err}`);
+        }
+      } finally {
+        if (token === parseTokenRef.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    run();
+  }, [file, csvDelimiter, csvHasHeader]);
+
+  function buildPreview() {
     if (!rows.length) {
       setError("לא נטענו נתונים. בחר/י קובץ קודם.");
       setStats(null);
@@ -86,16 +126,16 @@ export default function ImportDialog({
     }
   }
 
-  async function handleImport(){
+  async function handleImport() {
     if (!preview.length) return;
     setLoading(true);
     setError("");
-    try{
+    try {
       await onImport(preview);
       handleDialogClose();
-    }catch(err: any){
+    } catch (err: any) {
       setError(`ייבוא נכשל: ${err?.message || err}`);
-    }finally{
+    } finally {
       setLoading(false);
     }
   }
@@ -123,7 +163,6 @@ export default function ImportDialog({
               const f = e.target.files?.[0];
               e.currentTarget.value = "";
               setError("");
-              setFile(null);
               setRows([]);
               setPreview([]);
               setStats(null);
@@ -131,39 +170,19 @@ export default function ImportDialog({
               const mb = f.size / (1024 * 1024);
               if (mb > MAX_FILE_MB) {
                 setError(`הקובץ גדול מדי (${mb.toFixed(1)}MB). המקסימום ${MAX_FILE_MB}MB.`);
+                setFile(null);
                 setFileKey((k) => k + 1);
                 return;
               }
               if (!ACCEPT.split(",").some((ext) => f.name.toLowerCase().endsWith(ext.trim()))) {
                 setError("סוג קובץ לא נתמך. יש לבחור CSV/XLSX/OFX/QFX.");
+                setFile(null);
                 setFileKey((k) => k + 1);
                 return;
               }
-              const token = ++parseTokenRef.current;
+              parseTokenRef.current += 1;
               setLoading(true);
-              try {
-                const parsed = await parseFile(f);
-                if (token !== parseTokenRef.current) {
-                  return;
-                }
-                if (!parsed || parsed.length === 0) {
-                  setError("לא זוהו שורות בקובץ. בדקו שהכותרות בשורה הראשונה ושאין קידוד חריג.");
-                  setFileKey((k) => k + 1);
-                  setLoading(false);
-                  return;
-                }
-                setFile(f);
-                setRows(parsed);
-              } catch (err: any) {
-                if (token === parseTokenRef.current) {
-                  setError(`שגיאת קריאה/פענוח: ${err?.message || err}`);
-                  setFileKey((k) => k + 1);
-                }
-              } finally {
-                if (token === parseTokenRef.current) {
-                  setLoading(false);
-                }
-              }
+              setFile(f);
             }}
           />
           {file ? (
@@ -172,6 +191,27 @@ export default function ImportDialog({
             <p className="text-white/75">בחר/י קובץ דוח: CSV / XLSX / OFX</p>
           )}
         </label>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="glass-sm p-2 rounded-xl">
+            <label className="block text-xs text-white/60 mb-1">Delimiter</label>
+            <select className="bg-transparent w-full" value={csvDelimiter} onChange={(e) => setCsvDelimiter(e.target.value as any)}>
+              <option value="auto">Auto</option>
+              <option value=";">;</option>
+              <option value=",">,</option>
+              <option value="tab">Tab</option>
+            </select>
+          </div>
+          <div className="glass-sm p-2 rounded-xl flex items-center justify-between">
+            <label className="text-xs text-white/60">Headers in first row</label>
+            <input
+              type="checkbox"
+              className="scale-110"
+              checked={csvHasHeader}
+              onChange={(e) => setCsvHasHeader(e.target.checked)}
+            />
+          </div>
+        </div>
 
         {loading && (
           <p className="mt-3 text-white/70">
