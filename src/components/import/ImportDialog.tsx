@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { parseFile, toNormalized, type Mapping } from "../../lib/import/parsers";
 import { dedupe } from "../../lib/import/dedupe";
 import type { NormalizedExpense, SupportedCurrency } from "../../types/import";
@@ -35,6 +35,7 @@ export default function ImportDialog({
   const [defaultCurrency, setDefaultCurrency] = useState<SupportedCurrency>("ILS");
   const { list: participants, add: addParticipant } = useParticipants();
   const [paidBy, setPaidBy] = useState<string>("");
+  const fileInputId = useId();
 
   const columns = useMemo(() => (rows[0] ? Object.keys(rows[0]) : []), [rows]);
 
@@ -75,7 +76,7 @@ export default function ImportDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="glass m-4 w-full max-h-[86vh] overflow-hidden rounded-[28px] p-4 md:w-[760px]">
+      <div className="glass m-4 w-full max-h-[86vh] overflow-hidden rounded-[28px] border border-white/20 bg-slate-950/80 p-4 md:w-[760px]">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold">ייבוא דוח אשראי</h2>
           <button onClick={onClose} className="glass-sm rounded-full px-3 py-1.5">
@@ -84,14 +85,24 @@ export default function ImportDialog({
         </div>
 
         {/* Step 1: file */}
-        <label className="glass-sm block cursor-pointer rounded-2xl p-4 text-center">
-          <input
-            type="file"
-            accept=".csv,.xlsx,.xls,.ofx,.qfx"
-            className="hidden"
-            onChange={(event) => event.target.files?.[0] && handleFile(event.target.files[0])}
-          />
-          {file ? <p className="text-white/80">{file.name}</p> : <p className="text-white/70">בחר/י קובץ CSV/XLSX/OFX</p>}
+        <input
+          id={fileInputId}
+          type="file"
+          accept=".csv,.xlsx,.xls,.ofx,.qfx"
+          className="sr-only"
+          onChange={(event) => {
+            const selected = event.target.files?.[0];
+            if (selected) {
+              void handleFile(selected);
+              event.target.value = "";
+            }
+          }}
+        />
+        <label
+          htmlFor={fileInputId}
+          className="glass-sm block cursor-pointer rounded-2xl border border-white/20 bg-slate-900/75 p-4 text-center transition hover:bg-slate-900/85"
+        >
+          {file ? <p className="text-white/90">{file.name}</p> : <p className="text-white/80">בחר/י קובץ CSV/XLSX/OFX</p>}
         </label>
         {loading && <p className="mt-3 text-white/70">טוען…</p>}
 
@@ -108,7 +119,7 @@ export default function ImportDialog({
                 { key: "currency", label: "מטבע (עמודה בטבלה)" },
                 { key: "last4", label: "4 ספרות כרטיס" },
               ].map((field) => (
-                <div key={field.key} className="glass-sm rounded-xl p-2">
+                <div key={field.key} className="glass-sm rounded-xl bg-slate-900/70 p-2">
                   <label className="mb-1 block text-xs text-white/60">{field.label}</label>
                   <select
                     className="w-full bg-transparent outline-none"
@@ -126,7 +137,7 @@ export default function ImportDialog({
                   </select>
                 </div>
               ))}
-              <div className="glass-sm rounded-xl p-2">
+              <div className="glass-sm rounded-xl bg-slate-900/70 p-2">
                 <label className="mb-1 block text-xs text-white/60">מטבע ברירת־מחדל</label>
                 <select
                   className="w-full bg-transparent"
@@ -141,7 +152,7 @@ export default function ImportDialog({
                 </select>
                 <p className="mt-1 text-[11px] text-white/60">ישמש לשורות ללא עמודת מטבע / ללא סמלי מטבע.</p>
               </div>
-              <div className="glass-sm col-span-2 rounded-xl p-2">
+              <div className="glass-sm col-span-2 rounded-xl bg-slate-900/70 p-2">
                 <label className="mb-1 block text-xs text-white/60">שייך כל ההוצאות למי?</label>
                 <div className="flex items-center gap-2">
                   <select className="bg-transparent" value={paidBy} onChange={(event) => setPaidBy(event.target.value)}>
