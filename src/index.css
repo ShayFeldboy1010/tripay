@@ -1,0 +1,14 @@
+/* Darker overlay + stronger modal */
+.overlay-dim {
+  background: rgba(6, 8, 14, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.glass-strong {
+  background: linear-gradient(180deg, rgba(18,22,34,0.82), rgba(18,22,34,0.78));
+  border: 1px solid rgba(255,255,255,0.18);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border-radius: 28px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+}
