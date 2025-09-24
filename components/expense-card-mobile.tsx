@@ -119,7 +119,7 @@ export function ExpenseCardMobile({ expense, onEdit, onDelete, isDeleting = fals
                   )}
                 </div>
                 <div className="ms-3 flex-shrink-0 text-end">
-                  <p className="grad-text text-2xl font-bold">₪{expense.amount.toFixed(2)}</p>
+                  <p className="grad-text numeric-display text-2xl font-bold">₪{expense.amount.toFixed(2)}</p>
                 </div>
               </div>
 

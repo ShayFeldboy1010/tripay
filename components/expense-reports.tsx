@@ -228,7 +228,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   <Banknote className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">₪{totalAmount.toFixed(2)}</div>
+                  <div className="text-2xl font-bold numeric-display">₪{totalAmount.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">{expenses.length} expenses</p>
                 </CardContent>
               </Card>
@@ -238,7 +238,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">₪{averageExpense.toFixed(2)}</div>
+                  <div className="text-2xl font-bold numeric-display">₪{averageExpense.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">per expense</p>
                 </CardContent>
               </Card>
@@ -248,7 +248,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{uniquePayers}</div>
+                  <div className="text-2xl font-bold numeric-display">{uniquePayers}</div>
                   <p className="text-xs text-muted-foreground">people</p>
                 </CardContent>
               </Card>
@@ -258,7 +258,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{uniqueCategories}</div>
+                  <div className="text-2xl font-bold numeric-display">{uniqueCategories}</div>
                   <p className="text-xs text-muted-foreground">different types</p>
                 </CardContent>
               </Card>
@@ -293,7 +293,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           </div>
                         </div>
                         <div className="flex-none text-right">
-                          <span className="grad-text text-sm font-semibold">₪{data.total.toFixed(2)}</span>
+                          <span className="grad-text numeric-display text-sm font-semibold">₪{data.total.toFixed(2)}</span>
                         </div>
                       </div>
                     ))}
@@ -354,7 +354,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           <p className="truncate-2 text-xs text-white/70 leading-tight">Settlement balance</p>
                         </div>
                         <div className="flex-none text-right">
-                          <p className="grad-text text-lg font-bold">₪{balance.amount.toFixed(2)}</p>
+                          <p className="grad-text numeric-display text-lg font-bold">₪{balance.amount.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
@@ -387,7 +387,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                             </div>
                           </div>
                           <div className="flex-none text-right">
-                            <p className="grad-text text-lg font-bold">₪{data.total.toFixed(2)}</p>
+                            <p className="grad-text numeric-display text-lg font-bold">₪{data.total.toFixed(2)}</p>
                             <p className="truncate-2 text-sm text-white/70 leading-tight">
                               Avg ₪{(data.total / data.count).toFixed(2)} per expense
                             </p>
@@ -461,7 +461,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           </div>
                         </div>
                         <div className="flex-none text-right">
-                          <p className="grad-text font-semibold">₪{data.total.toFixed(2)}</p>
+                          <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
                           <p className="truncate-2 text-sm text-white/70 leading-tight">
                             {((data.total / totalAmount) * 100).toFixed(1)}%
                           </p>
@@ -502,17 +502,39 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
               <CardContent>
                 <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={timelineData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
+                    <BarChart
+                      data={timelineData}
+                      margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+                      style={{ background: "transparent" }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }}
+                        axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                        tickLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                      />
+                      <YAxis
+                        tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }}
+                        axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                        tickLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                        width={60}
+                      />
                       <Tooltip
+                        cursor={{ fill: "rgba(255,255,255,0.08)" }}
+                        contentStyle={{
+                          background: "rgba(15,23,42,0.88)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 12,
+                          color: "#fff",
+                        }}
+                        labelStyle={{ color: "rgba(255,255,255,0.7)" }}
                         formatter={(value, name) => [
                           name === "amount" ? `₪${Number(value).toFixed(2)}` : value,
                           name === "amount" ? "Amount" : "Count",
                         ]}
                       />
-                      <Bar dataKey="amount" fill="hsl(var(--chart-1))" />
+                      <Bar dataKey="amount" fill="hsl(var(--chart-1))" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -540,7 +562,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                         </div>
                         <div className="flex-none text-right">
-                          <p className="grad-text font-semibold">₪{data.total.toFixed(2)}</p>
+                          <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}

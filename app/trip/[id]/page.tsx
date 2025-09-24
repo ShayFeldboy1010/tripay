@@ -305,8 +305,8 @@ export default function TripPage() {
           <p className="text-sm text-white/70">Have Fun!</p>
         </div>
         <div className="space-y-1 text-end">
-          <p className="grad-text text-4xl font-bold leading-tight md:text-5xl">₪{totalAmount.toFixed(2)}</p>
-          <p className="text-sm text-white/60">{totalCount} total expenses</p>
+          <p className="grad-text numeric-display text-4xl font-bold leading-tight md:text-5xl">₪{totalAmount.toFixed(2)}</p>
+          <p className="text-sm text-white/60 numeric-display">{totalCount} total expenses</p>
         </div>
       </Card>
 

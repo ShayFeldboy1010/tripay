@@ -28,7 +28,7 @@ export function TotalBalance({ amount, totalExpenses, participantCount, averageE
       <div className="relative space-y-6">
         <div className="text-center space-y-2">
           <p className="text-sm uppercase tracking-[0.4em] text-white/60">יתרת הטיול</p>
-          <p className="grad-text text-6xl md:text-7xl font-extrabold tracking-tight leading-none text-center">
+          <p className="grad-text numeric-display text-[clamp(2.75rem,9vw,4.75rem)] font-extrabold tracking-tight leading-none text-center">
             {formatted}₪
           </p>
           <p className="text-base text-white/70">סכום מצטבר של כל ההוצאות ששויכו לטיול הזה</p>
@@ -38,17 +38,17 @@ export function TotalBalance({ amount, totalExpenses, participantCount, averageE
           <div className="text-center glass-sm p-4">
             <Receipt className="mx-auto h-5 w-5 text-white/70" />
             <p className="mt-2 text-xs text-white/60">סה״כ הוצאות</p>
-            <p className="mt-1 text-lg font-semibold text-white">{totalExpenses}</p>
+            <p className="mt-1 text-lg font-semibold text-white numeric-display">{totalExpenses}</p>
           </div>
           <div className="text-center glass-sm p-4">
             <Users className="mx-auto h-5 w-5 text-white/70" />
             <p className="mt-2 text-xs text-white/60">משתתפים</p>
-            <p className="mt-1 text-lg font-semibold text-white">{participantCount}</p>
+            <p className="mt-1 text-lg font-semibold text-white numeric-display">{participantCount}</p>
           </div>
           <div className="text-center glass-sm p-4">
             <TrendingUp className="mx-auto h-5 w-5 text-white/70" />
             <p className="mt-2 text-xs text-white/60">ממוצע הוצאה</p>
-            <p className="mt-1 text-lg font-semibold text-white">{averageFormatted}</p>
+            <p className="mt-1 text-lg font-semibold text-white numeric-display">{averageFormatted}</p>
           </div>
         </div>
       </div>

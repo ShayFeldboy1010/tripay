@@ -76,7 +76,7 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle dir="auto" className="text-lg text-white">{location}</CardTitle>
-              <span className="grad-text text-xl font-bold">₪{total.toFixed(2)}</span>
+              <span className="grad-text numeric-display text-xl font-bold">₪{total.toFixed(2)}</span>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
@@ -95,8 +95,8 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white">₪{amount.toFixed(2)}</span>
-                      <span className="text-xs text-white/60">({((amount / total) * 100).toFixed(1)}%)</span>
+                      <span className="text-sm font-medium text-white numeric-display">₪{amount.toFixed(2)}</span>
+                      <span className="text-xs text-white/60 numeric-display">({((amount / total) * 100).toFixed(1)}%)</span>
                     </div>
                   </div>
                   <div className="ms-4 space-y-1">
@@ -106,7 +106,7 @@ export function LocationsReport({ expenses }: LocationsReportProps) {
                           <span dir="auto" className="text-white/70">{expense.title || "Untitled"}</span>
                           {expense.description && <span dir="auto" className="text-white/50">• {expense.description}</span>}
                         </div>
-                        <span className="font-medium text-white text-end">₪{expense.amount.toFixed(2)}</span>
+                        <span className="font-medium text-white text-end numeric-display">₪{expense.amount.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
