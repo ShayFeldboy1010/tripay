@@ -42,14 +42,17 @@ export function parseDateGuess(v: any): string {
   return (guess.isValid() ? guess.toDate() : new Date()).toISOString();
 }
 
-export async function parseCSV(file: File) {
-  return new Promise<any[]>((resolve, reject) => {
+export async function parseCSV(file: File){
+  return new Promise<any[]>((resolve, reject)=>{
     Papa.parse(file, {
+      worker: true,
       header: true,
-      skipEmptyLines: true,
+      skipEmptyLines: "greedy",
+      dynamicTyping: false,
       encoding: "utf-8",
-      complete: (res) => resolve(res.data as any[]),
-      error: reject,
+      transformHeader: (h)=> (h || "").replace(/^\uFEFF/, "").trim(),
+      complete: (res)=> resolve((res.data as any[]) || []),
+      error: (err)=> reject(err)
     });
   });
 }
@@ -71,12 +74,14 @@ export async function parseOFX(file: File) {
   }));
   return tx;
 }
-export async function parseFile(file: File) {
-  const ext = file.name.toLowerCase().split(".").pop()!;
-  if (ext === "csv") return parseCSV(file);
-  if (ext === "xlsx" || ext === "xls") return parseXLSX(file);
-  if (ext === "ofx" || ext === "qfx") return parseOFX(file);
-  return [];
+export async function parseFile(file: File){
+  try{
+    const ext = file.name.toLowerCase().split(".").pop()!;
+    if (ext === "csv")  return await parseCSV(file);
+    if (ext === "xlsx" || ext === "xls") return await parseXLSX(file);
+    if (ext === "ofx"  || ext === "qfx") return await parseOFX(file);
+    return [];
+  }catch(e){ return []; }
 }
 
 /** Heuristic: detect currency from a row/strings/symbols; fallback to defaultCurrency */
