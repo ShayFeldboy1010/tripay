@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,26 +11,29 @@ import { supabase, type Participant } from "@/lib/supabase/client"
 interface ManageParticipantsModalProps {
   tripId: string
   onClose: () => void
+  onParticipantsChange?: (participants: Participant[]) => void
 }
 
-export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsModalProps) {
+export function ManageParticipantsModal({ tripId, onClose, onParticipantsChange }: ManageParticipantsModalProps) {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [newName, setNewName] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
 
-  useEffect(() => {
-    fetchParticipants()
-  }, [tripId])
-
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     const { data } = await supabase
       .from("participants")
       .select("*")
       .eq("trip_id", tripId)
       .order("name")
-    setParticipants(data || [])
-  }
+    const list = data || []
+    setParticipants(list)
+    onParticipantsChange?.(list)
+  }, [tripId, onParticipantsChange])
+
+  useEffect(() => {
+    fetchParticipants()
+  }, [fetchParticipants])
 
   const addParticipant = async () => {
     if (!newName.trim()) return
@@ -40,7 +43,9 @@ export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsM
       .select()
       .single()
     if (!error && data) {
-      setParticipants([...participants, data])
+      const updated = [...participants, data]
+      setParticipants(updated)
+      onParticipantsChange?.(updated)
       setNewName("")
     }
   }
@@ -52,7 +57,9 @@ export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsM
       .update({ name: editingName.trim() })
       .eq("id", id)
     if (!error) {
-      setParticipants(participants.map(p => (p.id === id ? { ...p, name: editingName.trim() } : p)))
+      const updated = participants.map(p => (p.id === id ? { ...p, name: editingName.trim() } : p))
+      setParticipants(updated)
+      onParticipantsChange?.(updated)
       setEditingId(null)
       setEditingName("")
     }
@@ -61,7 +68,9 @@ export function ManageParticipantsModal({ tripId, onClose }: ManageParticipantsM
   const deleteParticipant = async (id: string) => {
     const { error } = await supabase.from("participants").delete().eq("id", id)
     if (!error) {
-      setParticipants(participants.filter(p => p.id !== id))
+      const updated = participants.filter(p => p.id !== id)
+      setParticipants(updated)
+      onParticipantsChange?.(updated)
     }
   }
 

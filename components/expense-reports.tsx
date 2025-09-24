@@ -209,7 +209,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   }
 
   return (
-    <div className={className}>
+    <div className={className} dir="ltr">
       <div className="space-y-4">
         <SummaryTabs idPrefix={tabsIdPrefix} value={selectedTab} onChange={setSelectedTab} />
 
@@ -221,7 +221,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
             tabIndex={0}
             className="space-y-4"
           >
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
@@ -275,8 +275,8 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                     .sort(([, a], [, b]) => b.total - a.total)
                     .slice(0, 5)
                     .map(([category, data]) => (
-                      <div key={category} className="flex items-center gap-3">
-                        <div className="flex items-center gap-3 shrink-min">
+                      <div key={category} className="flex w-full items-center gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
                           <Badge
                             variant="outline"
                             dir="auto"
@@ -285,14 +285,14 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           >
                             {category}
                           </Badge>
-                          <div className="shrink-min">
+                          <div className="min-w-0 text-left">
                             <p dir="auto" className="truncate-1 text-balance text-sm font-semibold text-white">
                               {category}
                             </p>
                             <p className="truncate-2 text-xs text-white/70 leading-tight">{data.count} expenses</p>
                           </div>
                         </div>
-                        <div className="flex-none text-right">
+                        <div className="ml-auto flex-none text-right">
                           <span className="grad-text numeric-display text-sm font-semibold">₪{data.total.toFixed(2)}</span>
                         </div>
                       </div>
@@ -346,14 +346,14 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 ) : (
                   <div className="space-y-3">
                     {balances.map((balance, index) => (
-                      <div key={index} className="glass-sm flex items-center gap-3 rounded-2xl p-3">
-                        <div className="shrink-min">
+                      <div key={index} className="glass-sm flex w-full items-center gap-3 rounded-2xl p-3" dir="ltr">
+                        <div className="min-w-0 text-left">
                           <p dir="auto" className="truncate-1 text-balance text-sm font-semibold text-white">
                             {balance.from} owes {balance.to}
                           </p>
                           <p className="truncate-2 text-xs text-white/70 leading-tight">Settlement balance</p>
                         </div>
-                        <div className="flex-none text-right">
+                        <div className="ml-auto flex-none text-right">
                           <p className="grad-text numeric-display text-lg font-bold">₪{balance.amount.toFixed(2)}</p>
                         </div>
                       </div>
@@ -372,21 +372,21 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   {Object.entries(expensesByPayer)
                     .sort(([, a], [, b]) => b.total - a.total)
                     .map(([payer, data]) => (
-                      <div key={payer} className="glass-sm rounded-2xl p-4">
+                      <div key={payer} className="glass-sm rounded-2xl p-4" dir="ltr">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-3 shrink-min">
+                          <div className="flex min-w-0 flex-1 items-center gap-3">
                             <div
-                              className="h-4 w-4 rounded-full"
+                              className="h-4 w-4 flex-shrink-0 rounded-full"
                               style={{ backgroundColor: colorForKey(payer) }}
                             />
-                            <div className="shrink-min">
+                            <div className="min-w-0 text-left">
                               <h4 dir="auto" className="truncate-1 text-balance font-semibold text-white">
                                 {payer}
                               </h4>
                               <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                             </div>
                           </div>
-                          <div className="flex-none text-right">
+                          <div className="ml-auto flex-none text-right">
                             <p className="grad-text numeric-display text-lg font-bold">₪{data.total.toFixed(2)}</p>
                             <p className="truncate-2 text-sm text-white/70 leading-tight">
                               Avg ₪{(data.total / data.count).toFixed(2)} per expense
@@ -447,22 +447,22 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   {Object.entries(expensesByCategory)
                     .sort(([, a], [, b]) => b.total - a.total)
                     .map(([category, data]) => (
-                      <div key={category} className="glass-sm flex items-center gap-3 rounded-2xl p-3">
-                        <div className="flex items-center gap-3 shrink-min">
+                      <div key={category} className="glass-sm flex w-full items-center gap-3 rounded-2xl p-3" dir="ltr">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div
-                            className="h-4 w-4 rounded-full"
+                            className="h-4 w-4 flex-shrink-0 rounded-full"
                             style={{ backgroundColor: colorForKey(category) }}
                           />
-                          <div className="shrink-min">
+                          <div className="min-w-0 text-left">
                             <p dir="auto" className="truncate-1 text-balance font-medium text-white">
                               {category}
                             </p>
                             <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                           </div>
                         </div>
-                        <div className="flex-none text-right">
+                        <div className="ml-auto flex-none text-right">
                           <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
-                          <p className="truncate-2 text-sm text-white/70 leading-tight">
+                          <p className="truncate-2 text-sm text-white/70 leading-tight numeric-display">
                             {((data.total / totalAmount) * 100).toFixed(1)}%
                           </p>
                         </div>
@@ -550,8 +550,8 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                   {Object.entries(expensesByDate)
                     .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                     .map(([date, data]) => (
-                      <div key={date} className="glass-sm flex items-center gap-3 rounded-2xl p-3">
-                        <div className="shrink-min">
+                      <div key={date} className="glass-sm flex w-full items-center gap-3 rounded-2xl p-3" dir="ltr">
+                        <div className="min-w-0 text-left">
                           <p className="truncate-1 text-balance font-medium text-white">
                             {new Date(date).toLocaleDateString("en-US", {
                               weekday: "long",
@@ -561,7 +561,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           </p>
                           <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                         </div>
-                        <div className="flex-none text-right">
+                        <div className="ml-auto flex-none text-right">
                           <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
                         </div>
                       </div>

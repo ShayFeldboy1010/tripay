@@ -12,7 +12,7 @@ interface TotalBalanceProps {
 }
 
 export function TotalBalance({ amount, totalExpenses, participantCount, averageExpense }: TotalBalanceProps) {
-  const formatted = formatILS(amount).replace("₪", "").trim()
+  const totalFormatted = formatILS(amount)
   const averageFormatted = formatILS(averageExpense)
 
   return (
@@ -28,24 +28,27 @@ export function TotalBalance({ amount, totalExpenses, participantCount, averageE
       <div className="relative space-y-6">
         <div className="text-center space-y-2">
           <p className="text-sm uppercase tracking-[0.4em] text-white/60">יתרת הטיול</p>
-          <p className="grad-text numeric-display text-[clamp(2.75rem,9vw,4.75rem)] font-extrabold tracking-tight leading-none text-center">
-            {formatted}₪
+          <p
+            dir="ltr"
+            className="grad-text numeric-display text-[clamp(2.75rem,9vw,4.75rem)] font-extrabold tracking-tight leading-none text-center"
+          >
+            {totalFormatted}
           </p>
           <p className="text-base text-white/70">סכום מצטבר של כל ההוצאות ששויכו לטיול הזה</p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-8">
-          <div className="text-center glass-sm p-4">
+          <div className="text-center glass-sm p-4" dir="ltr">
             <Receipt className="mx-auto h-5 w-5 text-white/70" />
             <p className="mt-2 text-xs text-white/60">סה״כ הוצאות</p>
             <p className="mt-1 text-lg font-semibold text-white numeric-display">{totalExpenses}</p>
           </div>
-          <div className="text-center glass-sm p-4">
+          <div className="text-center glass-sm p-4" dir="ltr">
             <Users className="mx-auto h-5 w-5 text-white/70" />
             <p className="mt-2 text-xs text-white/60">משתתפים</p>
             <p className="mt-1 text-lg font-semibold text-white numeric-display">{participantCount}</p>
           </div>
-          <div className="text-center glass-sm p-4">
+          <div className="text-center glass-sm p-4" dir="ltr">
             <TrendingUp className="mx-auto h-5 w-5 text-white/70" />
             <p className="mt-2 text-xs text-white/60">ממוצע הוצאה</p>
             <p className="mt-1 text-lg font-semibold text-white numeric-display">{averageFormatted}</p>

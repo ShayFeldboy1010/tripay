@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase, type Trip, type Expense } from "@/lib/supabase/client";
+import { supabase, type Trip, type Expense, type Participant } from "@/lib/supabase/client";
 import { offlineStorage } from "@/lib/offline-storage";
 import { syncManager } from "@/lib/sync-manager";
 import { ExpenseReports } from "@/components/expense-reports";
@@ -23,6 +23,7 @@ export default function TripSummaryPage() {
   const tripId = params.id as string;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [participantsCount, setParticipantsCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
@@ -57,6 +58,13 @@ export default function TripSummaryPage() {
             setExpenses(expensesData);
             expensesData.forEach((e) => offlineStorage.saveExpense(e));
           }
+          const { data: participantsData } = await supabase
+            .from("participants")
+            .select("id")
+            .eq("trip_id", tripId);
+          if (participantsData) {
+            setParticipantsCount(participantsData.length);
+          }
           await syncManager.downloadTripData(tripId);
         }
       } finally {
@@ -68,6 +76,10 @@ export default function TripSummaryPage() {
 
   const onExpenseAdded = (expense: Expense) => {
     setExpenses((prev) => [expense, ...prev]);
+  };
+
+  const onParticipantsChange = (updatedParticipants: Participant[]) => {
+    setParticipantsCount(updatedParticipants.length);
   };
 
   if (loading || !trip) {
@@ -83,7 +95,9 @@ export default function TripSummaryPage() {
       participantSet.add(expense.paid_by);
     }
   });
-  const participantCount = participantSet.size || 1;
+  const derivedParticipantCount = participantSet.size;
+  const participantCount =
+    participantsCount ?? (derivedParticipantCount > 0 ? derivedParticipantCount : 1);
   const averageExpense = totalExpenses > 0 ? totalAmount / totalExpenses : 0;
 
   const content = (
@@ -101,7 +115,11 @@ export default function TripSummaryPage() {
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
       )}
       {showParticipants && (
-        <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
+        <ManageParticipantsModal
+          tripId={tripId}
+          onClose={() => setShowParticipants(false)}
+          onParticipantsChange={onParticipantsChange}
+        />
       )}
       {showLocations && (
         <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
