@@ -84,11 +84,11 @@ export default function ImportDialog({
         </div>
 
         {/* Step 1: file */}
-        <label className="glass-sm block cursor-pointer rounded-2xl p-4 text-center">
+        <label className="glass-sm relative block cursor-pointer rounded-2xl p-4 text-center">
           <input
             type="file"
             accept=".csv,.xlsx,.xls,.ofx,.qfx"
-            className="hidden"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             onChange={(event) => event.target.files?.[0] && handleFile(event.target.files[0])}
           />
           {file ? <p className="text-white/80">{file.name}</p> : <p className="text-white/70">בחר/י קובץ CSV/XLSX/OFX</p>}
