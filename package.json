@@ -7,7 +7,8 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node scripts/postinstall-check-import.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -45,6 +46,7 @@
     "cmdk": "1.0.4",
     "core-js": "^3.45.1",
     "date-fns": "latest",
+    "dayjs": "^1.11.18",
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.23.12",
     "geist": "latest",
@@ -53,6 +55,8 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "latest",
+    "ofx-parse": "npm:node-ofx-parser@^0.5.1",
+    "papaparse": "^5.5.3",
     "react": "^19",
     "react-day-picker": "9.8.0",
     "react-dom": "^19",
@@ -63,6 +67,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
+    "xlsx": "^0.18.5",
     "zod": "3.25.67"
   },
   "devDependencies": {

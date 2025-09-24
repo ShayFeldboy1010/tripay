@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { supabase, type Trip, type Expense } from "@/lib/supabase/client"
+import { supabase, type Trip, type Expense, type Participant, type Location } from "@/lib/supabase/client"
 import { X } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
@@ -25,6 +25,10 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
+import ImportDialog from "@/src/components/import/ImportDialog"
+import { ingestBatch } from "@/src/lib/import/ingest"
+import type { NormalizedExpense } from "@/src/types/import"
+import { cryptoHash } from "@/src/lib/import/parsers"
 
 export default function TripPage() {
   const params = useParams()
@@ -41,8 +45,33 @@ export default function TripPage() {
   const [showEditTrip, setShowEditTrip] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
+  const [participants, setParticipants] = useState<Participant[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const isDesktop = useIsDesktop()
+
+  const loadTripMeta = useCallback(async () => {
+    if (!tripId) return
+    try {
+      if (!navigator.onLine) return
+      const [{ data: participantData, error: participantError }, { data: locationData, error: locationError }] =
+        await Promise.all([
+          supabase.from("participants").select("id, name").eq("trip_id", tripId).order("name"),
+          supabase.from("locations").select("id, name").eq("trip_id", tripId).order("name"),
+        ])
+
+      if (!participantError) {
+        setParticipants(participantData || [])
+      }
+      if (!locationError) {
+        setLocations(locationData || [])
+      }
+    } catch (error) {
+      console.error("Error loading trip metadata:", error)
+    }
+  }, [tripId])
 
   useEffect(() => {
     loadTripData()
@@ -54,6 +83,16 @@ export default function TripPage() {
       }
     }
   }, [tripId])
+
+  useEffect(() => {
+    loadTripMeta()
+  }, [loadTripMeta])
+
+  useEffect(() => {
+    if (showImportDialog) {
+      loadTripMeta()
+    }
+  }, [showImportDialog, loadTripMeta])
 
   useEffect(() => {
     if (trip && showEditTrip) {
@@ -260,6 +299,23 @@ export default function TripPage() {
     }
   }
 
+  const handleImportExpenses = async (items: NormalizedExpense[]) => {
+    if (isImporting) return
+    try {
+      setIsImporting(true)
+      await ingestBatch(items, { tripId, participants, locations })
+      toast.success(`הדוח יובא בהצלחה (${items.length})`)
+      await loadTripData()
+      await loadTripMeta()
+    } catch (error) {
+      console.error("Error importing credit statement:", error)
+      toast.error("ייבוא הדוח נכשל")
+      throw error
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
 
   if (delayedLoading) {
     return (
@@ -292,6 +348,62 @@ export default function TripPage() {
     )
   }
 
+  const participantNameLookup = useMemo(() => {
+    const map = new Map<string, string>()
+    participants.forEach((participant) => {
+      map.set(participant.id, participant.name)
+    })
+    return map
+  }, [participants])
+
+  const existingNormalized = useMemo<NormalizedExpense[]>(() => {
+    return expenses.map((expense) => {
+      let metadata: unknown = null
+      if (expense.note) {
+        try {
+          metadata = JSON.parse(expense.note)
+        } catch {
+          metadata = null
+        }
+      }
+
+      const sourceMeta = (metadata as { source?: Record<string, unknown> } | null)?.source ?? {}
+      const provider = typeof sourceMeta.provider === "string" ? sourceMeta.provider : undefined
+      const rawLast4 = typeof sourceMeta.cardLast4 === "string" ? sourceMeta.cardLast4 : ""
+      const cardLast4 = rawLast4 ? rawLast4.replace(/\D/g, "").slice(-4) : ""
+      const fileName = typeof sourceMeta.fileName === "string" ? sourceMeta.fileName : undefined
+      const currency = typeof sourceMeta.currency === "string" && sourceMeta.currency ? sourceMeta.currency : "ILS"
+      const storedHash = typeof sourceMeta.hash === "string" && sourceMeta.hash ? sourceMeta.hash : undefined
+      const isoDate = expense.date ? new Date(expense.date).toISOString() : new Date(expense.created_at).toISOString()
+      const parsedAmount = Number(expense.amount)
+      const amount = Number.isNaN(parsedAmount) ? 0 : Math.abs(parsedAmount)
+      const description = expense.description || expense.title || ""
+      const fallbackHash = cryptoHash(
+        JSON.stringify({ date: isoDate, amount, description, currency, last4: cardLast4 }).toLowerCase(),
+      )
+      const participantNames = Array.isArray(expense.payers)
+        ? expense.payers
+            .map((id) => participantNameLookup.get(id) || (typeof id === "string" ? id : String(id)))
+            .filter((name): name is string => Boolean(name))
+        : []
+
+      return {
+        date: isoDate,
+        amount,
+        currency,
+        description,
+        category: expense.category ?? undefined,
+        participants: participantNames,
+        source: {
+          provider,
+          cardLast4: cardLast4 || undefined,
+          fileName,
+          hash: storedHash ?? fallbackHash,
+        },
+      }
+    })
+  }, [expenses, participantNameLookup])
+
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const totalCount = expenses.length
 
@@ -316,10 +428,18 @@ export default function TripPage() {
 
       <ExpenseList expenses={expenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
       {showParticipants && (
-        <ManageParticipantsModal tripId={tripId} onClose={() => setShowParticipants(false)} />
+        <ManageParticipantsModal
+          tripId={tripId}
+          onClose={() => setShowParticipants(false)}
+          onParticipantsChange={setParticipants}
+        />
       )}
       {showLocations && (
-        <ManageLocationsModal tripId={tripId} onClose={() => setShowLocations(false)} />
+        <ManageLocationsModal
+          tripId={tripId}
+          onClose={() => setShowLocations(false)}
+          onLocationsChange={setLocations}
+        />
       )}
       <Dialog.Root open={showEditTrip} onOpenChange={setShowEditTrip}>
         <Dialog.Portal>
@@ -376,6 +496,15 @@ export default function TripPage() {
     </div>
   )
 
+  const importDialog = (
+    <ImportDialog
+      open={showImportDialog}
+      onClose={() => setShowImportDialog(false)}
+      existing={existingNormalized}
+      onImport={handleImportExpenses}
+    />
+  )
+
   const fab = (
     <FAB
       onAddExpense={() => setShowAddForm(true)}
@@ -395,10 +524,12 @@ export default function TripPage() {
           onAddLocation={() => setShowLocations(true)}
           onEditTrip={() => setShowEditTrip(true)}
           onDeleteTrip={deleteTrip}
+          onImportStatement={() => setShowImportDialog(true)}
         >
           {content}
         </DesktopShell>
         {fab}
+        {importDialog}
       </>
     )
   }
@@ -413,6 +544,12 @@ export default function TripPage() {
             <span className="text-lg font-semibold tracking-tight">TripPay</span>
             <div className="flex items-center gap-2 text-white/80">
               <OfflineIndicator />
+              <button
+                onClick={() => setShowImportDialog(true)}
+                className="glass-sm h-9 rounded-2xl px-3 text-xs text-white/80 transition hover:text-white"
+              >
+                ייבוא דוח
+              </button>
               <TripSettingsDropdown
                 tripId={tripId}
                 onEdit={() => setShowEditTrip(true)}
@@ -426,6 +563,7 @@ export default function TripPage() {
       </div>
       {fab}
       <MobileNav tripId={tripId} active="expenses" />
+      {importDialog}
     </div>
   )
 }

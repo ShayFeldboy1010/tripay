@@ -17,6 +17,7 @@ interface DesktopShellProps {
   onAddLocation: () => void;
   onEditTrip: () => void;
   onDeleteTrip: () => void;
+  onImportStatement: () => void;
 }
 
 export function DesktopShell({
@@ -28,6 +29,7 @@ export function DesktopShell({
   onAddLocation,
   onEditTrip,
   onDeleteTrip,
+  onImportStatement,
 }: DesktopShellProps) {
   return (
     <div className="hidden min-h-screen grid-cols-[260px_1fr] gap-8 px-8 py-10 text-white antialiased lg:grid">
@@ -78,6 +80,12 @@ export function DesktopShell({
             <OfflineIndicator />
           </div>
           <div className="flex items-center gap-2" role="toolbar">
+            <button
+              onClick={onImportStatement}
+              className="glass-sm hidden h-10 rounded-2xl px-3 text-white/80 transition hover:text-white lg:inline-flex"
+            >
+              ייבוא דוח
+            </button>
             <Link
               href={`/trip/${tripId}/search`}
               className="glass-sm flex items-center justify-center rounded-full p-2 text-white/80 transition hover:text-white"
