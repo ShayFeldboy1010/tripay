@@ -253,6 +253,16 @@ body, #root {
   text-shadow: 0 1px 0 rgba(255,255,255,.25);
 }
 
+.numeric-display{
+  font-variant-numeric: tabular-nums;
+  letter-spacing:-0.01em;
+  overflow-wrap:anywhere;
+}
+
+@supports not (overflow-wrap:anywhere){
+  .numeric-display{ word-break: break-word; }
+}
+
 /* Fallback when backdrop-filter is not available */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))){
   .glass, .glass-sm { background: rgba(255,255,255,.10); }

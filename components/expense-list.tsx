@@ -97,7 +97,7 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
               })}
             </h3>
             <div className="h-px flex-1 bg-gradient-to-l from-white/10 to-transparent" />
-            <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white/80">
+            <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white/80 numeric-display">
               ₪{dayExpenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
             </span>
           </div>
@@ -141,7 +141,7 @@ export function ExpenseList({ expenses, onExpenseUpdated, onExpenseDeleted }: Ex
                           )}
                         </div>
                         <div className="text-end">
-                          <p className="grad-text text-3xl font-extrabold">₪{expense.amount.toFixed(2)}</p>
+                          <p className="grad-text numeric-display text-3xl font-extrabold">₪{expense.amount.toFixed(2)}</p>
                         </div>
                       </div>
 
