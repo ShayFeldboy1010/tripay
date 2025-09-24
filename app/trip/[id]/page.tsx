@@ -317,37 +317,6 @@ export default function TripPage() {
   }
 
 
-  if (delayedLoading) {
-    return (
-      <div className="min-h-screen app-bg antialiased text-white">
-        <div
-          className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)] space-y-4"
-        >
-          <ExpenseCardSkeleton />
-          <ExpenseCardSkeleton />
-          <ExpenseCardSkeleton />
-        </div>
-      </div>
-    )
-  }
-
-  if (!trip) {
-    return (
-      <div className="min-h-screen app-bg antialiased flex items-center justify-center text-white">
-        <div className="space-y-6 text-center">
-          <p className="text-lg font-medium text-white/80">Trip not found</p>
-          <Button
-            onClick={() => router.push("/")}
-            variant="glass"
-            className="h-11 rounded-2xl px-5 text-white/90 hover:text-white"
-          >
-            Go Home
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   const participantNameLookup = useMemo(() => {
     const map = new Map<string, string>()
     participants.forEach((participant) => {
@@ -403,6 +372,37 @@ export default function TripPage() {
       }
     })
   }, [expenses, participantNameLookup])
+
+  if (delayedLoading) {
+    return (
+      <div className="min-h-screen app-bg antialiased text-white">
+        <div
+          className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)] space-y-4"
+        >
+          <ExpenseCardSkeleton />
+          <ExpenseCardSkeleton />
+          <ExpenseCardSkeleton />
+        </div>
+      </div>
+    )
+  }
+
+  if (!trip) {
+    return (
+      <div className="min-h-screen app-bg antialiased flex items-center justify-center text-white">
+        <div className="space-y-6 text-center">
+          <p className="text-lg font-medium text-white/80">Trip not found</p>
+          <Button
+            onClick={() => router.push("/")}
+            variant="glass"
+            className="h-11 rounded-2xl px-5 text-white/90 hover:text-white"
+          >
+            Go Home
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const totalCount = expenses.length
