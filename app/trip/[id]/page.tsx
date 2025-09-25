@@ -25,7 +25,7 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
-import ImportDialog from "@/src/components/import/ImportDialog"
+import CreditImportDialog from "@/src/features/import/CreditImportDialog"
 import { ingestBatch } from "@/src/lib/import/ingest"
 import type { NormalizedExpense } from "@/src/types/import"
 import { cryptoHash } from "@/src/lib/import/parsers"
@@ -497,7 +497,7 @@ export default function TripPage() {
   )
 
   const importDialog = (
-    <ImportDialog
+    <CreditImportDialog
       open={showImportDialog}
       onClose={() => setShowImportDialog(false)}
       existing={existingNormalized}
