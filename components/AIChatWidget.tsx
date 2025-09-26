@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { AIChatBubble } from "./AIChatBubble";
@@ -9,8 +9,14 @@ import { useAIChat } from "./AIChatStore";
 export function AIChatWidget() {
   const pathname = usePathname();
   const { open, openForTrip, close, activeTripId } = useAIChat();
+  const [mounted, setMounted] = useState(false);
   const match = pathname.match(/\/trip\/([^/]+)/);
   const currentTrip = match ? match[1] : null;
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     function handler(e: KeyboardEvent) {
@@ -24,6 +30,7 @@ export function AIChatWidget() {
   }, [open, currentTrip, openForTrip, close]);
 
   if (!currentTrip) return null;
+  if (!mounted || typeof document === "undefined") return null;
 
   const tripForPanel = activeTripId || currentTrip;
 

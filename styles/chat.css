@@ -1,0 +1,75 @@
+.chat-panel {
+  background: var(--chat-bg-app);
+  color: #f5f7ff;
+}
+
+.chat-panel-overlay {
+  background: radial-gradient(1200px at 50% 0%, rgba(11, 18, 33, 0.92), rgba(8, 11, 20, 0.96));
+}
+
+.chat-bubble-user {
+  background: linear-gradient(135deg, var(--chat-ring-brand), var(--chat-primary));
+  color: #ffffff;
+  box-shadow: 0 12px 32px rgba(42, 91, 255, 0.35);
+}
+
+.chat-bubble-assistant {
+  background: var(--chat-bg-card);
+  border: 1px solid var(--chat-border-soft);
+  box-shadow: 0 16px 36px rgba(5, 8, 18, 0.55);
+  color: #e0e6fb;
+}
+
+.chat-bubble-assistant p,
+.chat-bubble-assistant span,
+.chat-bubble-assistant li {
+  color: inherit;
+}
+
+.chat-bubble-meta {
+  color: var(--chat-text-muted);
+}
+
+.chat-input-shell {
+  background: rgba(18, 24, 41, 0.92);
+  border: 1px solid rgba(42, 91, 255, 0.24);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 42px rgba(3, 7, 16, 0.45);
+}
+
+.chat-input-shell:focus-within {
+  box-shadow: 0 0 0 1px var(--chat-ring-brand), 0 20px 40px rgba(42, 91, 255, 0.28);
+  border-color: var(--chat-ring-brand);
+}
+
+.chat-text-muted {
+  color: var(--chat-text-muted);
+}
+
+.chat-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(78, 101, 149, 0.45);
+  border-radius: 999px;
+}
+
+.chat-skeleton {
+  background: linear-gradient(90deg, rgba(24, 31, 49, 0.85), rgba(31, 41, 63, 0.65), rgba(24, 31, 49, 0.85));
+  background-size: 200% 100%;
+  animation: chat-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes chat-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

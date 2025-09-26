@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
-import type { ExpensesChatResult } from "@/services/ai/askAI";
+import type { ExpensesChatMetaEvent, ExpensesChatResult } from "@/services/ai/askAI";
 
 export type Msg =
   | { role: "user"; text: string }
@@ -10,6 +10,8 @@ export type Msg =
       streaming?: boolean;
       result?: ExpensesChatResult | null;
       error?: string | null;
+      meta?: ExpensesChatMetaEvent | null;
+      reconnecting?: boolean;
     };
 
 interface Meta {

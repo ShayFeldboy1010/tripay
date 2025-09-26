@@ -24,11 +24,12 @@ let cachedSystemPrompt: string | null = null;
 
 function buildSystemPrompt(): string {
   if (cachedSystemPrompt) return cachedSystemPrompt;
-  cachedSystemPrompt = `You are a senior SQL planner for a personal expenses application.\n\
-You always produce valid JSON that matches this TypeScript type:\n\
-{\n  "intent": "aggregation" | "lookup" | "ranking",\n  "dimensions": string[],\n  "metrics": ("sum" | "avg" | "max" | "min" | "count")[],\n  "filters": { "column": string, "op": "=" | "!=" | ">" | "<" | ">=" | "<=" | "ILIKE", "value": string | number }[],\n  "since": "YYYY-MM-DD",\n  "until": "YYYY-MM-DD",\n  "sql": "SELECT ... LIMIT 200"\n}\n\
-Rules:\n\
-- Target PostgreSQL.\n- Allowed table: expenses.\n- Columns: id, user_id, date, amount, currency, category, merchant, notes, created_at.\n- No joins, CTEs, subqueries, DDL, or DML.\n- Allowed clauses: SELECT, FROM, WHERE, GROUP BY, ORDER BY, LIMIT.\n- Always select explicit columns; never use *.\n- LIMIT must be <= 500.\n- Always include currency column when aggregating. If multiple currencies exist, aggregate per currency.\n- Only use aggregates SUM, AVG, MIN, MAX, COUNT.\n- Honour provided date range (since/until). If missing, default to the current calendar month in the provided timezone.\n- Never convert currencies.\n- Prefer grouping for rankings (e.g., top merchants, categories).\n- Output JSON only with no extra commentary.\n`;
+  cachedSystemPrompt = `You are a senior SQL planner for Tripay's expenses assistant.\n\
+Return JSON only, matching exactly:\n\
+{\n  "intent": "aggregation" | "lookup" | "ranking",\n  "since": "YYYY-MM-DD",\n  "until": "YYYY-MM-DD",\n  "dimensions": ("category" | "merchant" | "date")[],\n  "metrics": ("sum" | "avg" | "max" | "min" | "count")[],\n  "filters": { "column": "category" | "merchant" | "currency" | "amount" | "notes", "op": "=" | "!=" | ">" | "<" | ">=" | "<=" | "ILIKE", "value": string | number }[],\n  "sql": "SELECT ... LIMIT 200"\n}\n\
+Schema:\n\
+expenses(id uuid, user_id uuid, date date, amount numeric(12,2), currency text, category text, merchant text, notes text, created_at timestamptz)\n\
+Rules:\n- Only SELECT from expenses.\n- No joins, subqueries, CTEs, DDL, or DML.\n- Clauses allowed: SELECT, WHERE, GROUP BY, ORDER BY, LIMIT.\n- List explicit columns (no *).\n- LIMIT must be <= 500.\n- Aggregates restricted to SUM, AVG, MIN, MAX, COUNT.\n- Always include currency columns in aggregates.\n- Respect provided date windows (default to current calendar month if omitted).\n- Never convert currencies.\n- Rankings should sort descending by metric with LIMIT <= 50.\n- Respond with valid JSON only, without commentary or markdown.\n`;
   return cachedSystemPrompt;
 }
 
@@ -75,9 +76,9 @@ function parsePlan(raw: string): SqlPlan {
     if (!parsed || typeof parsed !== "object") throw new Error("not object");
     if (!parsed.sql || typeof parsed.sql !== "string") throw new Error("sql missing");
     if (!parsed.since || !parsed.until) throw new Error("range missing");
-    parsed.filters = parsed.filters || [];
-    parsed.dimensions = parsed.dimensions || [];
-    parsed.metrics = parsed.metrics || [];
+    parsed.filters = Array.isArray(parsed.filters) ? parsed.filters : [];
+    parsed.dimensions = Array.isArray(parsed.dimensions) ? parsed.dimensions : [];
+    parsed.metrics = Array.isArray(parsed.metrics) ? parsed.metrics : [];
     return parsed;
   } catch (err) {
     throw new Error(`Failed to parse planner output: ${(err as Error).message}`);
@@ -106,4 +107,6 @@ export async function generateSqlPlan(
 export function cacheKeyForPlan(input: { question: string; userId: string; since: string; until: string }): string {
   return crypto.createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
+
+export const __test__parsePlan = parsePlan;
 
