@@ -131,8 +131,8 @@ export default function HomePage() {
   const additionalTrips = topTrip ? recentTrips.slice(1, 5) : []
 
   return (
-    <div className="min-h-screen app-bg antialiased">
-      <div className="relative min-h-screen overflow-hidden text-white">
+    <div className="min-100dvh min-vh app-bg antialiased">
+      <div className="relative min-100dvh min-vh overflow-hidden text-white">
         <div
           className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
         >

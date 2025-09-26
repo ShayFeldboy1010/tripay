@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useSSE } from "@/hooks/useSSE";
 import { ChatBubble } from "./ai-chat/ChatBubble";
 import { useAIChat } from "./AIChatStore";
+import { Modal } from "./Modal";
 
 type RangeOptionId = "thisMonth" | "last7" | "lastMonth" | "ytd" | "custom";
 
@@ -172,19 +173,24 @@ function parseStreamEvent(rawEvent: { event: string; data: string }) {
   }
 }
 
+const bottomInsetClass = "pb-[calc(var(--bottom-ui)+var(--safe-bottom))]"; // TODO(shay): verify nav height
+
 export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean }) {
   const isDesktop = useIsDesktop();
   const { messages, addMessage, updateLastMessage, close, meta, setMeta } = useAIChat();
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const [input, setInput] = useState("");
   const [activeRange, setActiveRange] = useState<{ id: RangeOptionId; since: string; until: string } | null>(null);
   const [timezone, setTimezone] = useState<string>("Asia/Seoul");
   const [userId, setUserId] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const sse = useSSE({ pingEventName: "ping", fallbackToFetch: true });
+  const titleId = useId();
+  const descriptionId = useId();
 
-  const msgs = messages[tripId] || [];
+  const msgs = useMemo(() => messages[tripId] || [], [messages, tripId]);
 
   useEffect(() => {
     const resolved = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -331,69 +337,92 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
     }
   }, [activeRange, addMessage, handleSseEvent, input, timezone, sse, tripId, updateLastMessage, userId]);
 
-  const overlayClasses = isDesktop
-    ? "fixed inset-y-0 right-0 flex max-w-full justify-end"
-    : "fixed inset-0 flex max-w-full";
+  const containerClassName = isDesktop
+    ? "items-end justify-center px-0 py-0 sm:px-6 sm:py-8 md:items-center md:justify-end"
+    : "items-end justify-center px-0 py-0";
 
   return (
-    <div className={overlayClasses} style={{ display: open ? "flex" : "none" }}>
-      <div className="chat-panel-overlay absolute inset-0" onClick={close} />
-      <div
-        className="chat-panel relative z-[10000] flex h-full w-full max-w-[560px] flex-col border-l border-[color:var(--chat-border-soft)]/60"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className="flex items-center justify-between gap-3 border-b border-[color:var(--chat-border-soft)]/60 px-6 py-5">
+    <Modal
+      open={open}
+      onClose={close}
+      labelledBy={titleId}
+      describedBy={descriptionId}
+      initialFocusRef={titleRef}
+      containerClassName={containerClassName}
+      overlayClassName="chat-panel-overlay"
+      contentClassName={
+        isDesktop
+          ? "chat-panel w-full max-w-[560px] rounded-none border border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/95 md:rounded-[32px]"
+          : "chat-panel w-full rounded-none border border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/96"
+      }
+    >
+      <div className="flex min-100dvh min-vh flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/92 px-6 py-5 backdrop-blur">
           <div className="flex items-center gap-3">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-[color:var(--chat-primary)]/15 text-[color:var(--chat-primary)]">
               <Sparkles className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-white">AI Expenses</h2>
-              <p className="text-[13px] text-[color:var(--chat-text-muted)]">Ask grounded questions about this trip&apos;s spending.</p>
+              <h2
+                id={titleId}
+                ref={titleRef}
+                tabIndex={-1}
+                className="text-lg font-semibold tracking-tight text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              >
+                AI Expenses
+              </h2>
+              <p id={descriptionId} className="text-[13px] text-[color:var(--chat-text-muted)]">
+                Ask grounded questions about this trip&apos;s spending.
+              </p>
             </div>
           </div>
           <button
             type="button"
             aria-label="Close chat"
             onClick={close}
-            className="rounded-full border border-[color:var(--chat-border-soft)]/80 bg-black/30 p-2 text-[color:var(--chat-text-muted)] transition hover:text-white"
+            className="rounded-full border border-[color:var(--chat-border-soft)]/80 bg-black/30 p-2 text-[color:var(--chat-text-muted)] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             <X className="h-5 w-5" />
           </button>
         </header>
-        <div className="px-6 py-4">
-          <div className="flex flex-wrap gap-2">
-            {RANGE_OPTIONS.map((option) => {
-              const active = activeRange?.id === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => handleRangeClick(option)}
-                  className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
-                    active
-                      ? "bg-[color:var(--chat-primary)] text-black shadow-[0_12px_30px_rgba(106,168,255,0.45)]"
-                      : "bg-white/5 text-[color:var(--chat-text-muted)] hover:bg-white/10"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+        <div
+          ref={listRef}
+          className={`chat-scroll-area flex-1 overflow-y-auto [overscroll-behavior:contain] ${bottomInsetClass}`}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="px-6 pb-4 pt-5">
+            <div className="flex flex-wrap gap-2">
+              {RANGE_OPTIONS.map((option) => {
+                const active = activeRange?.id === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleRangeClick(option)}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                      active
+                        ? "bg-[color:var(--chat-primary)] text-black shadow-[0_12px_30px_rgba(106,168,255,0.45)]"
+                        : "bg-white/5 text-[color:var(--chat-text-muted)] hover:bg-white/10"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {activeRange ? (
+              <p className="mt-3 text-[12px] text-[color:var(--chat-text-muted)]">
+                Filtering {activeRange.since} → {activeRange.until} ({timezone})
+              </p>
+            ) : null}
           </div>
-          {activeRange ? (
-            <p className="mt-3 text-[12px] text-[color:var(--chat-text-muted)]">
-              Filtering {activeRange.since} → {activeRange.until} ({timezone})
-            </p>
-          ) : null}
-        </div>
-        <div ref={listRef} className="chat-scroll-area flex-1 space-y-4 overflow-y-auto px-6 pb-8">
-          {msgs.map((m, index) => {
-            if (m.role === "user") {
-              return (
-                <ChatBubble key={index} role="user">
-                  <p>{m.text}</p>
-                </ChatBubble>
+          <div className="space-y-4 px-6 pb-8">
+            {msgs.map((m, index) => {
+              if (m.role === "user") {
+                return (
+                  <ChatBubble key={index} role="user">
+                    <p>{m.text}</p>
+                  </ChatBubble>
               );
             }
 
@@ -420,13 +449,15 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
                 {m.error ? <p className="mt-3 text-[12px] text-red-400">{m.error}</p> : null}
               </ChatBubble>
             );
-          })}
+            })}
+          </div>
         </div>
-        <footer className="safe-area-pb border-t border-[color:var(--chat-border-soft)]/60 px-6 py-5">
-          <div className="chat-input-shell flex items-end gap-3 rounded-2xl px-4 py-3">
+        <footer className="sticky bottom-0 z-10 border-t border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/92 px-6 pb-[calc(18px+var(--safe-bottom))] pt-4 backdrop-blur">
+          <div className="chat-input-shell flex flex-col gap-3 rounded-2xl px-4 py-4 sm:flex-row sm:items-end">
             <textarea
               ref={inputRef}
               value={input}
+              onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest" })}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
@@ -438,23 +469,25 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
               rows={1}
               placeholder="Ask about your expenses…"
             />
-            <button
-              type="button"
-              onClick={send}
-              disabled={!input.trim() || tokenLoading || sse.isConnecting}
-              className="rounded-full bg-[color:var(--chat-primary)] px-4 py-2 text-[13px] font-semibold text-black transition hover:bg-white disabled:cursor-not-allowed disabled:bg-white/30"
-            >
-              Send
-            </button>
-            {info ? (
-              <span className="text-[11px] text-[color:var(--chat-text-muted)]" title={`${info.provider}/${info.model}`}>
-                {info.model}
-              </span>
-            ) : null}
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              {info ? (
+                <span className="text-[11px] text-[color:var(--chat-text-muted)]" title={`${info.provider}/${info.model}`}>
+                  {info.model}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={send}
+                disabled={!input.trim() || tokenLoading || sse.isConnecting}
+                className="min-h-[48px] rounded-full bg-[color:var(--chat-primary)] px-6 text-[14px] font-semibold text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-white/30"
+              >
+                Send
+              </button>
+            </div>
           </div>
         </footer>
       </div>
-    </div>
+    </Modal>
   );
 }
 

@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '../styles/viewport.css';
 @import '../styles/chat.css';
 
 /* Stronger modal glass (less transparent) */
@@ -155,6 +156,21 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .surface-card {
+    background-color: color-mix(in srgb, var(--chat-bg-card) 94%, transparent);
+    color: #f4f6ff;
+  }
+
+  .text-muted {
+    color: var(--chat-text-muted);
+  }
+
+  .ring-brand {
+    --tw-ring-color: var(--chat-ring-brand);
   }
 }
 

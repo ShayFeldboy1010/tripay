@@ -32,7 +32,7 @@ export function DesktopShell({
   onImportStatement,
 }: DesktopShellProps) {
   return (
-    <div className="hidden min-h-screen grid-cols-[260px_1fr] gap-8 px-8 py-10 text-white antialiased lg:grid">
+    <div className="hidden min-100dvh min-vh grid-cols-[260px_1fr] gap-8 px-8 py-10 text-white antialiased lg:grid">
       <aside className="flex flex-col" aria-label="Sidebar">
         <div className="glass h-full p-6">
           <div className="flex items-center justify-between">

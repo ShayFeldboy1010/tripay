@@ -132,7 +132,7 @@ export default function TripSearchPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen app-bg antialiased text-white">
+      <div className="min-100dvh min-vh app-bg antialiased text-white">
         <div
           className="space-y-4 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
         >
@@ -145,7 +145,7 @@ export default function TripSearchPage() {
   }
 
   if (!trip) {
-    return <div className="min-h-screen app-bg" />
+    return <div className="min-100dvh min-vh app-bg" />
   }
 
   const content = (
@@ -193,7 +193,7 @@ export default function TripSearchPage() {
   }
 
   return (
-    <div className="min-h-screen app-bg antialiased text-white">
+    <div className="min-100dvh min-vh app-bg antialiased text-white">
       <div
         className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >

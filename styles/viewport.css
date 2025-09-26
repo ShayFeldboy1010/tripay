@@ -1,0 +1,22 @@
+:root {
+  --vh: 1vh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-ui: 64px;
+}
+
+.min-100dvh {
+  min-height: 100dvh;
+}
+
+.min-vh {
+  min-height: calc(var(--vh, 1vh) * 100);
+}
+
+.safe-area-top {
+  padding-top: var(--safe-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--safe-bottom);
+}
