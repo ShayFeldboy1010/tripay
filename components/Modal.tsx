@@ -122,6 +122,9 @@ export function Modal({
     return null;
   }
 
+  const maxModalHeight =
+    "min(calc(100dvh - 2rem - var(--safe-top) - var(--safe-bottom)), calc(var(--vh, 1vh) * 100 - 2rem - var(--safe-top) - var(--safe-bottom)))";
+
   const modalContent = (
     <div
       className={cn(
@@ -146,6 +149,7 @@ export function Modal({
           "pointer-events-auto relative flex w-full max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))] min-h-0 flex-col overflow-hidden rounded-[28px] border border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-card)]/95 text-white shadow-[0_20px_48px_rgba(4,7,18,0.55)]",
           contentClassName
         )}
+        style={{ maxHeight: maxModalHeight }}
         onClick={(event) => event.stopPropagation()}
       >
         {children}
