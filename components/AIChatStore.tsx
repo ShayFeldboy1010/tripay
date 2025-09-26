@@ -1,9 +1,21 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
+import type { ExpensesChatResult } from "@/services/ai/askAI";
 
-export type Msg = { role: "user" | "assistant"; text: string };
+export type Msg =
+  | { role: "user"; text: string }
+  | {
+      role: "assistant";
+      text: string;
+      streaming?: boolean;
+      result?: ExpensesChatResult | null;
+      error?: string | null;
+    };
 
-interface Meta { provider: string; model: string }
+interface Meta {
+  provider: string;
+  model: string;
+}
 
 interface Store {
   open: boolean;
@@ -13,6 +25,7 @@ interface Store {
   openForTrip(id: string): void;
   close(): void;
   addMessage(id: string, msg: Msg): void;
+  updateLastMessage(id: string, updater: (prev: Msg) => Msg): void;
   setMeta(id: string, info: Meta): void;
 }
 
@@ -31,11 +44,23 @@ export function AIChatProvider({ children }: { children: ReactNode }) {
   const close = () => setOpen(false);
   const addMessage = (id: string, msg: Msg) =>
     setMessages((m) => ({ ...m, [id]: [...(m[id] || []), msg] }));
+
+  const updateLastMessage = (id: string, updater: (prev: Msg) => Msg) => {
+    setMessages((current) => {
+      const list = current[id];
+      if (!list || list.length === 0) return current;
+      const next = [...list];
+      next[next.length - 1] = updater(next[next.length - 1]);
+      return { ...current, [id]: next };
+    });
+  };
   const setMetaForTrip = (id: string, info: Meta) =>
     setMeta((m) => ({ ...m, [id]: info }));
 
   return (
-    <Ctx.Provider value={{ open, activeTripId, messages, meta, openForTrip, close, addMessage, setMeta: setMetaForTrip }}>
+    <Ctx.Provider
+      value={{ open, activeTripId, messages, meta, openForTrip, close, addMessage, updateLastMessage, setMeta: setMetaForTrip }}
+    >
       {children}
     </Ctx.Provider>
   );
