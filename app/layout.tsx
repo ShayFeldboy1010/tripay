@@ -42,7 +42,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0B1020" />
       </head>
       <body className="antialiased touch-manipulation">
-        <div className="min-h-screen app-bg antialiased pb-[env(safe-area-inset-bottom)]">
+        <div className="min-100dvh min-vh app-bg antialiased pb-[var(--safe-bottom)]">
           <RootClient>
             <ThemeProvider>
               <AIChatProvider>

@@ -83,7 +83,7 @@ export default function TripSummaryPage() {
   };
 
   if (loading || !trip) {
-    return <div className="min-h-screen app-bg" />;
+    return <div className="min-100dvh min-vh app-bg" />;
   }
 
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -155,7 +155,7 @@ export default function TripSummaryPage() {
   }
 
   return (
-    <div className="min-h-screen app-bg antialiased text-white">
+    <div className="min-100dvh min-vh app-bg antialiased text-white">
       <div
         className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >

@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState, useId } from "react"
 import { parseCreditCsv, type CreditImportError, type CreditImportResult } from "./parseCreditCsv"
 import type { ExpenseDTO } from "@/src/types/expense"
 import type { NormalizedExpense, SupportedCurrency } from "@/src/types/import"
 import { dedupe } from "@/src/lib/import/dedupe"
+import { Modal } from "@/components/Modal"
 
 const SUPPORTED_CURRENCIES = new Set<SupportedCurrency>(["ILS", "KRW", "USD", "EUR", "JPY", "GBP"])
 
@@ -155,181 +156,211 @@ export default function CreditImportDialog({ open, onClose, onImport, existing =
 
   const rowsValid = result?.rowsValid ?? 0
   const rowsSkipped = result?.rowsSkipped ?? 0
+  const titleId = useId()
+  const descriptionId = useId()
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const bottomInsetClass = "pb-[calc(var(--bottom-ui)+var(--safe-bottom))]" // TODO(shay): verify nav height
 
-  return !open ? null : (
-    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative m-4 w-full max-h-[90vh] overflow-hidden rounded-[28px] border border-white/20 bg-white/80 p-4 text-neutral-900 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/70 dark:text-white md:w-[880px]">
-        <div className="mb-3 flex items-center justify-between">
+  if (!open) return null
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => {
+        onClose()
+        reset()
+      }}
+      labelledBy={titleId}
+      describedBy={descriptionId}
+      initialFocusRef={titleRef}
+      contentClassName="w-full max-w-[900px] rounded-[32px] border border-[color:var(--chat-border-soft)]/70 bg-[color:var(--chat-bg-card)]/95"
+    >
+      <div className="flex min-100dvh min-vh flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-card)]/92 px-6 py-5 backdrop-blur">
           <div>
-            <h2 className="text-xl font-semibold">ייבוא דוח אשראי</h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300">CSV בלבד · זיהוי אוטומטי של קידוד ו-Delimiter</p>
+            <h2
+              id={titleId}
+              ref={titleRef}
+              tabIndex={-1}
+              className="text-xl font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            >
+              ייבוא דוח אשראי
+            </h2>
+            <p id={descriptionId} className="text-sm text-[color:var(--chat-text-muted)]">
+              CSV בלבד · זיהוי אוטומטי של קידוד ו-Delimiter
+            </p>
           </div>
           <button
             onClick={() => {
               onClose()
               reset()
             }}
-            className="rounded-full bg-neutral-900/10 px-3 py-1 text-sm text-neutral-700 transition hover:bg-neutral-900/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+            className="rounded-full border border-[color:var(--chat-border-soft)]/70 bg-black/30 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             סגור
           </button>
-        </div>
+        </header>
+        <div
+          className={`flex-1 overflow-y-auto [overscroll-behavior:contain] ${bottomInsetClass}`}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="space-y-4 px-6 py-5">
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[color:var(--chat-border-soft)]/70 bg-[color:var(--chat-bg-card)]/80 px-6 py-6 text-center text-white/90 shadow-[0_18px_44px_rgba(4,7,18,0.45)] transition hover:border-[color:var(--chat-primary)]/60 hover:shadow-[0_22px_52px_rgba(14,24,48,0.65)] focus-within:outline-none focus-within:ring-2 focus-within:ring-brand">
+              <input
+                key={fileKey}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(event) => {
+                  const selected = event.target.files?.[0] ?? null
+                  event.currentTarget.value = ""
+                  setResult(null)
+                  setRawExpenses([])
+                  setErrors([])
+                  handleFileSelection(selected)
+                }}
+              />
+              {file ? (
+                <>
+                  <span className="text-sm font-medium text-white">{file.name}</span>
+                  <span className="text-xs text-[color:var(--chat-text-muted)]">{(file.size / 1024).toFixed(0)} KB</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm font-medium text-white">בחר/י קובץ CSV לייבוא</span>
+                  <span className="text-xs text-[color:var(--chat-text-muted)]">הקובץ ינותח לבד לזיהוי תווים והפרדה</span>
+                </>
+              )}
+            </label>
 
-        <div className="space-y-3 overflow-y-auto pr-1">
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-400/60 bg-white/70 p-5 text-center text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-900 dark:border-white/20 dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:border-white/40">
-            <input
-              key={fileKey}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={(event) => {
-                const selected = event.target.files?.[0] ?? null
-                event.currentTarget.value = ""
-                setResult(null)
-                setRawExpenses([])
-                setErrors([])
-                handleFileSelection(selected)
-              }}
-            />
-            {file ? (
-              <>
-                <span className="text-sm font-medium">{file.name}</span>
-                <span className="text-xs text-neutral-500 dark:text-neutral-300">{(file.size / 1024).toFixed(0)} KB</span>
-              </>
-            ) : (
-              <>
-                <span className="text-sm font-medium">בחר/י קובץ CSV לייבוא</span>
-                <span className="text-xs text-neutral-500">הקובץ ינותח לבד לזיהוי תווים והפרדה</span>
-              </>
-            )}
-          </label>
+            {result ? (
+              <div className="grid gap-4 rounded-2xl border border-[color:var(--chat-border-soft)]/60 bg-black/35 p-4 text-sm text-white/90 shadow-[0_16px_40px_rgba(6,10,22,0.5)] md:grid-cols-2">
+                <div className="space-y-1">
+                  <p>
+                    <span className="font-semibold text-white">שורות תקינות:</span> {rowsValid}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">שורות שנדחו:</span> {rowsSkipped}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">שורות כפולות:</span> {duplicates.length}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p>
+                    <span className="font-semibold text-white">קידוד:</span> {result.encoding.toUpperCase()}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">Delimiter:</span> {result.delimiter === "\t" ? "TAB" : result.delimiter}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">ייבאו בפועל:</span> {unique.length}
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
-          {result ? (
-            <div className="grid gap-3 rounded-2xl border border-neutral-200/70 bg-white/80 p-4 text-sm text-neutral-700 shadow-inner dark:border-white/10 dark:bg-neutral-800/70 dark:text-neutral-100 md:grid-cols-2">
+            <div className="grid gap-4 rounded-2xl border border-[color:var(--chat-border-soft)]/60 bg-black/35 p-4 text-sm text-white/80 shadow-[0_16px_40px_rgba(6,10,22,0.5)] md:grid-cols-2">
               <div>
-                <p>
-                  <span className="font-medium">שורות תקינות:</span> {rowsValid}
-                </p>
-                <p>
-                  <span className="font-medium">שורות שנדחו:</span> {rowsSkipped}
-                </p>
-                <p>
-                  <span className="font-medium">שורות כפולות:</span> {duplicates.length}
-                </p>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--chat-text-muted)]">
+                  שיוך הוצאה למי שילם
+                </label>
+                <select
+                  className="w-full rounded-xl border border-[color:var(--chat-border-soft)]/70 bg-[color:var(--chat-bg-card)]/70 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                  value={paidBy}
+                  onChange={(event) => setPaidBy(event.target.value)}
+                >
+                  <option value="">בחר/י משתתף</option>
+                  <option value="ירון">ירון</option>
+                  <option value="אלונה">אלונה</option>
+                </select>
               </div>
-              <div>
-                <p>
-                  <span className="font-medium">קידוד:</span> {result.encoding.toUpperCase()}
-                </p>
-                <p>
-                  <span className="font-medium">Delimiter:</span> {result.delimiter === "\t" ? "TAB" : result.delimiter}
-                </p>
-                <p>
-                  <span className="font-medium">ייבאו בפועל:</span> {unique.length}
-                </p>
+              <div className="flex flex-col justify-end text-xs text-[color:var(--chat-text-muted)]">
+                <p>ניתן לשנות שיוך לאחר הייבוא. במקרה של החזר, הסכום ישמר עם סימן מינוס.</p>
               </div>
             </div>
-          ) : null}
 
-          <div className="grid gap-3 rounded-2xl border border-neutral-200/70 bg-white/80 p-4 text-sm text-neutral-700 shadow-inner dark:border-white/10 dark:bg-neutral-800/70 dark:text-neutral-100 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                שיוך הוצאה למי שילם
-              </label>
-              <select
-                className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 focus:border-neutral-500 focus:outline-none dark:border-white/20 dark:bg-neutral-900 dark:text-white"
-                value={paidBy}
-                onChange={(event) => setPaidBy(event.target.value)}
-              >
-                <option value="">בחר/י משתתף</option>
-                <option value="ירון">ירון</option>
-                <option value="אלונה">אלונה</option>
-              </select>
-            </div>
-            <div className="flex flex-col justify-end text-xs text-neutral-600 dark:text-neutral-300">
-              <p>ניתן לשנות שיוך לאחר הייבוא. במקרה של החזר, הסכום ישמר עם סימן מינוס.</p>
-            </div>
-          </div>
-
-          {preview.length ? (
-            <div className="rounded-2xl border border-neutral-200/70 bg-white/90 shadow-sm dark:border-white/10 dark:bg-neutral-800/70">
-              <div className="flex items-center justify-between px-4 py-2">
-                <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-100">תצוגה מקדימה ({preview.length} מתוך {rawExpenses.length})</h3>
-                <span className="text-xs text-neutral-500 dark:text-neutral-300">הסכומים כוללים זיהוי החזרים</span>
-              </div>
-              <div className="max-h-64 overflow-auto">
-                <table className="min-w-full text-left text-xs text-neutral-600 dark:text-neutral-200">
-                  <thead className="sticky top-0 bg-white/90 text-neutral-500 backdrop-blur dark:bg-neutral-900/80 dark:text-neutral-300">
-                    <tr>
-                      <th className="px-4 py-2">תאריך</th>
-                      <th className="px-4 py-2">בית עסק</th>
-                      <th className="px-4 py-2 text-right">סכום</th>
-                      <th className="px-4 py-2">קטגוריה</th>
-                      <th className="px-4 py-2">הערות</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.map((row, index) => (
-                      <tr key={`${row.importHash}-${index}`} className="border-t border-neutral-200/60 last:border-b dark:border-white/10">
-                        <td className="px-4 py-2 text-neutral-700 dark:text-neutral-200">{row.date}</td>
-                        <td className="px-4 py-2 text-neutral-800 dark:text-neutral-50">{row.merchant}</td>
-                        <td className={`px-4 py-2 text-right font-medium ${row.amount < 0 ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-emerald-300"}`}>
-                          {formatAmount(row.amount, row.currency)}
-                        </td>
-                        <td className="px-4 py-2 text-neutral-600 dark:text-neutral-300">{row.category || "—"}</td>
-                        <td className="px-4 py-2 text-neutral-600 dark:text-neutral-300">{row.notes || ""}</td>
+            {preview.length ? (
+              <div className="rounded-2xl border border-[color:var(--chat-border-soft)]/60 bg-black/35 shadow-[0_16px_40px_rgba(6,10,22,0.5)]">
+                <div className="flex items-center justify-between border-b border-[color:var(--chat-border-soft)]/60 px-4 py-3">
+                  <h3 className="text-sm font-semibold text-white">תצוגה מקדימה ({preview.length} מתוך {rawExpenses.length})</h3>
+                  <span className="text-xs text-[color:var(--chat-text-muted)]">הסכומים כוללים זיהוי החזרים</span>
+                </div>
+                <div className="max-h-64 overflow-auto">
+                  <table className="min-w-full text-left text-xs text-[color:var(--chat-text-muted)]">
+                    <thead className="sticky top-0 bg-[color:var(--chat-bg-card)]/95 text-white">
+                      <tr>
+                        <th className="px-4 py-2">תאריך</th>
+                        <th className="px-4 py-2">בית עסק</th>
+                        <th className="px-4 py-2 text-right">סכום</th>
+                        <th className="px-4 py-2">קטגוריה</th>
+                        <th className="px-4 py-2">הערות</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {preview.map((row, index) => (
+                        <tr key={`${row.importHash}-${index}`} className="border-t border-[color:var(--chat-border-soft)]/60 text-white last:border-b">
+                          <td className="px-4 py-2 text-[color:var(--chat-text-muted)]">{row.date}</td>
+                          <td className="px-4 py-2 text-white">{row.merchant}</td>
+                          <td className={`px-4 py-2 text-right font-semibold ${row.amount < 0 ? "text-red-400" : "text-emerald-300"}`}>
+                            {formatAmount(row.amount, row.currency)}
+                          </td>
+                          <td className="px-4 py-2 text-[color:var(--chat-text-muted)]">{row.category || "—"}</td>
+                          <td className="px-4 py-2 text-[color:var(--chat-text-muted)]">{row.notes || ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {errors.length ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100">
-              <h3 className="mb-2 text-sm font-semibold">שורות שדולגו ({errors.length})</h3>
-              <ul className="space-y-1 text-xs">
-                {errors.map((err) => (
-                  <li key={`${err.rowIndex}-${err.message}`} className="flex justify-between gap-2">
-                    <span>שורה {err.rowIndex}</span>
-                    <span className="text-right">{err.message}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+            {errors.length ? (
+              <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+                <h3 className="mb-2 text-sm font-semibold text-red-200">שורות שדולגו ({errors.length})</h3>
+                <ul className="space-y-1 text-xs">
+                  {errors.map((err) => (
+                    <li key={`${err.rowIndex}-${err.message}`} className="flex justify-between gap-2">
+                      <span>שורה {err.rowIndex}</span>
+                      <span className="text-right">{err.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-          {error ? (
-            <div className="rounded-2xl border border-red-300 bg-red-100/70 px-4 py-3 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
-              {error}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 border-t border-neutral-200/70 pt-3 text-sm dark:border-white/10 md:flex-row md:items-center md:justify-between">
-          <div className="text-xs text-neutral-500 dark:text-neutral-300">
-            {parsing ? "מנתח את הקובץ..." : `מוכנים לייבוא ${unique.length} רשומות ייחודיות מתוך ${rowsValid} תקינות.`}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={reset}
-              disabled={parsing || importing}
-              className="rounded-full border border-neutral-300 bg-white/80 px-4 py-2 text-sm text-neutral-700 transition hover:border-neutral-400 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/20 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:border-white/40"
-            >
-              אפס
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={!unique.length || parsing || importing}
-              className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-500/60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-            >
-              {importing ? "מייבא..." : `ייבוא (${unique.length})`}
-            </button>
+            {error ? (
+              <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                {error}
+              </div>
+            ) : null}
           </div>
         </div>
+
+        <footer className="sticky bottom-0 z-10 border-t border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-card)]/92 px-6 pb-[calc(24px+var(--safe-bottom))] pt-4 backdrop-blur">
+          <div className="flex flex-col gap-3 text-sm text-[color:var(--chat-text-muted)] md:flex-row md:items-center md:justify-between">
+            <div>
+              {parsing ? "מנתח את הקובץ..." : `מוכנים לייבוא ${unique.length} רשומות ייחודיות מתוך ${rowsValid} תקינות.`}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                onClick={reset}
+                disabled={parsing || importing}
+                className="min-h-[48px] rounded-full border border-[color:var(--chat-border-soft)]/70 bg-transparent px-5 text-sm font-semibold text-white transition hover:border-[color:var(--chat-primary)]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                אפס
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!unique.length || parsing || importing}
+                className="min-h-[48px] w-full rounded-full bg-[color:var(--chat-primary)] px-6 text-sm font-semibold text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-white/30 sm:w-auto"
+              >
+                {importing ? "מייבא..." : `ייבוא (${unique.length})`}
+              </button>
+            </div>
+          </div>
+        </footer>
       </div>
-    </div>
+    </Modal>
   )
 }
