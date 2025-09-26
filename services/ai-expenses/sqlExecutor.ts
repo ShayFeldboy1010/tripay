@@ -251,12 +251,7 @@ export async function executePlan(
   const { clauses, params } = buildFilters(plan, baseParams);
   const limitValue = Math.min(limit, context.previewLimit ?? 200, 500);
 
-  const whereLines = [
-    "user_id = $1",
-    "date >= $2",
-    "date <= $3",
-    ...clauses.map((clause) => clause.replace(/\s+/g, " ")),
-  ];
+  const whereLines = ["user_id = $1", "date BETWEEN $2 AND $3", ...clauses.map((clause) => clause.replace(/\s+/g, " "))];
 
   const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM expenses\nWHERE ${whereLines.join(" AND ")}\nORDER BY date DESC\nLIMIT ${limitValue}`;
 
@@ -277,4 +272,6 @@ export async function executePlan(
     limit: limitValue,
   };
 }
+
+export const __test__ensureSafePlan = ensureSafePlan;
 

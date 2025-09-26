@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '../styles/chat.css';
 
 /* Stronger modal glass (less transparent) */
 .glass-strong{
@@ -23,6 +24,12 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --chat-bg-app: #0c111c;
+  --chat-bg-card: #121829;
+  --chat-text-muted: #a3b1ce;
+  --chat-primary: #6aa8ff;
+  --chat-ring-brand: #2b5bff;
+  --chat-border-soft: #1b2337;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -61,6 +68,12 @@
 }
 
 .dark {
+  --chat-bg-app: #050914;
+  --chat-bg-card: #121829;
+  --chat-text-muted: #7c8bb0;
+  --chat-primary: #6aa8ff;
+  --chat-ring-brand: #2b5bff;
+  --chat-border-soft: #1b2337;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);

@@ -39,8 +39,7 @@ describe("sqlExecutor", () => {
     expect(queryMock).toHaveBeenCalledTimes(1);
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toContain("user_id = $1");
-    expect(sql).toContain("date >= $2");
-    expect(sql).toContain("date <= $3");
+    expect(sql).toContain("date BETWEEN $2 AND $3");
     expect(sql).toContain("category = $4");
     expect(sql).toContain("LIMIT 120");
     expect(params).toEqual(["user-1", "2025-01-01", "2025-01-31", "Food"]);

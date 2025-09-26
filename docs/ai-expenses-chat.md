@@ -22,11 +22,11 @@ Backend:
 pnpm dev
 ```
 
-The SSE endpoint is available at `/api/ai/expenses/chat`. Example cURL using a JWT:
+The SSE endpoint is available at `/api/ai/expenses/chat/stream`. Issue a short-lived token via `/api/ai/expenses/chat/token` and include it as a query parameter:
 
 ```bash
-curl -N "http://localhost:3000/api/ai/expenses/chat?question=highest%20expense%20this%20month&timezone=Asia/Seoul" \
-  -H "Authorization: Bearer <TEST_JWT>"
+TOKEN=$(curl -s -X POST http://localhost:3000/api/ai/expenses/chat/token -H "Content-Type: application/json" -d '{"userId":"<USER_ID>"}' | jq -r .token)
+curl -N "http://localhost:3000/api/ai/expenses/chat/stream?q=highest%20expense%20this%20month&tz=Asia/Seoul&token=${TOKEN}"
 ```
 
 The stream emits `event: token` chunks for incremental text and a final `event: result` JSON payload containing the executed SQL, aggregates, and preview rows.

@@ -33,13 +33,20 @@ vi.mock("@/services/ai-expenses/groq", () => ({
   getGroqModels: () => ({ primary: "primary-model", fallback: "fallback-model" }),
 }));
 
-describe("/api/ai/expenses/chat", () => {
+const verifySseTokenMock = vi.fn(async () => "user-1");
+
+vi.mock("@/src/server/auth/jwt", () => ({
+  verifySseToken: verifySseTokenMock,
+}));
+
+describe("/api/ai/expenses/chat/stream", () => {
   beforeEach(() => {
     generateSqlPlanMock.mockReset();
     executePlanMock.mockReset();
     runTotalsFallbackMock.mockReset();
     runHighestExpenseFallbackMock.mockReset();
     fakeClient.chat.completions.create.mockReset();
+    verifySseTokenMock.mockClear();
   });
 
   it("streams tokens then result", async () => {
@@ -79,9 +86,9 @@ describe("/api/ai/expenses/chat", () => {
       })(),
     );
 
-    const { GET } = await import("@/app/api/ai/expenses/chat/route");
+    const { GET } = await import("@/app/api/ai/expenses/chat/stream/route");
     const req = new Request(
-      "http://localhost/api/ai/expenses/chat?question=total&since=2025-01-01&until=2025-01-31&timezone=UTC&userId=user-1",
+      "http://localhost/api/ai/expenses/chat/stream?q=total&since=2025-01-01&until=2025-01-31&tz=UTC&token=test-token",
     );
 
     const res = await GET(req as any);
@@ -101,9 +108,11 @@ describe("/api/ai/expenses/chat", () => {
       .map((chunk) => chunk.trim())
       .filter(Boolean);
 
+    const metaEvent = events.find((entry) => entry.startsWith("event: meta"));
     const tokenEvent = events.find((entry) => entry.startsWith("event: token"));
     const resultEvent = events.find((entry) => entry.startsWith("event: result"));
 
+    expect(metaEvent).toBeDefined();
     expect(tokenEvent).toBeDefined();
     expect(resultEvent).toBeDefined();
 
@@ -117,6 +126,7 @@ describe("/api/ai/expenses/chat", () => {
 
     expect(generateSqlPlanMock).toHaveBeenCalledWith("total", expect.objectContaining({ since: "2025-01-01" }));
     expect(executePlanMock).toHaveBeenCalled();
+    expect(verifySseTokenMock).toHaveBeenCalledWith("test-token");
   });
 });
 
