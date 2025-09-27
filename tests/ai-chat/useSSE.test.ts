@@ -73,7 +73,7 @@ describe("useSSE", () => {
     let doneCount = 0;
 
     await act(async () => {
-      const handle = result.current.startStream("question", { tz: "UTC" });
+      const handle = result.current.startStream("question", { tz: "UTC", tripId: "trip-123" });
       await Promise.resolve();
       handle
         .onToken((token) => tokens.push(token))
@@ -92,6 +92,8 @@ describe("useSSE", () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const url = fetchSpy.mock.calls[0]?.[0] as string;
+    expect(url).toContain("tripId=trip-123");
     expect(tokens.join("")).toContain("hello");
     expect(doneCount).toBe(1);
   });

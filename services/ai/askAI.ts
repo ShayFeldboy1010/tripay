@@ -47,13 +47,22 @@ export interface ExpensesChatRequestParams {
   until?: string;
   timezone?: string;
   tz?: string;
-  token: string;
+  token?: string | null;
+  tripId?: string | null;
+  userId?: string | null;
 }
 
 export function buildExpensesStreamUrl(params: ExpensesChatRequestParams) {
   const search = new URLSearchParams();
   search.set("q", params.question);
-  search.set("token", params.token);
+  if (params.tripId) {
+    search.set("tripId", params.tripId);
+  } else if (params.userId) {
+    search.set("userId", params.userId);
+  }
+  if (params.token) {
+    search.set("token", params.token);
+  }
   if (params.since) search.set("since", params.since);
   if (params.until) search.set("until", params.until);
   const tz = params.timezone ?? params.tz;

@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
         headers: { ...headers, "Content-Type": "application/json" },
       });
     }
-    const token = await issueSseToken(body.userId, Math.min(body.ttlSeconds ?? 300, 900));
+    const token = await issueSseToken(body.userId, {
+      ttlSeconds: Math.min(body.ttlSeconds ?? 300, 900),
+      userId: body.userId,
+    });
     return new Response(JSON.stringify({ token }), {
       status: 200,
       headers: { ...headers, "Content-Type": "application/json" },

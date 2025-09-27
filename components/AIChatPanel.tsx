@@ -8,6 +8,7 @@ import { type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useSSE, type StreamHandle } from "@/hooks/useSSE";
 import { useSupabaseUserId } from "@/hooks/useSupabaseUserId";
+import { AI_CHAT_IS_JWT } from "@/src/lib/ai/chatConfig";
 import { ChatBubble } from "./ai-chat/ChatBubble";
 import { useAIChat } from "./AIChatStore";
 import { Modal } from "./Modal";
@@ -55,7 +56,7 @@ const RANGE_OPTIONS: RangeOption[] = [
   },
 ];
 
-async function fetchSseToken(userId: string) {
+async function requestUserToken(userId: string) {
   const res = await fetch("/api/ai/expenses/chat/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -63,6 +64,25 @@ async function fetchSseToken(userId: string) {
   });
   if (!res.ok) {
     throw new Error("Unable to obtain stream token");
+  }
+  const payload = (await res.json()) as { token?: string };
+  if (!payload.token) {
+    throw new Error("Stream token missing");
+  }
+  return payload.token;
+}
+
+async function requestGuestToken(params: { tripId?: string | null; userId?: string | null }) {
+  const body: Record<string, string> = {};
+  if (params.tripId) body.tripId = params.tripId;
+  if (params.userId) body.userId = params.userId;
+  const res = await fetch("/api/ai/expenses/guest-token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error("Unable to obtain guest token");
   }
   const payload = (await res.json()) as { token?: string };
   if (!payload.token) {
@@ -174,11 +194,22 @@ export function AIChatPanel({
   const streamRef = useRef<StreamHandle | null>(null);
   const { startStream, abortCurrent, isStreaming } = useSSEHook({
     fallbackToFetch: true,
-    getToken: async () => {
-      const id = userIdRef.current;
-      if (!id) return null;
-      return fetchSseToken(id);
-    },
+    getToken: AI_CHAT_IS_JWT
+      ? async () => {
+          const id = userIdRef.current;
+          try {
+            if (id) {
+              return await requestUserToken(id);
+            }
+            if (tripId) {
+              return await requestGuestToken({ tripId });
+            }
+            throw new Error("Trip ID required for chat token");
+          } catch (err) {
+            throw err instanceof Error ? err : new Error("Unable to obtain stream token");
+          }
+        }
+      : undefined,
   });
   const titleId = useId();
   const descriptionId = useId();
@@ -257,10 +288,13 @@ export function AIChatPanel({
       setInput("");
       requestAnimationFrame(() => inputRef.current?.focus());
 
+      const currentUserId = userIdRef.current;
       const stream = startStream(normalized, {
         since: activeRange.since,
         until: activeRange.until,
         tz: timezone,
+        tripId,
+        userId: currentUserId,
       });
 
       streamRef.current = stream;
@@ -293,11 +327,11 @@ export function AIChatPanel({
           });
         })
         .onError((err) => {
-          const errorWithCode = err as Error & { code?: string };
-          const friendlyMessage =
-            errorWithCode.code === "AUTH_REQUIRED"
-              ? "You need to sign in to use AI Expenses. Please sign in and try again."
-              : err.message;
+          const errorWithCode = err as Error;
+          let friendlyMessage = errorWithCode.message || "Something went wrong starting the chat.";
+          if (/Unexpected status: 400/.test(friendlyMessage)) {
+            friendlyMessage = "We couldn’t start the chat. Check your trip selection and try again.";
+          }
 
           toast.error(friendlyMessage);
           updateLastMessage(tripId, (prev) => {

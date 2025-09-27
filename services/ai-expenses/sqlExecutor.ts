@@ -5,6 +5,7 @@ import { query } from "@/src/server/db/pool";
 const ALLOWED_COLUMNS = new Set([
   "id",
   "user_id",
+  "trip_id",
   "date",
   "amount",
   "currency",
@@ -17,8 +18,13 @@ const ALLOWED_COLUMNS = new Set([
 const ALLOWED_FILTER_COLUMNS = new Set(["category", "merchant", "currency", "amount", "notes"]);
 const ALLOWED_FUNCTIONS = new Set(["sum", "avg", "min", "max", "count"]);
 
+export interface ExecutionScope {
+  column: "trip_id" | "user_id";
+  id: string;
+}
+
 export interface ExecutionContext {
-  userId: string;
+  scope: ExecutionScope;
   since: string;
   until: string;
   previewLimit?: number;
@@ -242,16 +248,17 @@ export function computeAggregatesForRows(rows: ExpenseRow[]): Aggregates {
   };
 }
 
-export async function executePlan(
-  plan: SqlPlan,
-  context: ExecutionContext
-): Promise<ExecutionResult> {
+export async function executePlan(plan: SqlPlan, context: ExecutionContext): Promise<ExecutionResult> {
   const { limit } = ensureSafePlan(plan);
-  const baseParams = [context.userId, context.since, context.until];
+  const baseParams = [context.scope.id, context.since, context.until];
   const { clauses, params } = buildFilters(plan, baseParams);
   const limitValue = Math.min(limit, context.previewLimit ?? 200, 500);
 
-  const whereLines = ["user_id = $1", "date BETWEEN $2 AND $3", ...clauses.map((clause) => clause.replace(/\s+/g, " "))];
+  const whereLines = [
+    `${context.scope.column} = $1`,
+    "date BETWEEN $2 AND $3",
+    ...clauses.map((clause) => clause.replace(/\s+/g, " ")),
+  ];
 
   const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM expenses\nWHERE ${whereLines.join(" AND ")}\nORDER BY date DESC\nLIMIT ${limitValue}`;
 

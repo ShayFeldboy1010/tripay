@@ -80,6 +80,7 @@ describe("AIChatPanel submit flow", () => {
 
     await waitFor(() => expect(mockStartStream).toHaveBeenCalledTimes(1));
     expect(mockStartStream.mock.calls[0]?.[0]).toBe("highest expense?");
+    expect(mockStartStream.mock.calls[0]?.[1]).toMatchObject({ tripId: "trip-1" });
 
     const initialCalls = mockStartStream.mock.calls.length;
     toastError.mockClear();
@@ -146,7 +147,7 @@ describe("AIChatPanel submit flow", () => {
       errorCallback(authError);
     });
 
-    await screen.findByText("You need to sign in to use AI Expenses. Please sign in and try again.");
+    await screen.findByText("Authentication required. Please sign in to continue.");
     const retryButton = await screen.findByRole("button", { name: /retry/i });
     expect(retryButton).toBeTruthy();
   });
