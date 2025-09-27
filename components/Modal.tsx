@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import React, { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 

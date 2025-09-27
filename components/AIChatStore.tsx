@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 import type { ExpensesChatMetaEvent, ExpensesChatResult } from "@/services/ai/askAI";
 
 export type Msg =
@@ -12,6 +12,7 @@ export type Msg =
       error?: string | null;
       meta?: ExpensesChatMetaEvent | null;
       reconnecting?: boolean;
+      retryPrompt?: string | null;
     };
 
 interface Meta {

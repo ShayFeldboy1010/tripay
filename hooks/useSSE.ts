@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildExpensesStreamUrl, type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/ai/askAI";
 
 export interface SSEMessage {
   event: string;
@@ -8,47 +9,75 @@ export interface SSEMessage {
 }
 
 export interface UseSSEOptions {
-  retryDelays?: number[];
-  heartbeatMs?: number;
-  pingEventName?: string;
   fallbackToFetch?: boolean;
+  getToken?: () => Promise<string | null>;
 }
 
-export interface ConnectConfig {
-  url: string;
-  onEvent: (message: SSEMessage) => void;
-  onOpen?: () => void;
-  onError?: (error: Error) => void;
+export interface StartStreamParams {
+  since?: string;
+  until?: string;
+  tz?: string;
 }
 
-export interface SSEController {
-  connect(config: ConnectConfig): void;
-  close(): void;
-  stopReconnecting(): void;
-  isConnected: boolean;
-  isConnecting: boolean;
-  lastError: Error | null;
-  usingFetchFallback: boolean;
+export interface StreamHandle {
+  controller: AbortController;
+  onToken(cb: (token: string) => void): StreamHandle;
+  onMeta(cb: (meta: ExpensesChatMetaEvent) => void): StreamHandle;
+  onResult(cb: (result: ExpensesChatResult) => void): StreamHandle;
+  onError(cb: (error: Error) => void): StreamHandle;
+  onDone(cb: () => void): StreamHandle;
 }
 
-const DEFAULT_RETRY_DELAYS = [500, 1000, 2000, 4000, 8000];
-
-function isIOSDevice() {
-  if (typeof window === "undefined") return false;
-  const ua = window.navigator.userAgent;
-  return /iP(ad|hone|od)/i.test(ua);
+interface ListenerMap {
+  token: Set<(token: string) => void>;
+  meta: Set<(meta: ExpensesChatMetaEvent) => void>;
+  result: Set<(result: ExpensesChatResult) => void>;
+  error: Set<(error: Error) => void>;
+  done: Set<() => void>;
 }
 
-interface InternalState {
-  controller: EventSource | null;
-  abortController: AbortController | null;
-  reconnectTimer: ReturnType<typeof setTimeout> | null;
-  heartbeatTimer: ReturnType<typeof setTimeout> | null;
-  attempt: number;
-  shouldReconnect: boolean;
-  fetchFallback: boolean;
-  resolvedFetchFallback: boolean;
-  lastPing: number;
+interface ActiveStream {
+  controller: AbortController;
+  listeners: ListenerMap;
+  fallbackTried: boolean;
+  done: boolean;
+  firstTokenAt: number | null;
+  error: Error | null;
+  eventSource: EventSource | null;
+  reader: ReadableStreamDefaultReader<Uint8Array> | null;
+  prompt: string;
+  startedAt: number;
+  firstContentSeen: boolean;
+}
+
+function createListenerMap(): ListenerMap {
+  return {
+    token: new Set(),
+    meta: new Set(),
+    result: new Set(),
+    error: new Set(),
+    done: new Set(),
+  };
+}
+
+function notify<T>(listeners: Set<(value: T) => void>, value: T) {
+  listeners.forEach((listener) => {
+    try {
+      listener(value);
+    } catch (err) {
+      console.error("[ai-chat] listener error", err);
+    }
+  });
+}
+
+function notifyDone(listeners: Set<() => void>) {
+  listeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (err) {
+      console.error("[ai-chat] listener error", err);
+    }
+  });
 }
 
 function parseSSEChunk(buffer: string, onEvent: (message: SSEMessage) => void): string {
@@ -73,253 +102,321 @@ function parseSSEChunk(buffer: string, onEvent: (message: SSEMessage) => void): 
   return rest;
 }
 
-export function useSSE(options: UseSSEOptions = {}): SSEController {
-  const retryDelays = useMemo(() => options.retryDelays ?? DEFAULT_RETRY_DELAYS, [options.retryDelays]);
-  const pingEventName = options.pingEventName ?? "ping";
-  const heartbeatMs = options.heartbeatMs ?? 25_000;
-  const fallbackToFetch = options.fallbackToFetch ?? true;
+function parseMeta(data: string) {
+  return JSON.parse(data) as ExpensesChatMetaEvent;
+}
 
-  const stateRef = useRef<InternalState>({
-    controller: null,
-    abortController: null,
-    reconnectTimer: null,
-    heartbeatTimer: null,
-    attempt: 0,
-    shouldReconnect: false,
-    fetchFallback: false,
-    resolvedFetchFallback: false,
-    lastPing: Date.now(),
-  });
-  const configRef = useRef<ConnectConfig | null>(null);
+function parseResult(data: string) {
+  return JSON.parse(data) as ExpensesChatResult;
+}
 
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [lastError, setLastError] = useState<Error | null>(null);
-  const [, setUsingFetchFallbackTick] = useState(0);
+function parseError(data: string) {
+  try {
+    const parsed = JSON.parse(data) as { message?: string };
+    return parsed.message ? new Error(parsed.message) : new Error("Stream error");
+  } catch (err) {
+    return new Error("Stream error");
+  }
+}
 
-  const usingFetchFallback = stateRef.current.fetchFallback || stateRef.current.resolvedFetchFallback;
+export function useSSE(options: UseSSEOptions = {}) {
+  const { getToken } = options;
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [usingFetchFallback, setUsingFetchFallback] = useState(false);
+  const activeStreamRef = useRef<ActiveStream | null>(null);
+  const fallbackPreference = useMemo(() => options.fallbackToFetch ?? true, [options.fallbackToFetch]);
 
-  const cleanup = useCallback(() => {
-    const state = stateRef.current;
-    if (state.controller) {
-      state.controller.close();
-      state.controller = null;
+  const cleanup = useCallback((stream: ActiveStream | null) => {
+    if (!stream) return;
+    if (stream.eventSource) {
+      stream.eventSource.close();
+      stream.eventSource = null;
     }
-    if (state.abortController) {
-      state.abortController.abort();
-      state.abortController = null;
-    }
-    if (state.reconnectTimer) {
-      clearTimeout(state.reconnectTimer);
-      state.reconnectTimer = null;
-    }
-    if (state.heartbeatTimer) {
-      clearTimeout(state.heartbeatTimer);
-      state.heartbeatTimer = null;
+    if (stream.reader) {
+      try {
+        stream.reader.cancel().catch(() => {});
+      } catch (err) {
+        // ignore
+      }
+      stream.reader = null;
     }
   }, []);
 
-  const scheduleHeartbeat = useCallback(() => {
-    const state = stateRef.current;
-    if (state.heartbeatTimer) {
-      clearTimeout(state.heartbeatTimer);
+  useEffect(() => () => {
+    if (activeStreamRef.current) {
+      activeStreamRef.current.controller.abort();
+      cleanup(activeStreamRef.current);
     }
-    state.heartbeatTimer = setTimeout(() => {
-      const diff = Date.now() - state.lastPing;
-      if (diff >= heartbeatMs) {
-        if (state.shouldReconnect) {
-          setLastError(new Error("Heartbeat timeout"));
-          cleanup();
-          state.attempt = 0;
-          startConnection();
-        }
-      } else {
-        scheduleHeartbeat();
+  }, [cleanup]);
+
+  const finalize = useCallback(
+    (stream: ActiveStream, status: "success" | "error" | "aborted", error?: Error) => {
+      if (stream.done) return;
+      stream.done = true;
+      cleanup(stream);
+      setIsStreaming(false);
+      if (status === "error" && error) {
+        stream.error = error;
+        notify(stream.listeners.error, error);
+        console.error("[ai-chat] stream_failed", error);
       }
-    }, heartbeatMs);
-  }, [cleanup, heartbeatMs]);
+      notifyDone(stream.listeners.done);
+      if (activeStreamRef.current === stream) {
+        activeStreamRef.current = null;
+      }
+    },
+    [cleanup]
+  );
 
   const handleMessage = useCallback(
-    (message: SSEMessage) => {
-      const config = configRef.current;
-      if (!config) return;
-      if (message.event === pingEventName) {
-        stateRef.current.lastPing = Date.now();
-        scheduleHeartbeat();
-      }
-      config.onEvent(message);
-      if (message.event === "result") {
-        stateRef.current.shouldReconnect = false;
-        cleanup();
-        setIsConnected(false);
-        setIsConnecting(false);
+    (stream: ActiveStream, message: SSEMessage) => {
+      switch (message.event) {
+        case "meta": {
+          try {
+            const meta = parseMeta(message.data);
+            notify(stream.listeners.meta, meta);
+          } catch (err) {
+            console.warn("[ai-chat] failed to parse meta", err);
+          }
+          break;
+        }
+        case "token": {
+          stream.firstContentSeen = true;
+          if (stream.firstTokenAt === null) {
+            stream.firstTokenAt = performance.now();
+            console.info("[ai-chat] first_token_ms", Math.round(stream.firstTokenAt - stream.startedAt));
+          }
+          notify(stream.listeners.token, message.data);
+          break;
+        }
+        case "result": {
+          stream.firstContentSeen = true;
+          try {
+            const result = parseResult(message.data);
+            notify(stream.listeners.result, result);
+            finalize(stream, "success");
+          } catch (err) {
+            finalize(stream, "error", err instanceof Error ? err : new Error("Result parse error"));
+          }
+          break;
+        }
+        case "error": {
+          const err = parseError(message.data);
+          finalize(stream, "error", err);
+          break;
+        }
+        default:
+          break;
       }
     },
-    [cleanup, scheduleHeartbeat, pingEventName]
-  );
-
-  const handleConnectionError = useCallback(
-    (err: Error, { dueToNetwork }: { dueToNetwork: boolean }) => {
-      const config = configRef.current;
-      setLastError(err);
-      if (config?.onError) config.onError(err);
-      const state = stateRef.current;
-      if (!state.shouldReconnect) {
-        cleanup();
-        setIsConnected(false);
-        setIsConnecting(false);
-        return;
-      }
-      if (dueToNetwork && fallbackToFetch && !state.fetchFallback && !state.resolvedFetchFallback) {
-        state.fetchFallback = true;
-        setUsingFetchFallbackTick((x) => x + 1);
-      }
-      const delay = retryDelays[Math.min(state.attempt, retryDelays.length - 1)];
-      if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
-      state.reconnectTimer = setTimeout(() => {
-        state.attempt += 1;
-        startConnection();
-      }, delay);
-    },
-    [cleanup, fallbackToFetch, retryDelays]
-  );
-
-  const startFetchFallback = useCallback(
-    async (config: ConnectConfig) => {
-      const state = stateRef.current;
-      const controller = new AbortController();
-      state.abortController = controller;
-      let buffer = "";
-      try {
-        const res = await fetch(config.url, {
-          method: "GET",
-          headers: { Accept: "text/event-stream" },
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) {
-          throw new Error(`Unexpected status: ${res.status}`);
-        }
-        state.resolvedFetchFallback = true;
-        setUsingFetchFallbackTick((x) => x + 1);
-        if (config.onOpen) config.onOpen();
-        setIsConnected(true);
-        setIsConnecting(false);
-        scheduleHeartbeat();
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (!value) continue;
-          buffer += decoder.decode(value, { stream: true });
-          buffer = parseSSEChunk(buffer, handleMessage);
-        }
-        if (state.shouldReconnect) {
-          throw new Error("Connection closed");
-        }
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        handleConnectionError(err instanceof Error ? err : new Error("Fetch stream failed"), { dueToNetwork: true });
-      }
-    },
-    [handleConnectionError, handleMessage, scheduleHeartbeat]
+    [finalize]
   );
 
   const startEventSource = useCallback(
-    (config: ConnectConfig) => {
-      const state = stateRef.current;
-      const source = new EventSource(config.url, { withCredentials: false });
-      state.controller = source;
+    (stream: ActiveStream, url: string) =>
+      new Promise<void>((resolve, reject) => {
+        try {
+          const source = new EventSource(url, { withCredentials: false });
+          stream.eventSource = source;
 
-      const listen = (event: string) => {
-        source.addEventListener(event, (raw) => {
-          const message = raw as MessageEvent<string>;
-          handleMessage({ event, data: message.data ?? "" });
-        });
-      };
+          source.addEventListener("meta", (event) => {
+            handleMessage(stream, { event: "meta", data: (event as MessageEvent<string>).data ?? "" });
+          });
+          source.addEventListener("token", (event) => {
+            handleMessage(stream, { event: "token", data: (event as MessageEvent<string>).data ?? "" });
+          });
+          source.addEventListener("result", (event) => {
+            handleMessage(stream, { event: "result", data: (event as MessageEvent<string>).data ?? "" });
+          });
+          source.addEventListener("error", (event) => {
+            handleMessage(stream, { event: "error", data: (event as MessageEvent<string>).data ?? "" });
+          });
 
-      ["meta", "token", "result", "error", pingEventName].forEach(listen);
+          source.onopen = () => {
+            console.info("[ai-chat] stream_started", { transport: "eventsource" });
+          };
 
-      source.onopen = () => {
-        state.attempt = 0;
-        setIsConnected(true);
-        setIsConnecting(false);
-        setLastError(null);
-        state.lastPing = Date.now();
-        scheduleHeartbeat();
-        config.onOpen?.();
-      };
+          source.onerror = () => {
+            if (stream.done) return;
+            source.close();
+            stream.eventSource = null;
+            if (!stream.firstContentSeen) {
+              reject(new Error("EventSource failed"));
+            } else {
+              reject(new Error("EventSource interrupted"));
+            }
+          };
 
-      source.onerror = () => {
-        const err = new Error("EventSource failed");
-        source.close();
-        state.controller = null;
-        handleConnectionError(err, { dueToNetwork: true });
-      };
-    },
-    [handleConnectionError, handleMessage, pingEventName, scheduleHeartbeat]
+          stream.controller.signal.addEventListener(
+            "abort",
+            () => {
+              source.close();
+              stream.eventSource = null;
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true }
+          );
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error("EventSource failed"));
+        }
+      }),
+    [handleMessage]
   );
 
-  const startConnection = useCallback(() => {
-    const config = configRef.current;
-    if (!config) return;
-    const state = stateRef.current;
-    cleanup();
-    setIsConnecting(true);
-    setIsConnected(false);
-
-    const useFetch = state.fetchFallback || state.resolvedFetchFallback || (fallbackToFetch && isIOSDevice());
-    if (!useFetch && typeof EventSource !== "undefined") {
-      try {
-        startEventSource(config);
-        return;
-      } catch (err) {
-        handleConnectionError(err instanceof Error ? err : new Error("Failed to init EventSource"), { dueToNetwork: true });
-        return;
+  const startFetchFallback = useCallback(
+    async (stream: ActiveStream, url: string) => {
+      console.info("[ai-chat] stream_started", { transport: "fetch" });
+      let buffer = "";
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "text/event-stream" },
+        cache: "no-store",
+        signal: stream.controller.signal,
+      });
+      if (!response.ok || !response.body) {
+        throw new Error(`Unexpected status: ${response.status}`);
       }
-    }
-    startFetchFallback(config);
-  }, [cleanup, fallbackToFetch, handleConnectionError, startEventSource, startFetchFallback]);
-
-  const connect = useCallback(
-    (config: ConnectConfig) => {
-      configRef.current = config;
-      const state = stateRef.current;
-      state.shouldReconnect = true;
-      state.attempt = 0;
-      state.lastPing = Date.now();
-      state.fetchFallback = false;
-      setLastError(null);
-      startConnection();
+      const reader = response.body.getReader();
+      stream.reader = reader;
+      const decoder = new TextDecoder();
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        buffer += decoder.decode(value, { stream: true });
+        buffer = parseSSEChunk(buffer, (evt) => handleMessage(stream, evt));
+      }
+      stream.reader = null;
+      if (!stream.done) {
+        if (stream.firstContentSeen) {
+          finalize(stream, "success");
+        } else {
+          throw new Error("Stream closed");
+        }
+      }
     },
-    [startConnection]
+    [finalize, handleMessage]
   );
 
-  const close = useCallback(() => {
-    stateRef.current.shouldReconnect = false;
-    cleanup();
-    setIsConnected(false);
-    setIsConnecting(false);
-  }, [cleanup]);
+  const startStream = useCallback(
+    (prompt: string, params: StartStreamParams): StreamHandle => {
+      const controller = new AbortController();
+      const listeners = createListenerMap();
+      const stream: ActiveStream = {
+        controller,
+        listeners,
+        fallbackTried: false,
+        done: false,
+        firstTokenAt: null,
+        error: null,
+        eventSource: null,
+        reader: null,
+        prompt,
+        startedAt: performance.now(),
+        firstContentSeen: false,
+      };
 
-  const stopReconnecting = useCallback(() => {
-    stateRef.current.shouldReconnect = false;
-    if (!stateRef.current.controller && !stateRef.current.abortController) {
-      cleanup();
-      setIsConnecting(false);
+      if (activeStreamRef.current) {
+        activeStreamRef.current.controller.abort();
+      }
+      activeStreamRef.current = stream;
+      setIsStreaming(true);
+
+      const fetchTokenAndStart = async () => {
+        try {
+          const token = (await getToken?.()) ?? null;
+          if (!token) {
+            throw new Error("Authentication required");
+          }
+          const url = buildExpensesStreamUrl({
+            question: prompt,
+            since: params.since,
+            until: params.until,
+            tz: params.tz,
+            token,
+          });
+
+          console.info("[ai-chat] submit_clicked", { hasRange: Boolean(params.since && params.until) });
+
+          try {
+            setUsingFetchFallback(false);
+            await startEventSource(stream, url);
+          } catch (err) {
+            if (stream.done) return;
+            const networkError = err instanceof DOMException && err.name === "AbortError";
+            if (!stream.firstContentSeen && fallbackPreference && !stream.fallbackTried && !networkError) {
+              stream.fallbackTried = true;
+              setUsingFetchFallback(true);
+              await startFetchFallback(stream, url);
+            } else if (!networkError) {
+              finalize(stream, "error", err instanceof Error ? err : new Error("Stream failed"));
+            } else {
+              finalize(stream, "aborted");
+            }
+          }
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error("Stream failed to start");
+          finalize(stream, error.name === "AbortError" ? "aborted" : "error", error);
+        }
+      };
+
+      fetchTokenAndStart();
+
+      controller.signal.addEventListener(
+        "abort",
+        () => {
+          finalize(stream, "aborted", new DOMException("Aborted", "AbortError"));
+        },
+        { once: true }
+      );
+
+      const handle: StreamHandle = {
+        controller,
+        onToken(cb) {
+          listeners.token.add(cb);
+          return handle;
+        },
+        onMeta(cb) {
+          listeners.meta.add(cb);
+          return handle;
+        },
+        onResult(cb) {
+          listeners.result.add(cb);
+          return handle;
+        },
+        onError(cb) {
+          if (stream.error) {
+            cb(stream.error);
+          } else {
+            listeners.error.add(cb);
+          }
+          return handle;
+        },
+        onDone(cb) {
+          if (stream.done) {
+            cb();
+          } else {
+            listeners.done.add(cb);
+          }
+          return handle;
+        },
+      };
+
+      return handle;
+    },
+    [activeStreamRef, fallbackPreference, finalize, getToken, startEventSource, startFetchFallback]
+  );
+
+  const abortCurrent = useCallback(() => {
+    if (activeStreamRef.current) {
+      activeStreamRef.current.controller.abort();
     }
-  }, [cleanup]);
-
-  useEffect(() => close, [close]);
+  }, []);
 
   return {
-    connect,
-    close,
-    stopReconnecting,
-    isConnected,
-    isConnecting,
-    lastError,
+    startStream,
+    abortCurrent,
+    isStreaming,
     usingFetchFallback,
   };
 }
