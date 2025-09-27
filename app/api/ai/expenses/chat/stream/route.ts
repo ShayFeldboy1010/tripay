@@ -4,7 +4,8 @@ import { generateSqlPlan, type SqlPlan } from "@/services/ai-expenses/nl2sql";
 import { executePlan, type ExecutionResult } from "@/services/ai-expenses/sqlExecutor";
 import { runHighestExpenseFallback, runTotalsFallback } from "@/services/ai-expenses/templates";
 import { getGroqClient, getGroqModels } from "@/services/ai-expenses/groq";
-import { verifySseToken } from "@/src/server/auth/jwt";
+import { verifySseToken, type VerifiedSseToken } from "@/src/server/auth/jwt";
+import { AI_CHAT_AUTH_MODE, AI_CHAT_IS_ANONYMOUS } from "@/src/server/config";
 
 const encoder = new TextEncoder();
 
@@ -14,6 +15,38 @@ interface QueryInput {
   until?: string | null;
   tz?: string | null;
   token?: string | null;
+  tripId?: string | null;
+  userId?: string | null;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type Scope = { column: "trip_id" | "user_id"; id: string };
+
+function normalizeUuid(value: string | null | undefined, headers: Record<string, string>): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!UUID_PATTERN.test(trimmed)) {
+    throw new Response(JSON.stringify({ error: "invalid id format" }), {
+      status: 400,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
+  }
+  return trimmed;
+}
+
+function scopeFromToken(token: VerifiedSseToken | null): Scope | null {
+  if (!token) return null;
+  if (token.tripId && UUID_PATTERN.test(token.tripId)) {
+    return { column: "trip_id", id: token.tripId };
+  }
+  if (token.userId && UUID_PATTERN.test(token.userId)) {
+    return { column: "user_id", id: token.userId };
+  }
+  if (token.subject !== "guest" && UUID_PATTERN.test(token.subject)) {
+    return { column: "user_id", id: token.subject };
+  }
+  return null;
 }
 
 function buildHeaders(req: NextRequest) {
@@ -119,23 +152,78 @@ function buildAnswerMessages(args: {
   ];
 }
 
-async function runExecution(plan: SqlPlan | null, context: { userId: string; since: string; until: string }) {
+async function runExecution(
+  plan: SqlPlan | null,
+  context: { scope: Scope; since: string; until: string }
+) {
+  const baseContext = { scope: context.scope, since: context.since, until: context.until };
   if (!plan) {
-    const execution = await runTotalsFallback(context);
+    const execution = await runTotalsFallback(baseContext);
     return { execution, usedFallback: true };
   }
   try {
-    const execution = await executePlan(plan, { ...context });
+    const execution = await executePlan(plan, baseContext);
     return { execution, usedFallback: false };
   } catch (err) {
     const text = plan.intent?.toLowerCase() || "aggregation";
     if (text.includes("ranking") || /highest|largest|biggest/i.test(text)) {
-      const execution = await runHighestExpenseFallback(context);
+      const execution = await runHighestExpenseFallback(baseContext);
       return { execution, usedFallback: true };
     }
-    const execution = await runTotalsFallback(context);
+    const execution = await runTotalsFallback(baseContext);
     return { execution, usedFallback: true };
   }
+}
+
+async function resolveScope(req: NextRequest, input: QueryInput): Promise<Scope> {
+  const headers = buildHeaders(req);
+  let providedToken: VerifiedSseToken | null = null;
+
+  const tokenQuery = input.token?.trim();
+  if (tokenQuery) {
+    try {
+      providedToken = await verifySseToken(tokenQuery);
+    } catch (err) {
+      console.error("ai-chat: invalid token", err);
+      throw new Response(JSON.stringify({ error: "invalid token" }), {
+        status: 401,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  if (AI_CHAT_AUTH_MODE === "jwt" && !providedToken) {
+    throw new Response(JSON.stringify({ error: "token required" }), {
+      status: 401,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
+  }
+
+  const paramTrip = normalizeUuid(input.tripId, headers);
+  const paramUser = normalizeUuid(input.userId, headers);
+
+  if (!AI_CHAT_IS_ANONYMOUS && !providedToken && !paramTrip && !paramUser) {
+    throw new Response(JSON.stringify({ error: "token required" }), {
+      status: 401,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
+  }
+
+  const tokenScope = scopeFromToken(providedToken);
+  if (paramTrip) {
+    return { column: "trip_id", id: paramTrip };
+  }
+  if (paramUser) {
+    return { column: "user_id", id: paramUser };
+  }
+  if (tokenScope) {
+    return tokenScope;
+  }
+
+  throw new Response(JSON.stringify({ error: "tripId or userId required" }), {
+    status: 400,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
 }
 
 async function handle(req: NextRequest, input: QueryInput) {
@@ -148,22 +236,12 @@ async function handle(req: NextRequest, input: QueryInput) {
     });
   }
 
-  if (!input.token) {
-    return new Response(JSON.stringify({ error: "token required" }), {
-      status: 401,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
-  }
-
-  let userId: string;
+  let scope: Scope;
   try {
-    userId = await verifySseToken(input.token);
+    scope = await resolveScope(req, input);
   } catch (err) {
-    console.error("ai-chat: invalid token", err);
-    return new Response(JSON.stringify({ error: "invalid token" }), {
-      status: 401,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    if (err instanceof Response) return err;
+    throw err;
   }
 
   const timeRange = resolveTimeRange({ since: input.since, until: input.until, timezone: input.tz });
@@ -190,21 +268,26 @@ async function handle(req: NextRequest, input: QueryInput) {
         let execution: ExecutionResult;
         let usedFallback = false;
 
-        await send("meta", { timeRange: { since, until }, tz: timeRange.tz, userId_last4: userId.slice(-4) });
+        await send("meta", { timeRange: { since, until }, tz: timeRange.tz, userId_last4: scope.id.slice(-4) });
 
         try {
           plan = await generateSqlPlan(input.question, {
             since,
             until,
             timezone: timeRange.tz,
-            userId,
+            tripId: scope.column === "trip_id" ? scope.id : undefined,
+            userId: scope.column === "user_id" ? scope.id : undefined,
           });
         } catch (err) {
           console.warn("nl2sql: failed to plan", err);
         }
 
         try {
-          const outcome = await runExecution(plan, { userId, since, until });
+          const outcome = await runExecution(plan, {
+            since,
+            until,
+            scope,
+          });
           execution = outcome.execution;
           usedFallback = outcome.usedFallback;
         } catch (err) {
@@ -272,6 +355,8 @@ export async function GET(req: NextRequest) {
     until: params.get("until"),
     tz: params.get("tz"),
     token: params.get("token"),
+    tripId: params.get("tripId"),
+    userId: params.get("userId"),
   });
 }
 

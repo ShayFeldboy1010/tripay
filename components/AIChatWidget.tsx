@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 import { AIChatBubble } from "./AIChatBubble";
 import { AIChatPanel } from "./AIChatPanel";
 import { useAIChat } from "./AIChatStore";
+import { getActiveTripId } from "@/src/lib/trips/getActiveTripId";
 
 export function AIChatWidget() {
   const pathname = usePathname();
   const { open, openForTrip, close, activeTripId } = useAIChat();
   const [mounted, setMounted] = useState(false);
   const match = pathname.match(/\/trip\/([^/]+)/);
-  const currentTrip = match ? match[1] : null;
+  const currentTrip = match ? match[1] : getActiveTripId();
 
   useEffect(() => {
     setMounted(true);

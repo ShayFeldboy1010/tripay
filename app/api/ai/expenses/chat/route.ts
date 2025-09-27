@@ -33,22 +33,23 @@ async function resolveUserId(req: NextRequest, body: RequestBody): Promise<strin
 
 async function runExecution(
   plan: SqlPlan | null,
-  context: { userId: string; since: string; until: string }
+  context: { scope: { column: "trip_id" | "user_id"; id: string }; since: string; until: string }
 ): Promise<{ execution: ExecutionResult; usedFallback: boolean }> {
+  const execContext = { scope: context.scope, since: context.since, until: context.until };
   if (!plan) {
-    const execution = await runTotalsFallback({ ...context });
+    const execution = await runTotalsFallback(execContext);
     return { execution, usedFallback: true };
   }
   try {
-    const execution = await executePlan(plan, { ...context });
+    const execution = await executePlan(plan, execContext);
     return { execution, usedFallback: false };
   } catch (err) {
     const text = plan.intent?.toLowerCase() || "aggregation";
     if (text.includes("ranking") || /highest|largest|biggest/i.test(text)) {
-      const execution = await runHighestExpenseFallback({ ...context });
+      const execution = await runHighestExpenseFallback(execContext);
       return { execution, usedFallback: true };
     }
-    const execution = await runTotalsFallback({ ...context });
+    const execution = await runTotalsFallback(execContext);
     return { execution, usedFallback: true };
   }
 }
@@ -157,7 +158,11 @@ async function handleRequest(req: NextRequest, body: RequestBody) {
   let execution: ExecutionResult;
   let usedFallback = false;
   try {
-    const outcome = await runExecution(plan, { userId, since, until });
+    const outcome = await runExecution(plan, {
+      since,
+      until,
+      scope: { column: "user_id", id: userId },
+    });
     execution = outcome.execution;
     usedFallback = outcome.usedFallback;
   } catch (err) {

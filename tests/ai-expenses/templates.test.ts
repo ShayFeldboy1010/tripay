@@ -19,7 +19,11 @@ describe("templates", () => {
       ],
     });
 
-    const result = await runHighestExpenseFallback({ userId: "u", since: "2025-02-01", until: "2025-02-28" });
+    const result = await runHighestExpenseFallback({
+      scope: { column: "user_id", id: "u" },
+      since: "2025-02-01",
+      until: "2025-02-28",
+    });
     expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("ORDER BY amount DESC"), [
       "u",
       "2025-02-01",
@@ -33,7 +37,11 @@ describe("templates", () => {
     queryMock.mockResolvedValue({
       rows: [],
     });
-    await runTotalsFallback({ userId: "u", since: "2025-01-01", until: "2025-01-31" });
+    await runTotalsFallback({
+      scope: { column: "user_id", id: "u" },
+      since: "2025-01-01",
+      until: "2025-01-31",
+    });
     expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("ORDER BY date DESC"), [
       "u",
       "2025-01-01",

@@ -31,7 +31,7 @@ describe("sqlExecutor", () => {
     });
 
     const result = await executePlan(basePlan, {
-      userId: "user-1",
+      scope: { column: "user_id", id: "user-1" },
       since: "2025-01-01",
       until: "2025-01-31",
     });
@@ -57,7 +57,7 @@ describe("sqlExecutor", () => {
 
     await expect(
       executePlan(plan, {
-        userId: "user-1",
+        scope: { column: "user_id", id: "user-1" },
         since: "2025-01-01",
         until: "2025-01-31",
       }),

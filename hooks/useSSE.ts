@@ -17,6 +17,8 @@ export interface StartStreamParams {
   since?: string;
   until?: string;
   tz?: string;
+  tripId?: string | null;
+  userId?: string | null;
 }
 
 export interface StreamHandle {
@@ -325,16 +327,13 @@ export function useSSE(options: UseSSEOptions = {}) {
       const fetchTokenAndStart = async () => {
         try {
           const token = (await getToken?.()) ?? null;
-          if (!token) {
-            const authError = new Error("Authentication required. Please sign in to continue.");
-            (authError as Error & { code?: string }).code = "AUTH_REQUIRED";
-            throw authError;
-          }
           const url = buildExpensesStreamUrl({
             question: prompt,
             since: params.since,
             until: params.until,
             tz: params.tz,
+            tripId: params.tripId ?? null,
+            userId: params.userId ?? null,
             token,
           });
 

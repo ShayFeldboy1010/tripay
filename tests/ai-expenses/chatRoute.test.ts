@@ -33,7 +33,8 @@ vi.mock("@/services/ai-expenses/groq", () => ({
   getGroqModels: () => ({ primary: "primary-model", fallback: "fallback-model" }),
 }));
 
-const verifySseTokenMock = vi.fn(async () => "user-1");
+const TEST_SCOPE_ID = "11111111-1111-1111-1111-111111111111";
+const verifySseTokenMock = vi.fn(async () => ({ subject: TEST_SCOPE_ID, userId: TEST_SCOPE_ID }));
 
 vi.mock("@/src/server/auth/jwt", () => ({
   verifySseToken: verifySseTokenMock,
@@ -62,7 +63,7 @@ describe("/api/ai/expenses/chat/stream", () => {
 
     const execution: ExecutionResult = {
       sql: "SELECT date, amount FROM expenses WHERE user_id = $1",
-      params: ["user-1", "2025-01-01", "2025-01-31"],
+      params: [TEST_SCOPE_ID, "2025-01-01", "2025-01-31"],
       rows: [
         { date: "2025-01-05", amount: 42, currency: "USD", category: "Food", merchant: "Cafe", notes: null },
       ],

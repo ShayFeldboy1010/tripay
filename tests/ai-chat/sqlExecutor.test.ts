@@ -59,7 +59,11 @@ describe("sql executor", () => {
       sql: "SELECT date, amount FROM expenses ORDER BY date DESC LIMIT 20",
     };
 
-    const result = await executePlan(plan, { userId: "user-1234", since: "2024-01-01", until: "2024-01-31" });
+    const result = await executePlan(plan, {
+      scope: { column: "user_id", id: "user-1234" },
+      since: "2024-01-01",
+      until: "2024-01-31",
+    });
     expect(result.sql).toContain("user_id = $1");
     expect(result.sql).toContain("date BETWEEN $2 AND $3");
     expect(result.params.slice(0, 3)).toEqual(["user-1234", "2024-01-01", "2024-01-31"]);

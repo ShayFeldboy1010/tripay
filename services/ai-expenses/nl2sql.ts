@@ -87,7 +87,7 @@ function parsePlan(raw: string): SqlPlan {
 
 export async function generateSqlPlan(
   question: string,
-  payload: { since: string; until: string; timezone: string; userId: string }
+  payload: { since: string; until: string; timezone: string; userId?: string; tripId?: string }
 ): Promise<SqlPlan> {
   let attempt = 0;
   let lastError: Error | null = null;
@@ -104,7 +104,13 @@ export async function generateSqlPlan(
   throw lastError ?? new Error("Failed to generate SQL plan");
 }
 
-export function cacheKeyForPlan(input: { question: string; userId: string; since: string; until: string }): string {
+export function cacheKeyForPlan(input: {
+  question: string;
+  since: string;
+  until: string;
+  userId?: string;
+  tripId?: string;
+}): string {
   return crypto.createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 
