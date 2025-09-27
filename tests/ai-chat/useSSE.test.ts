@@ -6,15 +6,17 @@ import { useSSE } from "@/hooks/useSSE";
 class MockEventSource {
   static instances: MockEventSource[] = [];
   url: string;
-  withCredentials: boolean;
   onopen: (() => void) | null = null;
-  onerror: (() => void) | null = null;
+  onerror: ((event?: Event) => void) | null = null;
   listeners = new Map<string, (event: MessageEvent<string>) => void>();
 
-  constructor(url: string, init?: EventSourceInit) {
+  constructor(url: string) {
     this.url = url;
-    this.withCredentials = Boolean(init?.withCredentials);
     MockEventSource.instances.push(this);
+  }
+
+  addEventListener(type: string, listener: (event: MessageEvent<string>) => void) {
+    this.listeners.set(type, listener);
   }
 
   emit(type: string, data: string) {
@@ -22,8 +24,8 @@ class MockEventSource {
     if (handler) handler(new MessageEvent(type, { data }));
   }
 
-  addEventListener(type: string, listener: (event: MessageEvent<string>) => void) {
-    this.listeners.set(type, listener);
+  triggerError() {
+    this.onerror?.(new Event("error"));
   }
 
   close() {
@@ -32,74 +34,97 @@ class MockEventSource {
 }
 
 describe("useSSE", () => {
+  const encoder = new TextEncoder();
+  const fetchSpy = vi.fn();
+
   beforeEach(() => {
     MockEventSource.instances = [];
-    vi.useFakeTimers();
-    // @ts-expect-error override global EventSource for testing
-    global.EventSource = MockEventSource;
+    vi.stubGlobal("EventSource", MockEventSource as unknown as typeof EventSource);
+    vi.stubGlobal("fetch", fetchSpy);
+    fetchSpy.mockReset();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
-  it("reconnects after heartbeat timeout", () => {
-    const events: string[] = [];
-    const { result } = renderHook(() => useSSE({ heartbeatMs: 1000, retryDelays: [100] }));
+  it("falls back to fetch when EventSource fails before payload and resolves stream", async () => {
+    const chunks = [
+      "event: token\n",
+      "data: hello\n\n",
+      'event: result\n',
+      'data: {"answer":"done","model":"gpt","provider":"openai","sql":"","timeRange":{"since":"2024-01-01","until":"2024-01-31","tz":"UTC"},"aggregates":{"totalsByCurrency":[],"total":null,"avg":null,"max":null,"byCategory":[],"byMerchant":[]},"rows":[],"plan":null,"usedFallback":false}\n\n',
+    ].join("");
+    fetchSpy.mockResolvedValue(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode(chunks));
+            controller.close();
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } }
+      )
+    );
 
-    act(() => {
-      result.current.connect({
-        url: "/test",
-        onEvent: (evt) => events.push(evt.event),
-      });
+    const { result } = renderHook(() => useSSE({ getToken: async () => "token", fallbackToFetch: true }));
+
+    const tokens: string[] = [];
+    let doneCount = 0;
+
+    await act(async () => {
+      const handle = result.current.startStream("question", { tz: "UTC" });
+      await Promise.resolve();
+      handle
+        .onToken((token) => tokens.push(token))
+        .onResult(() => {})
+        .onError(() => {})
+        .onDone(() => {
+          doneCount += 1;
+        });
+
+      expect(MockEventSource.instances).toHaveLength(1);
+      MockEventSource.instances[0]!.triggerError();
     });
 
-    expect(MockEventSource.instances.length).toBe(1);
-    const instance = MockEventSource.instances[0]!;
-
-    act(() => {
-      instance.onopen?.();
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    // advance just before timeout
-    act(() => {
-      vi.advanceTimersByTime(900);
-    });
-    expect(MockEventSource.instances.length).toBe(1);
-
-    // timeout triggers reconnect
-    act(() => {
-      vi.advanceTimersByTime(200);
-    });
-    expect(MockEventSource.instances.length).toBeGreaterThan(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(tokens.join("")).toContain("hello");
+    expect(doneCount).toBe(1);
   });
 
-  it("resets heartbeat on ping", () => {
-    const { result } = renderHook(() => useSSE({ heartbeatMs: 1000, retryDelays: [100] }));
+  it("invokes onDone when aborted", async () => {
+    fetchSpy.mockResolvedValue(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start() {
+            // keep open until abort
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } }
+      )
+    );
 
-    act(() => {
-      result.current.connect({
-        url: "/ping",
-        onEvent: () => {},
+    const { result } = renderHook(() => useSSE({ getToken: async () => "token" }));
+
+    let doneCount = 0;
+
+    await act(async () => {
+      const handle = result.current.startStream("stop", { tz: "UTC" });
+      handle.onDone(() => {
+        doneCount += 1;
       });
+      handle.onError(() => {});
+      handle.controller.abort();
     });
 
-    const instance = MockEventSource.instances[0]!;
-    act(() => instance.onopen?.());
-
-    act(() => {
-      vi.advanceTimersByTime(800);
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    act(() => {
-      instance.emit("ping", "{}");
-    });
-
-    act(() => {
-      vi.advanceTimersByTime(400);
-    });
-
-    expect(MockEventSource.instances.length).toBe(1);
+    expect(doneCount).toBe(1);
   });
 });
-

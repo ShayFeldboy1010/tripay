@@ -1,17 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
+import React, { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Loader2, Sparkles, X } from "lucide-react";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
-import {
-  buildExpensesStreamUrl,
-  type ExpensesChatMetaEvent,
-  type ExpensesChatResult,
-} from "@/services/ai/askAI";
+import { type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/ai/askAI";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { useSSE } from "@/hooks/useSSE";
+import { useSSE, type StreamHandle } from "@/hooks/useSSE";
+import { useSupabaseUserId } from "@/hooks/useSupabaseUserId";
 import { ChatBubble } from "./ai-chat/ChatBubble";
 import { useAIChat } from "./AIChatStore";
 import { Modal } from "./Modal";
@@ -151,31 +147,17 @@ function ResultDataPanel({ result, meta }: { result: ExpensesChatResult; meta?: 
   );
 }
 
-function parseStreamEvent(rawEvent: { event: string; data: string }) {
-  try {
-    switch (rawEvent.event) {
-      case "meta":
-        return { type: "meta" as const, data: JSON.parse(rawEvent.data) as ExpensesChatMetaEvent };
-      case "token":
-        return { type: "token" as const, data: rawEvent.data };
-      case "result":
-        return { type: "result" as const, data: JSON.parse(rawEvent.data) as ExpensesChatResult };
-      case "error":
-        return { type: "error" as const, data: JSON.parse(rawEvent.data) as { message?: string } };
-      case "ping":
-        return { type: "ping" as const, data: {} };
-      default:
-        return null;
-    }
-  } catch (err) {
-    console.error("ai-chat: failed to parse event", rawEvent, err);
-    return null;
-  }
-}
-
 const bottomInsetClass = "pb-[calc(var(--bottom-ui)+var(--safe-bottom))]"; // TODO(shay): verify nav height
 
-export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean }) {
+export function AIChatPanel({
+  tripId,
+  open,
+  useSSEHook = useSSE,
+}: {
+  tripId: string;
+  open: boolean;
+  useSSEHook?: typeof useSSE;
+}) {
   const isDesktop = useIsDesktop();
   const { messages, addMessage, updateLastMessage, close, meta, setMeta } = useAIChat();
   const listRef = useRef<HTMLDivElement>(null);
@@ -184,9 +166,19 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
   const [input, setInput] = useState("");
   const [activeRange, setActiveRange] = useState<{ id: RangeOptionId; since: string; until: string } | null>(null);
   const [timezone, setTimezone] = useState<string>("Asia/Seoul");
-  const [userId, setUserId] = useState<string | null>(null);
-  const [tokenLoading, setTokenLoading] = useState(false);
-  const sse = useSSE({ pingEventName: "ping", fallbackToFetch: true });
+  const { userId } = useSupabaseUserId();
+  const userIdRef = useRef<string | null>(userId ?? null);
+  const [isShaking, setIsShaking] = useState(false);
+  const inputShellRef = useRef<HTMLDivElement>(null);
+  const streamRef = useRef<StreamHandle | null>(null);
+  const { startStream, abortCurrent, isStreaming } = useSSEHook({
+    fallbackToFetch: true,
+    getToken: async () => {
+      const id = userIdRef.current;
+      if (!id) return null;
+      return fetchSseToken(id);
+    },
+  });
   const titleId = useId();
   const descriptionId = useId();
 
@@ -200,21 +192,19 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-    });
-  }, []);
+    userIdRef.current = userId ?? null;
+  }, [userId]);
 
   useEffect(() => {
     if (!open) {
-      sse.close();
+      abortCurrent();
       return;
     }
     const defaultRange = RANGE_OPTIONS[0];
     const computed = defaultRange.compute(timezone);
     setActiveRange({ id: defaultRange.id, ...computed });
     setTimeout(() => inputRef.current?.focus(), 180);
-  }, [open, timezone, sse]);
+  }, [abortCurrent, open, timezone]);
 
   useEffect(() => {
     if (!open) return;
@@ -235,107 +225,115 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
     [timezone]
   );
 
-  const handleSseEvent = useCallback(
-    (raw: { event: string; data: string }) => {
-      const event = parseStreamEvent(raw);
-      if (!event) return;
-      switch (event.type) {
-        case "meta":
-          updateLastMessage(tripId, (prev) => {
-            if (prev.role !== "assistant") return prev;
-            return { ...prev, meta: event.data, reconnecting: false };
-          });
-          break;
-        case "token":
-          updateLastMessage(tripId, (prev) => {
-            if (prev.role !== "assistant") return prev;
-            return { ...prev, text: prev.text + event.data, streaming: true, reconnecting: false };
-          });
-          break;
-        case "result":
-          setMeta(tripId, { provider: event.data.provider, model: event.data.model });
-          updateLastMessage(tripId, (prev) => {
-            if (prev.role !== "assistant") return prev;
-            return { ...prev, text: event.data.answer.trim(), streaming: false, result: event.data, reconnecting: false };
-          });
-          sse.stopReconnecting();
-          break;
-        case "error":
-          toast.error(event.data.message ?? "Connection interrupted. Trying again…");
-          updateLastMessage(tripId, (prev) => {
-            if (prev.role !== "assistant") return prev;
-            return { ...prev, reconnecting: true };
-          });
-          break;
-        case "ping":
-        default:
-          break;
+  const submitPrompt = useCallback(
+    (rawQuestion: string, options?: { fromRetry?: boolean }) => {
+      const normalized = rawQuestion.replace(/\s+/g, " ").trim();
+      if (!normalized) {
+        toast.error("Please enter a question");
+        setIsShaking(true);
+        return;
       }
-    },
-    [setMeta, sse, tripId, updateLastMessage]
-  );
+      if (!activeRange) {
+        toast.error("Select a time range first");
+        return;
+      }
+      const currentUserId = userIdRef.current;
+      if (!currentUserId) {
+        toast.error("You need to be signed in to use AI chat");
+        return;
+      }
 
-  const send = useCallback(async () => {
-    if (!input.trim()) return;
-    if (!activeRange) {
-      toast.error("Select a time range first");
-      return;
-    }
-    if (!userId) {
-      toast.error("You need to be signed in to use AI chat");
-      return;
-    }
+      if (streamRef.current) {
+        streamRef.current.controller.abort();
+      }
 
-    const question = input.trim();
-    setInput("");
-    addMessage(tripId, { role: "user", text: question });
-    addMessage(tripId, { role: "assistant", text: "", streaming: true });
+      setIsShaking(false);
+      if (options?.fromRetry) {
+        updateLastMessage(tripId, (prev) => {
+          if (prev.role !== "assistant") return prev;
+          return { ...prev, text: "", streaming: true, error: null, retryPrompt: null, result: null, meta: null };
+        });
+      } else {
+        addMessage(tripId, { role: "user", text: normalized });
+        addMessage(tripId, { role: "assistant", text: "", streaming: true });
+      }
 
-    try {
-      setTokenLoading(true);
-      const token = await fetchSseToken(userId);
-      const url = buildExpensesStreamUrl({
-        question,
+      setInput("");
+      requestAnimationFrame(() => inputRef.current?.focus());
+
+      const stream = startStream(normalized, {
         since: activeRange.since,
         until: activeRange.until,
-        timezone,
-        token,
+        tz: timezone,
       });
 
-      sse.connect({
-        url,
-        onEvent: handleSseEvent,
-        onOpen: () => {
+      streamRef.current = stream;
+
+      stream
+        .onMeta((event) => {
           updateLastMessage(tripId, (prev) => {
             if (prev.role !== "assistant") return prev;
-            return { ...prev, reconnecting: false };
+            return { ...prev, meta: event };
           });
-        },
-        onError: (err) => {
-          console.warn("ai-chat: stream error", err);
+        })
+        .onToken((token) => {
           updateLastMessage(tripId, (prev) => {
             if (prev.role !== "assistant") return prev;
-            return { ...prev, reconnecting: true };
+            return { ...prev, text: prev.text + token, streaming: true };
           });
-          toast.error("Network interrupted. Reconnecting…");
-        },
-      });
-    } catch (err) {
-      console.error("ai-chat: failed to start stream", err);
-      toast.error("Unable to start AI chat");
-      updateLastMessage(tripId, (prev) => {
-        if (prev.role !== "assistant") return prev;
-        return {
-          ...prev,
-          streaming: false,
-          text: "We couldn't reach the AI right now. Please try again shortly.",
-          error: "startup",
-        };
-      });
-    } finally {
-      setTokenLoading(false);
-    }
-  }, [activeRange, addMessage, handleSseEvent, input, timezone, sse, tripId, updateLastMessage, userId]);
+        })
+        .onResult((result) => {
+          setMeta(tripId, { provider: result.provider, model: result.model });
+          updateLastMessage(tripId, (prev) => {
+            if (prev.role !== "assistant") return prev;
+            return {
+              ...prev,
+              text: result.answer.trim(),
+              streaming: false,
+              result,
+              error: null,
+              retryPrompt: null,
+            };
+          });
+        })
+        .onError((err) => {
+          toast.error(err.message);
+          updateLastMessage(tripId, (prev) => {
+            if (prev.role !== "assistant") return prev;
+            return {
+              ...prev,
+              streaming: false,
+              error: err.message,
+              retryPrompt: normalized,
+            };
+          });
+        })
+        .onDone(() => {
+          streamRef.current = null;
+          updateLastMessage(tripId, (prev) => {
+            if (prev.role !== "assistant") return prev;
+            return { ...prev, streaming: false };
+          });
+        });
+    },
+    [activeRange, addMessage, setMeta, startStream, timezone, tripId, updateLastMessage]
+  );
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      submitPrompt(input);
+    },
+    [input, submitPrompt]
+  );
+
+  const handleRetry = useCallback(
+    (prompt: string) => {
+      submitPrompt(prompt, { fromRetry: true });
+    },
+    [submitPrompt]
+  );
 
   const containerClassName = isDesktop
     ? "items-end justify-center px-0 py-0 sm:px-6 sm:py-8 md:items-center md:justify-end"
@@ -387,7 +385,7 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
         </header>
         <div
           ref={listRef}
-          className={`chat-scroll-area flex-1 overflow-y-auto [overscroll-behavior:contain] ${bottomInsetClass}`}
+          className={`chat-scroll-area relative z-[1] flex-1 overflow-y-auto [overscroll-behavior:contain] ${bottomInsetClass}`}
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           <div className="px-6 pb-4 pt-5">
@@ -416,7 +414,7 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
               </p>
             ) : null}
           </div>
-          <div className="space-y-4 px-6 pb-8">
+          <div className="space-y-4 px-6 pb-8" aria-live="polite">
             {msgs.map((m, index) => {
               if (m.role === "user") {
                 return (
@@ -446,45 +444,75 @@ export function AIChatPanel({ tripId, open }: { tripId: string; open: boolean })
               >
                 <p className="whitespace-pre-wrap text-[15px] leading-7 text-white/90">{m.text}</p>
                 {m.result ? <ResultDataPanel result={m.result} meta={m.meta} /> : null}
-                {m.error ? <p className="mt-3 text-[12px] text-red-400">{m.error}</p> : null}
+                {m.error ? (
+                  <div className="mt-3 flex flex-col gap-2 text-[12px] text-red-400">
+                    <p>{m.error}</p>
+                    {m.retryPrompt ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRetry(m.retryPrompt!)}
+                        className="self-start rounded-full border border-red-400/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-red-200 transition hover:border-red-300 hover:text-red-100"
+                      >
+                        Retry
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </ChatBubble>
             );
             })}
           </div>
         </div>
-        <footer className="sticky bottom-0 z-10 border-t border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/92 px-6 pb-[calc(18px+var(--safe-bottom))] pt-4 backdrop-blur">
-          <div className="chat-input-shell flex flex-col gap-3 rounded-2xl px-4 py-4 sm:flex-row sm:items-end">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest" })}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  send();
-                }
-              }}
-              className="max-h-40 flex-1 resize-none bg-transparent text-[15px] text-white/90 placeholder:text-[color:var(--chat-text-muted)] focus:outline-none"
-              rows={1}
-              placeholder="Ask about your expenses…"
-            />
-            <div className="flex items-center justify-between gap-3 sm:justify-end">
-              {info ? (
-                <span className="text-[11px] text-[color:var(--chat-text-muted)]" title={`${info.provider}/${info.model}`}>
-                  {info.model}
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={send}
-                disabled={!input.trim() || tokenLoading || sse.isConnecting}
-                className="min-h-[48px] rounded-full bg-[color:var(--chat-primary)] px-6 text-[14px] font-semibold text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-white/30"
-              >
-                Send
-              </button>
+        <footer className="sticky bottom-0 z-[2] pointer-events-auto border-t border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/92 px-6 pb-[calc(18px+var(--safe-bottom))] pt-4 backdrop-blur">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div
+              ref={inputShellRef}
+              className={`chat-input-shell flex flex-1 flex-col gap-3 rounded-2xl px-4 py-4 sm:flex-row sm:items-end ${
+                isShaking ? "chat-input-shell-shake" : ""
+              }`}
+              onAnimationEnd={() => setIsShaking(false)}
+            >
+              <textarea
+                ref={inputRef}
+                value={input}
+                onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest" })}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    submitPrompt(event.currentTarget.value);
+                  }
+                }}
+                className="max-h-40 flex-1 resize-none bg-transparent text-[15px] text-white/90 placeholder:text-[color:var(--chat-text-muted)] focus:outline-none"
+                rows={1}
+                placeholder="Ask about your expenses…"
+                aria-label="Ask about your expenses"
+              />
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                {info ? (
+                  <span className="text-[11px] text-[color:var(--chat-text-muted)]" title={`${info.provider}/${info.model}`}>
+                    {info.model}
+                  </span>
+                ) : null}
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  aria-disabled={isStreaming}
+                  disabled={isStreaming}
+                  className="min-h-[48px] rounded-full bg-[color:var(--chat-primary)] px-6 text-[14px] font-semibold text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-wait disabled:bg-white/30"
+                >
+                  {isStreaming ? (
+                    <span className="flex items-center gap-2 text-[14px] font-semibold">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending…
+                    </span>
+                  ) : (
+                    "Send"
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          </form>
         </footer>
       </div>
     </Modal>
