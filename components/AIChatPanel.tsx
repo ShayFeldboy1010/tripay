@@ -161,6 +161,7 @@ export function AIChatPanel({
   const isDesktop = useIsDesktop();
   const { messages, addMessage, updateLastMessage, close, meta, setMeta } = useAIChat();
   const listRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [input, setInput] = useState("");
@@ -235,11 +236,6 @@ export function AIChatPanel({
       }
       if (!activeRange) {
         toast.error("Select a time range first");
-        return;
-      }
-      const currentUserId = userIdRef.current;
-      if (!currentUserId) {
-        toast.error("You need to be signed in to use AI chat");
         return;
       }
 
@@ -339,6 +335,9 @@ export function AIChatPanel({
     ? "items-end justify-center px-0 py-0 sm:px-6 sm:py-8 md:items-center md:justify-end"
     : "items-end justify-center px-0 py-0";
 
+  const trimmedInput = useMemo(() => input.replace(/\s+/g, " ").trim(), [input]);
+  const isSubmitDisabled = isStreaming || !trimmedInput;
+
   return (
     <Modal
       open={open}
@@ -385,7 +384,7 @@ export function AIChatPanel({
         </header>
         <div
           ref={listRef}
-          className={`chat-scroll-area relative z-[1] flex-1 overflow-y-auto [overscroll-behavior:contain] ${bottomInsetClass}`}
+          className={`chat-scroll-area relative z-[0] flex-1 overflow-y-auto [overscroll-behavior:contain] ${bottomInsetClass}`}
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           <div className="px-6 pb-4 pt-5">
@@ -463,8 +462,8 @@ export function AIChatPanel({
             })}
           </div>
         </div>
-        <footer className="sticky bottom-0 z-[2] pointer-events-auto border-t border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-app)]/92 px-6 pb-[calc(18px+var(--safe-bottom))] pt-4 backdrop-blur">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <footer className="sticky bottom-0 z-[110] pointer-events-auto border-t border-border-soft bg-card px-6 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-4 backdrop-blur">
+          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div
               ref={inputShellRef}
               className={`chat-input-shell flex flex-1 flex-col gap-3 rounded-2xl px-4 py-4 sm:flex-row sm:items-end ${
@@ -480,15 +479,19 @@ export function AIChatPanel({
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
-                    submitPrompt(event.currentTarget.value);
+                    event.stopPropagation();
+                    event.currentTarget.form?.requestSubmit();
                   }
                 }}
-                className="max-h-40 flex-1 resize-none bg-transparent text-[15px] text-white/90 placeholder:text-[color:var(--chat-text-muted)] focus:outline-none"
+                className="max-h-40 flex-1 resize-none bg-transparent text-[15px] text-white/90 placeholder:text-[color:var(--chat-text-muted)] focus:outline-none focus-visible:ring focus-visible:ring-brand focus-visible:ring-offset-0 focus-visible:ring-offset-transparent"
                 rows={1}
                 placeholder="Ask about your expenses…"
                 aria-label="Ask about your expenses"
               />
-              <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <div
+                className="relative z-[1] flex items-center justify-between gap-3 sm:justify-end pointer-events-auto"
+                data-testid="ai-send"
+              >
                 {info ? (
                   <span className="text-[11px] text-[color:var(--chat-text-muted)]" title={`${info.provider}/${info.model}`}>
                     {info.model}
@@ -497,9 +500,9 @@ export function AIChatPanel({
                 <button
                   type="submit"
                   aria-label="Send message"
-                  aria-disabled={isStreaming}
-                  disabled={isStreaming}
-                  className="min-h-[48px] rounded-full bg-[color:var(--chat-primary)] px-6 text-[14px] font-semibold text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-wait disabled:bg-white/30"
+                  aria-disabled={isSubmitDisabled}
+                  disabled={isSubmitDisabled}
+                  className="min-h-[48px] rounded-full bg-[color:var(--chat-primary)] px-6 text-[14px] font-semibold text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-white/20"
                 >
                   {isStreaming ? (
                     <span className="flex items-center gap-2 text-[14px] font-semibold">
