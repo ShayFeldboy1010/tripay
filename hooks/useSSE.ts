@@ -326,7 +326,9 @@ export function useSSE(options: UseSSEOptions = {}) {
         try {
           const token = (await getToken?.()) ?? null;
           if (!token) {
-            throw new Error("Authentication required");
+            const authError = new Error("Authentication required. Please sign in to continue.");
+            (authError as Error & { code?: string }).code = "AUTH_REQUIRED";
+            throw authError;
           }
           const url = buildExpensesStreamUrl({
             question: prompt,
