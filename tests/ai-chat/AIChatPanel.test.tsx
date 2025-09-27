@@ -114,7 +114,13 @@ describe("AIChatPanel submit flow", () => {
     renderPanel();
 
     const button = await screen.findByRole("button", { name: /send message/i });
+    expect(button.hasAttribute("disabled")).toBe(true);
     expect(button.getAttribute("type")).toBe("submit");
+
+    const textarea = await screen.findByPlaceholderText("Ask about your expenses…");
+    fireEvent.change(textarea, { target: { value: "Can I expense lunch?" } });
+
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     expect(window.getComputedStyle(button).pointerEvents).toBe("auto");
   });
 });
