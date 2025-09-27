@@ -25,7 +25,7 @@ vi.mock("@/hooks/useIsDesktop", () => ({ useIsDesktop: () => true }));
 vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, beforeEach, afterAll, vi } from "vitest";
 import { AIChatPanel } from "@/components/AIChatPanel";
 import { AIChatProvider } from "@/components/AIChatStore";
@@ -122,5 +122,32 @@ describe("AIChatPanel submit flow", () => {
 
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     expect(window.getComputedStyle(button).pointerEvents).toBe("auto");
+  });
+
+  it("surfaces authentication errors with inline guidance", async () => {
+    renderPanel();
+
+    const textarea = await screen.findByPlaceholderText("Ask about your expenses…");
+    await screen.findByText(/Filtering/);
+
+    fireEvent.change(textarea, { target: { value: "Show me the latest spend" } });
+    fireEvent.submit(textarea.closest("form")!);
+
+    await waitFor(() => expect(mockStartStream).toHaveBeenCalledTimes(1));
+
+    const handle = mockStartStream.mock.results[0]?.value as any;
+    expect(handle.onError).toHaveBeenCalledTimes(1);
+
+    const errorCallback = handle.onError.mock.calls[0]?.[0] as (error: Error & { code?: string }) => void;
+    const authError = new Error("Authentication required. Please sign in to continue.") as Error & { code?: string };
+    authError.code = "AUTH_REQUIRED";
+
+    await act(async () => {
+      errorCallback(authError);
+    });
+
+    await screen.findByText("You need to sign in to use AI Expenses. Please sign in and try again.");
+    const retryButton = await screen.findByRole("button", { name: /retry/i });
+    expect(retryButton).toBeTruthy();
   });
 });

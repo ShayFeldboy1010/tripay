@@ -293,13 +293,19 @@ export function AIChatPanel({
           });
         })
         .onError((err) => {
-          toast.error(err.message);
+          const errorWithCode = err as Error & { code?: string };
+          const friendlyMessage =
+            errorWithCode.code === "AUTH_REQUIRED"
+              ? "You need to sign in to use AI Expenses. Please sign in and try again."
+              : err.message;
+
+          toast.error(friendlyMessage);
           updateLastMessage(tripId, (prev) => {
             if (prev.role !== "assistant") return prev;
             return {
               ...prev,
               streaming: false,
-              error: err.message,
+              error: friendlyMessage,
               retryPrompt: normalized,
             };
           });
