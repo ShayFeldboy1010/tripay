@@ -1,22 +1,11 @@
 import { parse } from "pgsql-ast-parser";
 import type { SqlPlan } from "./nl2sql";
 import { query } from "@/src/server/db/pool";
-
-const ALLOWED_COLUMNS = new Set([
-  "id",
-  "user_id",
-  "trip_id",
-  "date",
-  "amount",
-  "currency",
-  "category",
-  "merchant",
-  "notes",
-  "created_at",
-]);
+import { ALLOWED_AGG, EXPENSES_COLUMNS, EXPENSES_TABLE, MAX_LIMIT } from "./schema";
 
 const ALLOWED_FILTER_COLUMNS = new Set(["category", "merchant", "currency", "amount", "notes"]);
-const ALLOWED_FUNCTIONS = new Set(["sum", "avg", "min", "max", "count"]);
+const ALLOWED_FUNCTIONS = new Set(Array.from(ALLOWED_AGG).map((fn) => fn.toLowerCase()));
+const ALLOWED_COLUMNS = new Set(Object.keys(EXPENSES_COLUMNS));
 
 export interface ExecutionScope {
   column: "trip_id" | "user_id";
@@ -46,6 +35,7 @@ export interface Aggregates {
   byCategory: Array<{ category: string; sum: number; currency: string }>;
   byMerchant: Array<{ merchant: string; sum: number; currency: string }>;
   totalsByCurrency: Array<{ currency: string; total: number; avg: number; count: number }>;
+  currencyNote: string | null;
 }
 
 export interface ExecutionResult {
@@ -56,28 +46,35 @@ export interface ExecutionResult {
   limit: number;
 }
 
-function ensureSafePlan(plan: SqlPlan): { limit: number } {
+interface ValidationOutcome {
+  limit: number;
+}
+
+function ensureSafePlan(plan: SqlPlan): ValidationOutcome {
   const statements = parse(plan.sql);
   if (statements.length !== 1) throw new Error("Plan must contain a single statement");
   const statement = statements[0];
   if (statement.type !== "select") throw new Error("Only SELECT statements are allowed");
   if (!statement.from || statement.from.length !== 1) throw new Error("Single FROM source required");
   const from = statement.from[0];
-  if (from.type !== "table" || from.name.name !== "expenses") {
-    throw new Error("Plan can only query expenses table");
+  if (from.type !== "table" || from.name.name !== EXPENSES_TABLE) {
+    throw new Error(`Plan can only query ${EXPENSES_TABLE}`);
   }
 
   const aliasNames = new Set<string>();
+  let hasCurrencyColumn = false;
+  let hasAggregate = false;
 
-  const checkExpression = (expr: any) => {
+  const inspectExpression = (expr: any) => {
     if (!expr) return;
     switch (expr.type) {
       case "ref": {
-        if (expr.name === "*") {
-          throw new Error("Wildcard selects are not permitted");
-        }
+        if (expr.name === "*") throw new Error("Wildcard selects are not permitted");
         if (!ALLOWED_COLUMNS.has(expr.name) && !aliasNames.has(expr.name)) {
           throw new Error(`Column ${expr.name} is not allowed`);
+        }
+        if (expr.name === "currency") {
+          hasCurrencyColumn = true;
         }
         return;
       }
@@ -86,9 +83,15 @@ function ensureSafePlan(plan: SqlPlan): { limit: number } {
         if (!fnName || !ALLOWED_FUNCTIONS.has(fnName)) {
           throw new Error(`Function ${expr.function?.name} is not permitted`);
         }
+        hasAggregate = true;
         for (const arg of expr.args || []) {
-          checkExpression(arg);
+          inspectExpression(arg);
         }
+        return;
+      }
+      case "binary": {
+        inspectExpression(expr.left);
+        inspectExpression(expr.right);
         return;
       }
       case "number":
@@ -97,79 +100,75 @@ function ensureSafePlan(plan: SqlPlan): { limit: number } {
       case "string":
       case "boolean":
         return;
-      case "binary": {
-        checkExpression(expr.left);
-        checkExpression(expr.right);
-        return;
-      }
-      case "cast": {
-        checkExpression(expr.operand);
-        return;
-      }
-      case "parameter": {
+      case "parameter":
         throw new Error("Parameterized statements are not supported in generated SQL");
-      }
+      case "select":
+      case "list":
+      case "exists":
+        throw new Error("Subqueries are not permitted");
       default:
         throw new Error(`Unsupported expression type: ${expr.type}`);
     }
   };
 
-  for (const col of statement.columns) {
-    checkExpression(col.expr);
-    if (col.alias?.name) aliasNames.add(col.alias.name);
+  for (const column of statement.columns) {
+    inspectExpression(column.expr);
+    if (column.alias?.name) {
+      aliasNames.add(column.alias.name);
+      if (column.alias.name === "currency") {
+        hasCurrencyColumn = true;
+      }
+    }
   }
 
-  const validateExpression = (expr: any) => {
-    if (!expr) return;
-    checkExpression(expr);
-  };
-
-  if (statement.where) {
-    validateExpression(statement.where);
+  if (hasAggregate && !hasCurrencyColumn) {
+    throw new Error("Aggregations must include currency column");
   }
 
-  for (const group of statement.groupBy || []) {
-    validateExpression(group);
-  }
+  if (statement.where) inspectExpression(statement.where);
+  for (const group of statement.groupBy || []) inspectExpression(group);
+  for (const order of statement.orderBy || []) inspectExpression(order.by);
 
-  for (const order of statement.orderBy || []) {
-    validateExpression(order.by);
-  }
-
-  let limitValue = 200;
+  let limitValue = MAX_LIMIT;
   if (statement.limit?.limit?.type === "integer") {
-    limitValue = statement.limit.limit.value;
+    limitValue = Math.min(statement.limit.limit.value, MAX_LIMIT);
   }
   if (!Number.isFinite(limitValue) || limitValue <= 0) {
-    limitValue = 200;
+    limitValue = MAX_LIMIT;
   }
-  limitValue = Math.min(limitValue, 500);
 
   return { limit: limitValue };
 }
 
-function buildFilters(plan: SqlPlan, baseParams: any[]): { clauses: string[]; params: any[] } {
+export function prepareNamedStatement(sql: string, params: Record<string, any>): { sql: string; values: any[] } {
+  const order: string[] = [];
+  const values: any[] = [];
+  const transformed = sql.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, key: string) => {
+    if (!(key in params)) {
+      throw new Error(`Missing parameter value for :${key}`);
+    }
+    if (!order.includes(key)) {
+      order.push(key);
+      values.push(params[key]);
+    }
+    return `$${order.indexOf(key) + 1}`;
+  });
+  return { sql: transformed, values };
+}
+
+function buildFilters(plan: SqlPlan, params: Record<string, any>): string[] {
   const clauses: string[] = [];
-  const params: any[] = [];
-  for (const filter of plan.filters || []) {
-    const column = filter.column;
-    if (!ALLOWED_FILTER_COLUMNS.has(column)) continue;
-    const op = filter.op;
-    const placeholder = `$${baseParams.length + params.length + 1}`;
-    if (typeof filter.value === "string") {
-      params.push(filter.value);
-    } else if (typeof filter.value === "number") {
-      params.push(filter.value);
+  plan.filters.forEach((filter, index) => {
+    if (!ALLOWED_FILTER_COLUMNS.has(filter.column)) return;
+    const paramKey = `filter_${index}`;
+    params[paramKey] = filter.value;
+    if (filter.op === "ILIKE") {
+      clauses.push(`${filter.column} ILIKE :${paramKey}`);
     } else {
-      continue;
+      clauses.push(`${filter.column} ${filter.op} :${paramKey}`);
     }
-    if (op === "ILIKE") {
-      clauses.push(`${column} ILIKE ${placeholder}`);
-    } else if (["=", "!=", ">", "<", ">=", "<="].includes(op)) {
-      clauses.push(`${column} ${op} ${placeholder}`);
-    }
-  }
-  return { clauses, params };
+  });
+  return clauses;
 }
 
 export function computeAggregatesForRows(rows: ExpenseRow[]): Aggregates {
@@ -238,6 +237,13 @@ export function computeAggregatesForRows(rows: ExpenseRow[]): Aggregates {
     .sort((a, b) => b.sum - a.sum)
     .slice(0, 20);
 
+  const currencyNote =
+    totalsByCurrency.length > 1
+      ? `Found ${totalsByCurrency.length} currencies (${totalsByCurrency
+          .map((item) => item.currency)
+          .join(", ")}). Totals are reported per currency.`
+      : null;
+
   return {
     total: singleCurrency ? singleCurrency.total : null,
     avg: singleCurrency ? singleCurrency.avg : null,
@@ -245,40 +251,73 @@ export function computeAggregatesForRows(rows: ExpenseRow[]): Aggregates {
     byCategory,
     byMerchant,
     totalsByCurrency,
+    currencyNote,
   };
 }
 
-export async function executePlan(plan: SqlPlan, context: ExecutionContext): Promise<ExecutionResult> {
-  const { limit } = ensureSafePlan(plan);
-  const baseParams = [context.scope.id, context.since, context.until];
-  const { clauses, params } = buildFilters(plan, baseParams);
-  const limitValue = Math.min(limit, context.previewLimit ?? 200, 500);
+function deriveOrderClause(plan: SqlPlan): string {
+  if (plan.order.length > 0) {
+    const primary = plan.order[0];
+    const by = primary.by.toLowerCase();
+    const direction = primary.dir.toUpperCase();
+    if (by.includes("amount") || by === "sum" || by === "max" || by === "total") {
+      return `ORDER BY amount ${direction}`;
+    }
+    if (by.includes("date")) {
+      return `ORDER BY date ${direction}`;
+    }
+  }
+  if (plan.intent === "ranking") {
+    return "ORDER BY amount DESC";
+  }
+  return "ORDER BY date DESC";
+}
 
+export async function executePlan(plan: SqlPlan, context: ExecutionContext): Promise<ExecutionResult> {
+  const { limit: planLimit } = ensureSafePlan(plan);
+  const params: Record<string, any> = {
+    scope_id: context.scope.id,
+    since: context.since,
+    until: context.until,
+  };
+
+  const filters = buildFilters(plan, params);
   const whereLines = [
-    `${context.scope.column} = $1`,
-    "date BETWEEN $2 AND $3",
-    ...clauses.map((clause) => clause.replace(/\s+/g, " ")),
+    `${context.scope.column} = :scope_id`,
+    "date BETWEEN :since AND :until",
+    ...filters,
   ];
 
-  const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM expenses\nWHERE ${whereLines.join(" AND ")}\nORDER BY date DESC\nLIMIT ${limitValue}`;
+  const limitValue = Math.min(plan.limit ?? planLimit, planLimit, context.previewLimit ?? MAX_LIMIT, MAX_LIMIT);
+  const orderClause = deriveOrderClause(plan);
 
-  const result = await query<ExpenseRow>(sql, [...baseParams, ...params]);
-  const rows = result.rows.slice(0, context.previewLimit ?? 100).map((row) => ({
+  const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM ${EXPENSES_TABLE}\nWHERE ${whereLines.join(
+    " AND "
+  )}\n${orderClause}\nLIMIT ${limitValue}`;
+
+  const prepared = prepareNamedStatement(sql, params);
+  let result;
+  try {
+    result = await query<ExpenseRow>(prepared.sql, prepared.values);
+  } catch (err) {
+    const error = err as Error & { executedSql?: string; executedParams?: any[] };
+    error.executedSql = prepared.sql;
+    error.executedParams = prepared.values;
+    throw error;
+  }
+
+  const rows = result.rows.map((row) => ({
     ...row,
     date: new Date(row.date).toISOString().slice(0, 10),
   }));
 
   return {
-    sql,
-    params: [...baseParams, ...params],
+    sql: prepared.sql,
+    params: prepared.values,
     rows,
-    aggregates: computeAggregatesForRows(result.rows.map((row) => ({
-      ...row,
-      date: new Date(row.date).toISOString().slice(0, 10),
-    }))),
+    aggregates: computeAggregatesForRows(rows),
     limit: limitValue,
   };
 }
 
 export const __test__ensureSafePlan = ensureSafePlan;
-

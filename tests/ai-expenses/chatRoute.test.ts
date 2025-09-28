@@ -6,6 +6,8 @@ const generateSqlPlanMock = vi.fn<[], Promise<SqlPlan>>();
 const executePlanMock = vi.fn<[], Promise<ExecutionResult>>();
 const runTotalsFallbackMock = vi.fn();
 const runHighestExpenseFallbackMock = vi.fn();
+const runTotalsByCategoryFallbackMock = vi.fn();
+const runTopMerchantsFallbackMock = vi.fn();
 
 const fakeClient = {
   chat: {
@@ -26,6 +28,8 @@ vi.mock("@/services/ai-expenses/sqlExecutor", () => ({
 vi.mock("@/services/ai-expenses/templates", () => ({
   runTotalsFallback: runTotalsFallbackMock,
   runHighestExpenseFallback: runHighestExpenseFallbackMock,
+  runTotalsByCategoryFallback: runTotalsByCategoryFallbackMock,
+  runTopMerchantsFallback: runTopMerchantsFallbackMock,
 }));
 
 vi.mock("@/services/ai-expenses/groq", () => ({
@@ -46,6 +50,8 @@ describe("/api/ai/expenses/chat/stream", () => {
     executePlanMock.mockReset();
     runTotalsFallbackMock.mockReset();
     runHighestExpenseFallbackMock.mockReset();
+    runTotalsByCategoryFallbackMock.mockReset();
+    runTopMerchantsFallbackMock.mockReset();
     fakeClient.chat.completions.create.mockReset();
     verifySseTokenMock.mockClear();
   });
@@ -58,6 +64,8 @@ describe("/api/ai/expenses/chat/stream", () => {
       filters: [],
       since: "2025-01-01",
       until: "2025-01-31",
+      order: [],
+      limit: 10,
       sql: "SELECT date, amount FROM expenses LIMIT 10",
     };
 
@@ -74,6 +82,7 @@ describe("/api/ai/expenses/chat/stream", () => {
         byCategory: [{ category: "Food", sum: 42, currency: "USD" }],
         byMerchant: [{ merchant: "Cafe", sum: 42, currency: "USD" }],
         totalsByCurrency: [{ currency: "USD", total: 42, avg: 42, count: 1 }],
+        currencyNote: null,
       },
       limit: 10,
     };
@@ -124,6 +133,7 @@ describe("/api/ai/expenses/chat/stream", () => {
     expect(payload.sql).toContain("SELECT date, amount");
     expect(payload.timeRange.since).toBe("2025-01-01");
     expect(payload.rows[0].merchant).toBe("Cafe");
+    expect(payload.fallbackReason).toBeNull();
 
     expect(generateSqlPlanMock).toHaveBeenCalledWith("total", expect.objectContaining({ since: "2025-01-01" }));
     expect(executePlanMock).toHaveBeenCalled();

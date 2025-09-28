@@ -44,6 +44,8 @@ describe("sql executor", () => {
         metrics: [],
         since: "2024-01-01",
         until: "2024-01-31",
+        order: [],
+        limit: 100,
       } as any)
     ).toThrow(/Only SELECT statements/);
   });
@@ -56,6 +58,8 @@ describe("sql executor", () => {
       metrics: [],
       since: "2024-01-01",
       until: "2024-01-31",
+      order: [],
+      limit: 20,
       sql: "SELECT date, amount FROM expenses ORDER BY date DESC LIMIT 20",
     };
 

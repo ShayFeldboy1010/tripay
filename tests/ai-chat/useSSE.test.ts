@@ -53,7 +53,7 @@ describe("useSSE", () => {
       "event: token\n",
       "data: hello\n\n",
       'event: result\n',
-      'data: {"answer":"done","model":"gpt","provider":"openai","sql":"","timeRange":{"since":"2024-01-01","until":"2024-01-31","tz":"UTC"},"aggregates":{"totalsByCurrency":[],"total":null,"avg":null,"max":null,"byCategory":[],"byMerchant":[]},"rows":[],"plan":null,"usedFallback":false}\n\n',
+      'data: {"answer":"done","model":"gpt","provider":"openai","sql":"","timeRange":{"since":"2024-01-01","until":"2024-01-31","tz":"UTC"},"aggregates":{"totalsByCurrency":[],"total":null,"avg":null,"max":null,"byCategory":[],"byMerchant":[],"currencyNote":null},"rows":[],"plan":null,"usedFallback":false,"fallbackReason":null,"currencyNote":null}\n\n',
     ].join("");
     fetchSpy.mockResolvedValue(
       new Response(

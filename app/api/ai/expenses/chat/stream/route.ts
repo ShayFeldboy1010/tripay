@@ -2,7 +2,12 @@ import { NextRequest } from "next/server";
 import { resolveTimeRange, toISODate } from "@/services/ai-expenses/timeRange";
 import { generateSqlPlan, type SqlPlan } from "@/services/ai-expenses/nl2sql";
 import { executePlan, type ExecutionResult } from "@/services/ai-expenses/sqlExecutor";
-import { runHighestExpenseFallback, runTotalsFallback } from "@/services/ai-expenses/templates";
+import {
+  runHighestExpenseFallback,
+  runTopMerchantsFallback,
+  runTotalsByCategoryFallback,
+  runTotalsFallback,
+} from "@/services/ai-expenses/templates";
 import { getGroqClient, getGroqModels } from "@/services/ai-expenses/groq";
 import { verifySseToken, type VerifiedSseToken } from "@/src/server/auth/jwt";
 import { AI_CHAT_AUTH_MODE, AI_CHAT_IS_ANONYMOUS } from "@/src/server/config";
@@ -152,26 +157,59 @@ function buildAnswerMessages(args: {
   ];
 }
 
+function guessFallbackTemplate(question: string, plan: SqlPlan | null): "highest" | "category" | "merchant" | "totals" {
+  const text = `${plan?.intent ?? ""} ${question}`.toLowerCase();
+  const rankingRegex = /(highest|largest|biggest|max|יקר|הכי)/i;
+  const categoryRegex = /(category|categories|type|קטגור)/i;
+  const merchantRegex = /(merchant|vendor|store|shop|ספק|חנות)/i;
+  if (plan?.intent === "ranking" || rankingRegex.test(text)) return "highest";
+  if (categoryRegex.test(text)) return "category";
+  if (merchantRegex.test(text)) return "merchant";
+  return "totals";
+}
+
 async function runExecution(
   plan: SqlPlan | null,
-  context: { scope: Scope; since: string; until: string }
+  context: { scope: Scope; since: string; until: string },
+  question: string
 ) {
   const baseContext = { scope: context.scope, since: context.since, until: context.until };
+  const template = guessFallbackTemplate(question, plan);
   if (!plan) {
-    const execution = await runTotalsFallback(baseContext);
-    return { execution, usedFallback: true };
+    const execution = await runTemplateByName(template, baseContext);
+    return { execution, usedFallback: true, fallbackReason: "planner_error" as const };
   }
   try {
     const execution = await executePlan(plan, baseContext);
-    return { execution, usedFallback: false };
+    return { execution, usedFallback: false, fallbackReason: null as const };
   } catch (err) {
-    const text = plan.intent?.toLowerCase() || "aggregation";
-    if (text.includes("ranking") || /highest|largest|biggest/i.test(text)) {
-      const execution = await runHighestExpenseFallback(baseContext);
-      return { execution, usedFallback: true };
-    }
-    const execution = await runTotalsFallback(baseContext);
-    return { execution, usedFallback: true };
+    const execution = await runTemplateByName(template, baseContext);
+    const error = err as Error & { executedSql?: string; executedParams?: any[] };
+    const params = Array.isArray(error.executedParams)
+      ? error.executedParams.map((value, index) => (index === 0 ? "***" : value))
+      : [];
+    console.error("[ai-sql] db_error", {
+      message: error.message,
+      sql: error.executedSql,
+      params,
+    });
+    return { execution, usedFallback: true, fallbackReason: "db_error" as const };
+  }
+}
+
+async function runTemplateByName(
+  name: "highest" | "category" | "merchant" | "totals",
+  context: { scope: Scope; since: string; until: string }
+) {
+  switch (name) {
+    case "highest":
+      return runHighestExpenseFallback(context);
+    case "category":
+      return runTotalsByCategoryFallback(context);
+    case "merchant":
+      return runTopMerchantsFallback(context);
+    default:
+      return runTotalsFallback(context);
   }
 }
 
@@ -267,6 +305,7 @@ async function handle(req: NextRequest, input: QueryInput) {
         let plan: SqlPlan | null = null;
         let execution: ExecutionResult;
         let usedFallback = false;
+        let fallbackReason: "planner_error" | "db_error" | null = null;
 
         await send("meta", { timeRange: { since, until }, tz: timeRange.tz, userId_last4: scope.id.slice(-4) });
 
@@ -280,6 +319,7 @@ async function handle(req: NextRequest, input: QueryInput) {
           });
         } catch (err) {
           console.warn("nl2sql: failed to plan", err);
+          await send("error", { message: "Couldn’t understand the question. Showing best guess results." });
         }
 
         try {
@@ -287,12 +327,13 @@ async function handle(req: NextRequest, input: QueryInput) {
             since,
             until,
             scope,
-          });
+          }, input.question);
           execution = outcome.execution;
           usedFallback = outcome.usedFallback;
+          fallbackReason = outcome.fallbackReason;
         } catch (err) {
           console.error("ai-chat: execution failed", err);
-          await send("error", { message: "Failed to execute SQL" });
+          await send("error", { message: "There was a database error. We applied a safe fallback query." });
           clearInterval(pingTimer);
           controller.close();
           return;
@@ -312,10 +353,12 @@ async function handle(req: NextRequest, input: QueryInput) {
             provider: "groq",
             plan,
             usedFallback,
+            fallbackReason,
             sql: execution.sql,
             timeRange: { since, until, tz: timeRange.tz },
             aggregates: execution.aggregates,
             rows: execution.rows.slice(0, 20),
+            currencyNote: execution.aggregates.currencyNote,
           });
         } catch (err) {
           console.error("ai-chat: streaming failed", err);

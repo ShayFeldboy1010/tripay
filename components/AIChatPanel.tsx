@@ -94,6 +94,7 @@ async function requestGuestToken(params: { tripId?: string | null; userId?: stri
 function ResultDataPanel({ result, meta }: { result: ExpensesChatResult; meta?: ExpensesChatMetaEvent | null }) {
   const [open, setOpen] = useState(false);
   const toggle = () => setOpen((prev) => !prev);
+  const currencyNote = result.currencyNote ?? result.aggregates.currencyNote;
   return (
     <div className="mt-3">
       <button
@@ -133,6 +134,7 @@ function ResultDataPanel({ result, meta }: { result: ExpensesChatResult; meta?: 
                 ))}
               </ul>
             )}
+            {currencyNote ? <p className="text-xs text-amber-300/80">{currencyNote}</p> : null}
           </section>
           <section className="space-y-2 text-[color:var(--chat-text-muted)]">
             <h4 className="text-[11px] uppercase tracking-[0.3em] text-[color:var(--chat-text-muted)]">Rows</h4>
@@ -313,6 +315,15 @@ export function AIChatPanel({
           });
         })
         .onResult((result) => {
+          console.info("[ai-chat] plan", result.plan);
+          console.info("[ai-chat] validated-sql", result.sql);
+          console.info("[ai-chat] fallback-used", {
+            used: result.usedFallback,
+            reason: result.fallbackReason,
+          });
+          if (result.currencyNote) {
+            console.info("[ai-chat] currency-note", result.currencyNote);
+          }
           setMeta(tripId, { provider: result.provider, model: result.model });
           updateLastMessage(tripId, (prev) => {
             if (prev.role !== "assistant") return prev;
@@ -329,6 +340,11 @@ export function AIChatPanel({
         .onError((err) => {
           const errorWithCode = err as Error;
           let friendlyMessage = errorWithCode.message || "Something went wrong starting the chat.";
+          if (/best guess/i.test(friendlyMessage) || /safe fallback/i.test(friendlyMessage)) {
+            console.warn("[ai-chat] soft-error", friendlyMessage);
+            toast.warning(friendlyMessage);
+            return;
+          }
           if (/Unexpected status: 400/.test(friendlyMessage)) {
             friendlyMessage = "We couldn’t start the chat. Check your trip selection and try again.";
           }
