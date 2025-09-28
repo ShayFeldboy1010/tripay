@@ -14,6 +14,8 @@ const basePlan = {
   filters: [{ column: "category", op: "=", value: "Food" }],
   since: "2025-01-01",
   until: "2025-01-31",
+  order: [],
+  limit: 120,
   sql: "SELECT date, amount, currency, category FROM expenses WHERE category = 'Food' LIMIT 120",
 };
 
@@ -47,6 +49,7 @@ describe("sqlExecutor", () => {
     expect(result.rows).toHaveLength(2);
     expect(result.aggregates.total).toBeCloseTo(20);
     expect(result.aggregates.byMerchant[0].merchant).toBe("Cafe");
+    expect(result.aggregates.currencyNote).toBeNull();
   });
 
   it("rejects unsafe SQL", async () => {
@@ -63,6 +66,36 @@ describe("sqlExecutor", () => {
       }),
     ).rejects.toThrow(/Wildcard/);
     expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks DML statements", async () => {
+    const plan = {
+      ...basePlan,
+      sql: "DELETE FROM expenses WHERE id = '1'",
+    };
+
+    await expect(
+      executePlan(plan, {
+        scope: { column: "user_id", id: "user-1" },
+        since: "2025-01-01",
+        until: "2025-01-31",
+      }),
+    ).rejects.toThrow(/Only SELECT/);
+  });
+
+  it("blocks subqueries", async () => {
+    const plan = {
+      ...basePlan,
+      sql: "SELECT date FROM expenses WHERE amount > (SELECT AVG(amount) FROM expenses)",
+    };
+
+    await expect(
+      executePlan(plan, {
+        scope: { column: "user_id", id: "user-1" },
+        since: "2025-01-01",
+        until: "2025-01-31",
+      }),
+    ).rejects.toThrow(/Subqueries/);
   });
 });
 

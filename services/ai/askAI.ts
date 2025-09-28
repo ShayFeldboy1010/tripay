@@ -14,6 +14,7 @@ export interface ExpensesAggregates {
   byCategory: Array<{ category: string; sum: number; currency: string }>;
   byMerchant: Array<{ merchant: string; sum: number; currency: string }>;
   totalsByCurrency: Array<{ currency: string; total: number; avg: number; count: number }>;
+  currencyNote: string | null;
 }
 
 export interface ExpensesChatMetaEvent {
@@ -28,10 +29,12 @@ export interface ExpensesChatResult {
   provider: string;
   plan: unknown;
   usedFallback: boolean;
+  fallbackReason: "planner_error" | "db_error" | null;
   sql: string;
   timeRange: { since: string; until: string; tz: string };
   aggregates: ExpensesAggregates;
   rows: ExpensesChatRow[];
+  currencyNote?: string | null;
 }
 
 export type ExpensesStreamEvent =
