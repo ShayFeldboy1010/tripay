@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { buildExpensesStreamUrl, type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/ai/askAI";
 
 export interface SSEMessage {
@@ -50,6 +50,57 @@ interface ActiveStream {
   prompt: string;
   startedAt: number;
   firstContentSeen: boolean;
+}
+
+export type StreamPhase = "idle" | "drafting" | "streaming" | "completed" | "error";
+
+export class ChatStreamError extends Error {
+  code: string;
+  retriable: boolean;
+
+  constructor(code: string, message: string, options: { retriable?: boolean } = {}) {
+    super(message);
+    this.name = "ChatStreamError";
+    this.code = code;
+    this.retriable = Boolean(options.retriable);
+  }
+}
+
+export interface StreamStatus {
+  phase: StreamPhase;
+  attempt: number;
+  lastError: ChatStreamError | null;
+}
+
+export type StreamAction =
+  | { type: "reset" }
+  | { type: "drafting" }
+  | { type: "streaming" }
+  | { type: "completed" }
+  | { type: "error"; error: ChatStreamError };
+
+export const initialStreamStatus: StreamStatus = {
+  phase: "idle",
+  attempt: 0,
+  lastError: null,
+};
+
+export function streamStatusReducer(state: StreamStatus, action: StreamAction): StreamStatus {
+  switch (action.type) {
+    case "reset":
+      return { ...initialStreamStatus };
+    case "drafting":
+      return { phase: "drafting", attempt: state.attempt + 1, lastError: null };
+    case "streaming":
+      if (state.phase === "streaming") return state;
+      return { ...state, phase: "streaming" };
+    case "completed":
+      return { ...state, phase: "completed" };
+    case "error":
+      return { phase: "error", attempt: state.attempt, lastError: action.error };
+    default:
+      return state;
+  }
 }
 
 function createListenerMap(): ListenerMap {
@@ -114,10 +165,12 @@ function parseResult(data: string) {
 
 function parseError(data: string) {
   try {
-    const parsed = JSON.parse(data) as { message?: string };
-    return parsed.message ? new Error(parsed.message) : new Error("Stream error");
+    const parsed = JSON.parse(data) as { code?: string; message?: string };
+    const code = parsed.code ?? "AI-500";
+    const message = parsed.message ?? "Stream error";
+    return new ChatStreamError(code, message, { retriable: code === "AI-408" || code.startsWith("AI-5") });
   } catch (err) {
-    return new Error("Stream error");
+    return new ChatStreamError("AI-500", "Stream error");
   }
 }
 
@@ -127,6 +180,19 @@ export function useSSE(options: UseSSEOptions = {}) {
   const [usingFetchFallback, setUsingFetchFallback] = useState(false);
   const activeStreamRef = useRef<ActiveStream | null>(null);
   const fallbackPreference = useMemo(() => options.fallbackToFetch ?? true, [options.fallbackToFetch]);
+  const [status, dispatch] = useReducer(streamStatusReducer, initialStreamStatus);
+  const debug = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const flags = params.getAll("debug");
+      if (!flags.length) return false;
+      return flags.some((flag) => flag.split(",").map((v) => v.trim().toLowerCase()).includes("ai"));
+    } catch (err) {
+      console.warn("[ai-chat] failed to read debug flag", err);
+      return false;
+    }
+  }, []);
 
   const cleanup = useCallback((stream: ActiveStream | null) => {
     if (!stream) return;
@@ -152,22 +218,31 @@ export function useSSE(options: UseSSEOptions = {}) {
   }, [cleanup]);
 
   const finalize = useCallback(
-    (stream: ActiveStream, status: "success" | "error" | "aborted", error?: Error) => {
+    (stream: ActiveStream, outcome: "success" | "error" | "aborted", error?: Error) => {
       if (stream.done) return;
       stream.done = true;
       cleanup(stream);
       setIsStreaming(false);
-      if (status === "error" && error) {
+      if (outcome === "success") {
+        dispatch({ type: "completed" });
+      } else if (outcome === "error" && error) {
         stream.error = error;
-        notify(stream.listeners.error, error);
-        console.error("[ai-chat] stream_failed", error);
+        const normalized = error instanceof ChatStreamError ? error : new ChatStreamError("AI-500", error.message);
+        dispatch({ type: "error", error: normalized });
+        notify(stream.listeners.error, normalized);
+        console.error("[ai-chat] stream_failed", normalized);
+      } else {
+        dispatch({ type: "reset" });
+      }
+      if (debug) {
+        console.debug("[ai-chat] stream_finalize", { outcome, hasError: Boolean(error) });
       }
       notifyDone(stream.listeners.done);
       if (activeStreamRef.current === stream) {
         activeStreamRef.current = null;
       }
     },
-    [cleanup]
+    [activeStreamRef, cleanup, debug]
   );
 
   const handleMessage = useCallback(
@@ -184,6 +259,7 @@ export function useSSE(options: UseSSEOptions = {}) {
         }
         case "token": {
           stream.firstContentSeen = true;
+          dispatch({ type: "streaming" });
           if (stream.firstTokenAt === null) {
             stream.firstTokenAt = performance.now();
             console.info("[ai-chat] first_token_ms", Math.round(stream.firstTokenAt - stream.startedAt));
@@ -266,17 +342,39 @@ export function useSSE(options: UseSSEOptions = {}) {
   );
 
   const startFetchFallback = useCallback(
-    async (stream: ActiveStream, url: string) => {
-      console.info("[ai-chat] stream_started", { transport: "fetch" });
+    async (stream: ActiveStream, url: string, attempt = 0): Promise<void> => {
+      const fetchController = new AbortController();
+      const timeoutMs = 25_000;
+      const timeout = setTimeout(() => {
+        fetchController.abort(new DOMException("Timeout", "AbortError"));
+      }, timeoutMs);
+      const signal = mergeAbortSignals([stream.controller.signal, fetchController.signal]);
+      console.info("[ai-chat] stream_started", { transport: "fetch", attempt: attempt + 1 });
       let buffer = "";
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { Accept: "text/event-stream" },
-        cache: "no-store",
-        signal: stream.controller.signal,
-      });
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: "GET",
+          headers: { Accept: "text/event-stream" },
+          cache: "no-store",
+          signal,
+        });
+      } catch (err) {
+        clearTimeout(timeout);
+        if (err instanceof DOMException && err.name === "AbortError") {
+          throw new ChatStreamError("AI-408", "Request timed out", { retriable: true });
+        }
+        throw err instanceof Error ? err : new Error("Stream failed");
+      }
+      clearTimeout(timeout);
       if (!response.ok || !response.body) {
-        throw new Error(`Unexpected status: ${response.status}`);
+        const parsed = await parseResponseError(response);
+        if (parsed instanceof ChatStreamError && parsed.retriable && attempt < 1) {
+          const jitter = 200 + Math.floor(Math.random() * 400);
+          await wait(jitter);
+          return startFetchFallback(stream, url, attempt + 1);
+        }
+        throw parsed;
       }
       const reader = response.body.getReader();
       stream.reader = reader;
@@ -323,6 +421,7 @@ export function useSSE(options: UseSSEOptions = {}) {
       }
       activeStreamRef.current = stream;
       setIsStreaming(true);
+      dispatch({ type: "drafting" });
 
       const fetchTokenAndStart = async () => {
         try {
@@ -350,13 +449,18 @@ export function useSSE(options: UseSSEOptions = {}) {
               setUsingFetchFallback(true);
               await startFetchFallback(stream, url);
             } else if (!networkError) {
-              finalize(stream, "error", err instanceof Error ? err : new Error("Stream failed"));
+              const normalized = err instanceof ChatStreamError ? err : err instanceof Error ? err : new Error("Stream failed");
+              finalize(stream, "error", normalized);
             } else {
               finalize(stream, "aborted");
             }
           }
         } catch (err) {
-          const error = err instanceof Error ? err : new Error("Stream failed to start");
+          const error = err instanceof ChatStreamError
+            ? err
+            : err instanceof Error
+              ? err
+              : new ChatStreamError("AI-500", "Stream failed to start");
           finalize(stream, error.name === "AbortError" ? "aborted" : "error", error);
         }
       };
@@ -419,6 +523,42 @@ export function useSSE(options: UseSSEOptions = {}) {
     abortCurrent,
     isStreaming,
     usingFetchFallback,
+    state: status,
   };
+}
+
+function mergeAbortSignals(signals: AbortSignal[]): AbortSignal {
+  const filtered = signals.filter(Boolean);
+  if (filtered.length === 1) return filtered[0]!;
+  const controller = new AbortController();
+  const onAbort = (event: Event) => {
+    controller.abort((event as any)?.detail ?? undefined);
+  };
+  filtered.forEach((signal) => {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+    } else {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+  });
+  return controller.signal;
+}
+
+async function parseResponseError(response: Response) {
+  let payload: any = null;
+  try {
+    payload = await response.clone().json();
+  } catch {
+    // ignore
+  }
+  const fallbackCode = response.status >= 500 ? "AI-500" : `AI-${response.status}`;
+  const code = typeof payload?.code === "string" ? payload.code : fallbackCode;
+  const message = typeof payload?.message === "string" ? payload.message : `Unexpected status: ${response.status}`;
+  const retriable = response.status === 429 || response.status >= 500;
+  return new ChatStreamError(code, message, { retriable });
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

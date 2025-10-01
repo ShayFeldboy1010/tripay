@@ -63,6 +63,7 @@ describe("AIChatPanel submit flow", () => {
             abortCurrent: mockAbort,
             isStreaming: false,
             usingFetchFallback: false,
+            state: { phase: "idle", attempt: 0, lastError: null },
           })}
         />
       </AIChatProvider>
@@ -147,7 +148,7 @@ describe("AIChatPanel submit flow", () => {
       errorCallback(authError);
     });
 
-    await screen.findByText("Authentication required. Please sign in to continue.");
+    await screen.findByText(/AUTH_REQUIRED: Authentication required\. Please sign in to continue\./);
     const retryButton = await screen.findByRole("button", { name: /retry/i });
     expect(retryButton).toBeTruthy();
   });

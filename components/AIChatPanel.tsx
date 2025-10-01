@@ -6,7 +6,7 @@ import { DateTime } from "luxon";
 import { toast } from "sonner";
 import { type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/ai/askAI";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { useSSE, type StreamHandle } from "@/hooks/useSSE";
+import { ChatStreamError, useSSE, type StreamHandle } from "@/hooks/useSSE";
 import { useSupabaseUserId } from "@/hooks/useSupabaseUserId";
 import { AI_CHAT_IS_JWT } from "@/src/lib/ai/chatConfig";
 import { ChatBubble } from "./ai-chat/ChatBubble";
@@ -194,7 +194,8 @@ export function AIChatPanel({
   const [isShaking, setIsShaking] = useState(false);
   const inputShellRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<StreamHandle | null>(null);
-  const { startStream, abortCurrent, isStreaming } = useSSEHook({
+  const lastSubmitRef = useRef<number>(0);
+  const { startStream, abortCurrent, isStreaming, state: streamState } = useSSEHook({
     fallbackToFetch: true,
     getToken: AI_CHAT_IS_JWT
       ? async () => {
@@ -276,6 +277,16 @@ export function AIChatPanel({
         streamRef.current.controller.abort();
       }
 
+      if (!options?.fromRetry) {
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        if (now - lastSubmitRef.current < 250) {
+          return;
+        }
+        lastSubmitRef.current = now;
+      } else {
+        lastSubmitRef.current = typeof performance !== "undefined" ? performance.now() : Date.now();
+      }
+
       setIsShaking(false);
       if (options?.fromRetry) {
         updateLastMessage(tripId, (prev) => {
@@ -338,15 +349,21 @@ export function AIChatPanel({
           });
         })
         .onError((err) => {
-          const errorWithCode = err as Error;
-          let friendlyMessage = errorWithCode.message || "Something went wrong starting the chat.";
+          const errorWithCode =
+            err instanceof ChatStreamError
+              ? err
+              : typeof (err as { code?: string }).code === "string"
+                ? new ChatStreamError((err as { code: string }).code, err.message)
+                : new ChatStreamError("AI-500", err.message);
+          const baseMessage = errorWithCode.message || "Something went wrong starting the chat.";
+          let friendlyMessage = `${errorWithCode.code}: ${baseMessage}`;
           if (/best guess/i.test(friendlyMessage) || /safe fallback/i.test(friendlyMessage)) {
             console.warn("[ai-chat] soft-error", friendlyMessage);
             toast.warning(friendlyMessage);
             return;
           }
           if (/Unexpected status: 400/.test(friendlyMessage)) {
-            friendlyMessage = "We couldn’t start the chat. Check your trip selection and try again.";
+            friendlyMessage = `${errorWithCode.code}: We couldn’t start the chat. Check your trip selection and try again.`;
           }
 
           toast.error(friendlyMessage);
@@ -519,7 +536,12 @@ export function AIChatPanel({
           </div>
         </div>
         <footer className="sticky bottom-0 z-[110] pointer-events-auto border-t border-border-soft bg-card px-6 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-4 backdrop-blur">
-          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            data-stream-phase={streamState.phase}
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          >
             <div
               ref={inputShellRef}
               className={`chat-input-shell flex flex-1 flex-col gap-3 rounded-2xl px-4 py-4 sm:flex-row sm:items-end ${

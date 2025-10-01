@@ -14,6 +14,8 @@ import { AI_CHAT_AUTH_MODE, AI_CHAT_IS_ANONYMOUS } from "@/src/server/config";
 
 const encoder = new TextEncoder();
 
+type ErrorPayload = { code: string; message: string };
+
 interface QueryInput {
   question: string;
   since?: string | null;
@@ -32,10 +34,7 @@ function normalizeUuid(value: string | null | undefined, headers: Record<string,
   if (!value) return null;
   const trimmed = value.trim();
   if (!UUID_PATTERN.test(trimmed)) {
-    throw new Response(JSON.stringify({ error: "invalid id format" }), {
-      status: 400,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    throw errorResponse(headers, 400, "AI-400", "Invalid id format");
   }
   return trimmed;
 }
@@ -223,28 +222,19 @@ async function resolveScope(req: NextRequest, input: QueryInput): Promise<Scope>
       providedToken = await verifySseToken(tokenQuery);
     } catch (err) {
       console.error("ai-chat: invalid token", err);
-      throw new Response(JSON.stringify({ error: "invalid token" }), {
-        status: 401,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      throw errorResponse(headers, 401, "RLS-401", "Invalid or expired token");
     }
   }
 
   if (AI_CHAT_AUTH_MODE === "jwt" && !providedToken) {
-    throw new Response(JSON.stringify({ error: "token required" }), {
-      status: 401,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    throw errorResponse(headers, 401, "RLS-401", "Authentication token required");
   }
 
   const paramTrip = normalizeUuid(input.tripId, headers);
   const paramUser = normalizeUuid(input.userId, headers);
 
   if (!AI_CHAT_IS_ANONYMOUS && !providedToken && !paramTrip && !paramUser) {
-    throw new Response(JSON.stringify({ error: "token required" }), {
-      status: 401,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    throw errorResponse(headers, 401, "RLS-401", "Authentication token required");
   }
 
   const tokenScope = scopeFromToken(providedToken);
@@ -258,20 +248,14 @@ async function resolveScope(req: NextRequest, input: QueryInput): Promise<Scope>
     return tokenScope;
   }
 
-  throw new Response(JSON.stringify({ error: "tripId or userId required" }), {
-    status: 400,
-    headers: { ...headers, "Content-Type": "application/json" },
-  });
+  throw errorResponse(headers, 400, "AI-400", "tripId or userId required");
 }
 
 async function handle(req: NextRequest, input: QueryInput) {
   const headers = buildHeaders(req);
 
   if (!input.question || !input.question.trim()) {
-    return new Response(JSON.stringify({ error: "question is required" }), {
-      status: 400,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return errorResponse(headers, 400, "AI-400", "Question is required");
   }
 
   let scope: Scope;
@@ -319,7 +303,7 @@ async function handle(req: NextRequest, input: QueryInput) {
           });
         } catch (err) {
           console.warn("nl2sql: failed to plan", err);
-          await send("error", { message: "Couldn’t understand the question. Showing best guess results." });
+          await sendError(send, "AI-422", "Couldn’t understand the question. Showing best guess results.");
         }
 
         try {
@@ -333,7 +317,7 @@ async function handle(req: NextRequest, input: QueryInput) {
           fallbackReason = outcome.fallbackReason;
         } catch (err) {
           console.error("ai-chat: execution failed", err);
-          await send("error", { message: "There was a database error. We applied a safe fallback query." });
+          await sendError(send, "SQL-500", "There was a database error. We applied a safe fallback query.");
           clearInterval(pingTimer);
           controller.close();
           return;
@@ -362,7 +346,7 @@ async function handle(req: NextRequest, input: QueryInput) {
           });
         } catch (err) {
           console.error("ai-chat: streaming failed", err);
-          await send("error", { message: "Unable to generate answer" });
+          await sendError(send, "AI-502", "Unable to generate answer");
         } finally {
           clearInterval(pingTimer);
           controller.close();
@@ -371,7 +355,7 @@ async function handle(req: NextRequest, input: QueryInput) {
         console.error("ai-chat: internal failure", err);
         clearInterval(pingTimer);
         try {
-          writeEvent(controller, "error", { message: "Stream aborted" });
+          writeEvent(controller, "error", { code: "AI-500", message: "Stream aborted" });
         } finally {
           controller.close();
         }
@@ -408,10 +392,18 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as QueryInput;
     return handle(req, body);
   } catch {
-    return new Response(JSON.stringify({ error: "invalid json" }), {
-      status: 400,
-      headers: { ...buildHeaders(req), "Content-Type": "application/json" },
-    });
+    return errorResponse(buildHeaders(req), 400, "AI-400", "Invalid JSON body");
   }
+}
+
+function errorResponse(headers: Record<string, string>, status: number, code: string, message: string) {
+  return new Response(JSON.stringify({ code, message }), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
+
+async function sendError(send: (event: string, data: unknown) => Promise<void> | void, code: string, message: string) {
+  await send("error", { code, message } satisfies ErrorPayload);
 }
 
