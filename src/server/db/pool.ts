@@ -18,6 +18,7 @@ export const CONNECTION_ENV_KEYS = [
   "POSTGRES_URL",
 ];
 
+
 export const SSL_ENV_KEYS = [
   ...SSL_MODE_ENV_KEYS,
   SSL_FILE_ENV_KEYS.rootCert,
@@ -36,6 +37,7 @@ function resolveConnectionString(): string {
       }
       return value;
     }
+
   }
 
   throw new Error(
@@ -126,6 +128,7 @@ function buildPoolConfig(): PoolConfig {
 function createPool(): Pool {
   const config = buildPoolConfig();
   const pool = new Pool(config);
+
   pool.on("error", (err) => {
     console.error("pg: unexpected error on idle client", err);
   });

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getGroqClient, getGroqModels } from "@/services/ai-expenses/groq";
+
 import { CONNECTION_ENV_KEYS, SSL_ENV_KEYS, query } from "@/src/server/db/pool";
+
 import { AI_CHAT_AUTH_MODE, AI_CHAT_IS_ANONYMOUS } from "@/src/server/config";
 
 export const runtime = "nodejs";
@@ -11,10 +13,12 @@ export async function GET() {
       acc[key] = Boolean(process.env[key]);
       return acc;
     }, {}),
+
     ssl: SSL_ENV_KEYS.reduce<Record<string, boolean>>((acc, key) => {
       acc[key] = Boolean(process.env[key]);
       return acc;
     }, {}),
+
     GROQ_API_KEY: Boolean(process.env.GROQ_API_KEY),
   } as const;
 

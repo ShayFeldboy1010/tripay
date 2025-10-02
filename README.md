@@ -37,6 +37,9 @@ Continue building your app on:
 4. **Client errors** – the app now logs Supabase error `code`, `message`, and `details` to the console. Use these logs to diagnose issues quickly.
 5. **AI expenses view** – after seeding the database run `scripts/05-create-ai-expenses-view.sql` so the `ai_expenses` view exists. The AI chat feature reads from this view and will fail if it is missing. Make sure the server has a Postgres connection string configured (set `DATABASE_URL` or `SUPABASE_DB_URL`) so the AI chat can query the view. If your database requires TLS, set `PGSSLMODE` (`require`, `verify-ca`, or `verify-full`) and provide certificate paths with `PGSSLROOTCERT` / `PGSSLCERT` / `PGSSLKEY` as needed.
 
+5. **AI expenses view** – after seeding the database run `scripts/05-create-ai-expenses-view.sql` so the `ai_expenses` view exists. The AI chat feature reads from this view and will fail if it is missing. Make sure the server has a Postgres connection string configured (set `DATABASE_URL` or `SUPABASE_DB_URL`) so the AI chat can query the view.
+
+
 ## Configuring Groq AI
 
 - Set `GROQ_API_KEY` in both `.env.local` and the Vercel project to enable Groq-powered parsing.
