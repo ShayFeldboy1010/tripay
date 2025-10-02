@@ -9,7 +9,9 @@ Set the following environment variables before running the app:
 ```
 GROQ_API_KEY=<your groq key>
 GROQ_MODEL=llama-3.1-70b-versatile
+# One of these must point at the Postgres instance that hosts the expenses tables
 DATABASE_URL=postgres://...
+# or SUPABASE_DB_URL=postgres://...
 DEFAULT_TIMEZONE=Asia/Seoul
 JWT_SECRET=<shared jwt secret>
 AI_CHAT_AUTH_MODE=anonymous          # backend mode: anonymous (default) | jwt

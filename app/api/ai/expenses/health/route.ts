@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 import { getGroqClient, getGroqModels } from "@/services/ai-expenses/groq";
-import { query } from "@/src/server/db/pool";
+import { CONNECTION_ENV_KEYS, query } from "@/src/server/db/pool";
 import { AI_CHAT_AUTH_MODE, AI_CHAT_IS_ANONYMOUS } from "@/src/server/config";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   const envsPresent = {
-    DATABASE_URL: Boolean(process.env.DATABASE_URL),
+    database: CONNECTION_ENV_KEYS.reduce<Record<string, boolean>>((acc, key) => {
+      acc[key] = Boolean(process.env[key]);
+      return acc;
+    }, {}),
     GROQ_API_KEY: Boolean(process.env.GROQ_API_KEY),
   } as const;
 
   let supabaseOk = false;
   let supabaseError: string | null = null;
-  if (!envsPresent.DATABASE_URL) {
-    supabaseError = "DATABASE_URL missing";
+  const hasDatabaseUrl = Object.values(envsPresent.database).some(Boolean);
+
+  if (!hasDatabaseUrl) {
+    supabaseError = `Missing database connection string. Set one of ${CONNECTION_ENV_KEYS.join(", ")}.`;
   } else {
     try {
       const { rows } = await query<{ ok: number }>("select 1 as ok");
