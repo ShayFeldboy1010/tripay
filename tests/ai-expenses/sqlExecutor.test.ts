@@ -16,7 +16,7 @@ const basePlan = {
   until: "2025-01-31",
   order: [],
   limit: 120,
-  sql: "SELECT date, amount, currency, category FROM expenses WHERE category = 'Food' LIMIT 120",
+  sql: "SELECT date, amount, currency, category FROM ai_expenses WHERE category = 'Food' LIMIT 120",
 };
 
 describe("sqlExecutor", () => {
@@ -55,7 +55,7 @@ describe("sqlExecutor", () => {
   it("rejects unsafe SQL", async () => {
     const plan = {
       ...basePlan,
-      sql: "SELECT * FROM expenses",
+      sql: "SELECT * FROM ai_expenses",
     };
 
     await expect(
@@ -71,7 +71,7 @@ describe("sqlExecutor", () => {
   it("blocks DML statements", async () => {
     const plan = {
       ...basePlan,
-      sql: "DELETE FROM expenses WHERE id = '1'",
+      sql: "DELETE FROM ai_expenses WHERE id = '1'",
     };
 
     await expect(
@@ -86,7 +86,7 @@ describe("sqlExecutor", () => {
   it("blocks subqueries", async () => {
     const plan = {
       ...basePlan,
-      sql: "SELECT date FROM expenses WHERE amount > (SELECT AVG(amount) FROM expenses)",
+      sql: "SELECT date FROM ai_expenses WHERE amount > (SELECT AVG(amount) FROM ai_expenses)",
     };
 
     await expect(
