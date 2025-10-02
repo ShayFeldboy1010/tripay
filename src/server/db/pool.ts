@@ -3,11 +3,33 @@ import { Pool, type PoolClient, type QueryResult } from "pg";
 let sharedPool: Pool | null = null;
 let testPoolOverride: Pool | null = null;
 
-function createPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is required for AI expenses chat");
+export const CONNECTION_ENV_KEYS = [
+  "DATABASE_URL",
+  "SUPABASE_DB_URL",
+  "SUPABASE_DB_CONNECTION_STRING",
+  "POSTGRES_URL",
+];
+
+function resolveConnectionString(): string {
+  for (const key of CONNECTION_ENV_KEYS) {
+    const value = process.env[key];
+    if (value) {
+      if (key !== "DATABASE_URL") {
+        console.warn(
+          `AI expenses chat is using ${key} for the Postgres connection; set DATABASE_URL to silence this warning.`
+        );
+      }
+      return value;
+    }
   }
+
+  throw new Error(
+    `Database connection string missing. Define one of ${CONNECTION_ENV_KEYS.join(", ")}.`
+  );
+}
+
+function createPool(): Pool {
+  const connectionString = resolveConnectionString();
   const pool = new Pool({ connectionString, max: 10 });
   pool.on("error", (err) => {
     console.error("pg: unexpected error on idle client", err);
