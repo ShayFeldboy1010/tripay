@@ -12,12 +12,14 @@ GROQ_MODEL=llama-3.1-70b-versatile
 # One of these must point at the Postgres instance that hosts the expenses tables
 DATABASE_URL=postgres://...
 # or SUPABASE_DB_URL=postgres://...
+# or POSTGRES_URL=postgres://...     # automatically mirrors into DATABASE_URL
 
 # TLS options (optional)
 # PGSSLMODE=require            # or verify-ca / verify-full
 # PGSSLROOTCERT=/path/to/root.crt
 # PGSSLCERT=/path/to/client.crt
 # PGSSLKEY=/path/to/client.key
+# AI_CHAT_PGSSL_ALLOW_SELF_SIGNED=true  # defaults to true; set to false to enforce CA validation
 
 DEFAULT_TIMEZONE=Asia/Seoul
 JWT_SECRET=<shared jwt secret>
@@ -25,7 +27,7 @@ AI_CHAT_AUTH_MODE=anonymous          # backend mode: anonymous (default) | jwt
 NEXT_PUBLIC_AI_CHAT_AUTH_MODE=anonymous  # frontend mode: anonymous (default) | jwt
 ```
 
-The modes control whether the chat expects JWT-based authentication or allows anonymous usage scoped by `tripId`/`userId`. Both sides must agree on the same mode. When connecting to a database that uses a self-signed certificate, set `PGSSLMODE=require` (to skip verification) or provide the CA file through `PGSSLROOTCERT` so the pool trusts the chain.
+The modes control whether the chat expects JWT-based authentication or allows anonymous usage scoped by `tripId`/`userId`. Both sides must agree on the same mode. When connecting to a database that uses a self-signed certificate, set `PGSSLMODE=require` (to skip verification) or provide the CA file through `PGSSLROOTCERT` so the pool trusts the chain. You can also keep the default `AI_CHAT_PGSSL_ALLOW_SELF_SIGNED=true` so the pool automatically disables certificate validation when no CA material is provided.
 
 ## Database projection
 
