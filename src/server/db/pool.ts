@@ -8,6 +8,23 @@ const SSL_FILE_ENV_KEYS = {
   clientKey: "PGSSLKEY",
 } as const;
 
+const BOOLEAN_TRUE = new Set(["1", "true", "yes", "on"]);
+const BOOLEAN_FALSE = new Set(["0", "false", "no", "off"]);
+
+function parseBooleanEnv(key: string, defaultValue: boolean): boolean {
+  const raw = process.env[key];
+  if (raw === undefined) return defaultValue;
+  const normalized = raw.trim().toLowerCase();
+  if (BOOLEAN_TRUE.has(normalized)) return true;
+  if (BOOLEAN_FALSE.has(normalized)) return false;
+  throw new Error(
+    `Invalid boolean value for ${key}: ${raw}. Expected one of ${[
+      ...BOOLEAN_TRUE,
+      ...BOOLEAN_FALSE,
+    ].join(", ")}.`
+  );
+}
+
 let sharedPool: Pool | null = null;
 let testPoolOverride: Pool | null = null;
 
@@ -34,6 +51,9 @@ function resolveConnectionString(): string {
         console.warn(
           `AI expenses chat is using ${key} for the Postgres connection; set DATABASE_URL to silence this warning.`
         );
+        if (!process.env.DATABASE_URL) {
+          process.env.DATABASE_URL = value;
+        }
       }
       return value;
     }
@@ -75,9 +95,10 @@ function resolveSslConfig(connectionString: string): PoolConfig["ssl"] | undefin
   const ca = readOptionalFile(SSL_FILE_ENV_KEYS.rootCert);
   const cert = readOptionalFile(SSL_FILE_ENV_KEYS.clientCert);
   const key = readOptionalFile(SSL_FILE_ENV_KEYS.clientKey);
+  const allowSelfSigned = parseBooleanEnv("AI_CHAT_PGSSL_ALLOW_SELF_SIGNED", true);
 
   if (!mode && !ca && !cert && !key) {
-    return undefined;
+    return allowSelfSigned ? { rejectUnauthorized: false } : undefined;
   }
 
   if (mode && !["disable", "require", "verify-ca", "verify-full"].includes(mode)) {
@@ -109,6 +130,14 @@ function resolveSslConfig(connectionString: string): PoolConfig["ssl"] | undefin
     if (key) ssl.key = key;
     if (ssl.rejectUnauthorized === undefined) {
       ssl.rejectUnauthorized = true;
+    }
+  }
+
+  if (allowSelfSigned) {
+    if (!ssl || typeof ssl === "boolean") {
+      ssl = { rejectUnauthorized: false };
+    } else if (ssl.rejectUnauthorized !== true) {
+      ssl.rejectUnauthorized = false;
     }
   }
 
