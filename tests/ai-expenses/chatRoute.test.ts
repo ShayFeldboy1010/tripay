@@ -66,11 +66,11 @@ describe("/api/ai/expenses/chat/stream", () => {
       until: "2025-01-31",
       order: [],
       limit: 10,
-      sql: "SELECT date, amount FROM expenses LIMIT 10",
+      sql: "SELECT date, amount FROM ai_expenses LIMIT 10",
     };
 
     const execution: ExecutionResult = {
-      sql: "SELECT date, amount FROM expenses WHERE user_id = $1",
+      sql: "SELECT date, amount FROM ai_expenses WHERE user_id = $1",
       params: [TEST_SCOPE_ID, "2025-01-01", "2025-01-31"],
       rows: [
         { date: "2025-01-05", amount: 42, currency: "USD", category: "Food", merchant: "Cafe", notes: null },

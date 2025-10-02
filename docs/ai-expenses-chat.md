@@ -9,14 +9,25 @@ Set the following environment variables before running the app:
 ```
 GROQ_API_KEY=<your groq key>
 GROQ_MODEL=llama-3.1-70b-versatile
+# One of these must point at the Postgres instance that hosts the expenses tables
 DATABASE_URL=postgres://...
+# or SUPABASE_DB_URL=postgres://...
+# TLS options (optional)
+# PGSSLMODE=require            # or verify-ca / verify-full
+# PGSSLROOTCERT=/path/to/root.crt
+# PGSSLCERT=/path/to/client.crt
+# PGSSLKEY=/path/to/client.key
 DEFAULT_TIMEZONE=Asia/Seoul
 JWT_SECRET=<shared jwt secret>
 AI_CHAT_AUTH_MODE=anonymous          # backend mode: anonymous (default) | jwt
 NEXT_PUBLIC_AI_CHAT_AUTH_MODE=anonymous  # frontend mode: anonymous (default) | jwt
 ```
 
-The modes control whether the chat expects JWT-based authentication or allows anonymous usage scoped by `tripId`/`userId`. Both sides must agree on the same mode.
+The modes control whether the chat expects JWT-based authentication or allows anonymous usage scoped by `tripId`/`userId`. Both sides must agree on the same mode. When connecting to a database that uses a self-signed certificate, set `PGSSLMODE=require` (to skip verification) or provide the CA file through `PGSSLROOTCERT` so the pool trusts the chain.
+
+## Database projection
+
+Run `scripts/05-create-ai-expenses-view.sql` against your Supabase database (or local Postgres) after applying the base schema. This script creates the `ai_expenses` view that the chat pipeline queries. The view normalizes existing expense rows, extracts the transaction currency from the JSON `note` column when present, and provides safe fallbacks so the SQL layer always sees the columns it expects (`amount`, `currency`, `merchant`, `notes`, etc.).
 
 ## Modes
 

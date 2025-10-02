@@ -37,7 +37,7 @@ describe("sql executor", () => {
   it("rejects non-select statements", () => {
     expect(() =>
       __test__ensureSafePlan({
-        sql: "DELETE FROM expenses WHERE id = 1",
+      sql: "DELETE FROM ai_expenses WHERE id = 1",
         intent: "lookup",
         filters: [],
         dimensions: [],
@@ -60,7 +60,7 @@ describe("sql executor", () => {
       until: "2024-01-31",
       order: [],
       limit: 20,
-      sql: "SELECT date, amount FROM expenses ORDER BY date DESC LIMIT 20",
+      sql: "SELECT date, amount FROM ai_expenses ORDER BY date DESC LIMIT 20",
     };
 
     const result = await executePlan(plan, {

@@ -35,6 +35,7 @@ Continue building your app on:
 2. **Schema** – run the SQL scripts in `scripts/` to keep the database in sync. Missing columns such as `is_shared_payment` will cause inserts to fail.
 3. **Row Level Security** – confirm that policies allow your user to insert and update rows for the trip. RLS errors surface from Supabase with a detailed `code` and `message`.
 4. **Client errors** – the app now logs Supabase error `code`, `message`, and `details` to the console. Use these logs to diagnose issues quickly.
+5. **AI expenses view** – after seeding the database run `scripts/05-create-ai-expenses-view.sql` so the `ai_expenses` view exists. The AI chat feature reads from this view and will fail if it is missing. Make sure the server has a Postgres connection string configured (set `DATABASE_URL` or `SUPABASE_DB_URL`) so the AI chat can query the view. If your database requires TLS, set `PGSSLMODE` (`require`, `verify-ca`, or `verify-full`) and provide certificate paths with `PGSSLROOTCERT` / `PGSSLCERT` / `PGSSLKEY` as needed.
 
 ## Configuring Groq AI
 
