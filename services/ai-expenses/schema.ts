@@ -1,4 +1,4 @@
-export const EXPENSES_TABLE = "expenses";
+export const EXPENSES_TABLE = "ai_expenses";
 
 export const EXPENSES_COLUMNS: Record<string, string> = {
   id: "uuid",

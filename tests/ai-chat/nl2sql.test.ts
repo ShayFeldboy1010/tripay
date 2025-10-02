@@ -10,7 +10,7 @@ describe("nl2sql parsing", () => {
       dimensions: ["category"],
       metrics: ["sum"],
       filters: [{ column: "category", op: "=", value: "Groceries" }],
-      sql: "SELECT category, SUM(amount) AS total FROM expenses WHERE category = 'Groceries' LIMIT 200",
+      sql: "SELECT category, SUM(amount) AS total FROM ai_expenses WHERE category = 'Groceries' LIMIT 200",
     });
 
     const plan = __test__parsePlan(raw);
@@ -25,7 +25,7 @@ describe("nl2sql parsing", () => {
       intent: "lookup",
       since: "2024-01-01",
       until: "2024-02-01",
-      sql: "SELECT date, amount FROM expenses LIMIT 10",
+      sql: "SELECT date, amount FROM ai_expenses LIMIT 10",
     });
     const plan = __test__parsePlan(raw);
     expect(plan.filters).toEqual([]);
