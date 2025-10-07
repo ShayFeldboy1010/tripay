@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import type { ExpensesChatMetaEvent, ExpensesChatResult } from "@/services/ai/askAI";
+import type { ExpensesChatMetaEvent, ExpensesChatResult } from "@/src/lib/chatClient";
 
 export type Msg =
   | { role: "user"; text: string }
