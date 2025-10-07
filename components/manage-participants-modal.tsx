@@ -77,9 +77,9 @@ export function ManageParticipantsModal({ tripId, onClose, onParticipantsChange 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+        <Dialog.Overlay className="overlay-dim fixed inset-0" />
         <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
-          <Card className="max-h-[90vh] flex flex-col rounded-t-[28px] border-none py-0 md:rounded-[28px]">
+          <Card className="glass-strong relative z-10 max-h-[90vh] flex flex-col rounded-t-[28px] border-none py-0 md:rounded-[28px]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 px-6 pb-4 pt-6">
               <CardTitle className="text-lg font-semibold text-white">Manage Participants</CardTitle>
               <Dialog.Close asChild>
