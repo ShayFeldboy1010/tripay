@@ -4,7 +4,7 @@ import React, { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useSt
 import { ChevronDown, ChevronUp, Loader2, Sparkles, X } from "lucide-react";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
-import { type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/ai/askAI";
+import { type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/src/lib/chatClient";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { ChatStreamError, useSSE, type StreamHandle } from "@/hooks/useSSE";
 import { useSupabaseUserId } from "@/hooks/useSupabaseUserId";
@@ -56,39 +56,44 @@ const RANGE_OPTIONS: RangeOption[] = [
   },
 ];
 
+const TOKEN_TIMEOUT_MS = 12_000;
+
+async function postToken(endpoint: string, payload: Record<string, string>) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException("Token request timed out", "AbortError"));
+  }, TOKEN_TIMEOUT_MS);
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const errorBody = await res.clone().text();
+      console.error("[ai-chat] token_error", { endpoint, status: res.status, body: errorBody });
+      throw new Error("Unable to obtain stream token");
+    }
+    const json = (await res.json()) as { token?: string };
+    if (!json.token) {
+      throw new Error("Stream token missing");
+    }
+    return json.token;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function requestUserToken(userId: string) {
-  const res = await fetch("/api/ai/expenses/chat/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId }),
-  });
-  if (!res.ok) {
-    throw new Error("Unable to obtain stream token");
-  }
-  const payload = (await res.json()) as { token?: string };
-  if (!payload.token) {
-    throw new Error("Stream token missing");
-  }
-  return payload.token;
+  return postToken("/api/chat/token", { userId });
 }
 
 async function requestGuestToken(params: { tripId?: string | null; userId?: string | null }) {
   const body: Record<string, string> = {};
   if (params.tripId) body.tripId = params.tripId;
   if (params.userId) body.userId = params.userId;
-  const res = await fetch("/api/ai/expenses/guest-token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error("Unable to obtain guest token");
-  }
-  const payload = (await res.json()) as { token?: string };
-  if (!payload.token) {
-    throw new Error("Stream token missing");
-  }
-  return payload.token;
+  return postToken("/api/chat/guest-token", body);
 }
 
 function ResultDataPanel({ result, meta }: { result: ExpensesChatResult; meta?: ExpensesChatMetaEvent | null }) {
@@ -195,6 +200,7 @@ export function AIChatPanel({
   const inputShellRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<StreamHandle | null>(null);
   const lastSubmitRef = useRef<number>(0);
+  const [liveMessage, setLiveMessage] = useState<string>("");
   const { startStream, abortCurrent, isStreaming, state: streamState } = useSSEHook({
     fallbackToFetch: true,
     getToken: AI_CHAT_IS_JWT
@@ -233,6 +239,7 @@ export function AIChatPanel({
   useEffect(() => {
     if (!open) {
       abortCurrent();
+      setLiveMessage("");
       return;
     }
     const defaultRange = RANGE_OPTIONS[0];
@@ -266,10 +273,12 @@ export function AIChatPanel({
       if (!normalized) {
         toast.error("Please enter a question");
         setIsShaking(true);
+        requestAnimationFrame(() => inputRef.current?.focus());
         return;
       }
       if (!activeRange) {
         toast.error("Select a time range first");
+        requestAnimationFrame(() => inputRef.current?.focus());
         return;
       }
 
@@ -299,6 +308,7 @@ export function AIChatPanel({
       }
 
       setInput("");
+      setLiveMessage("Sending message");
       requestAnimationFrame(() => inputRef.current?.focus());
 
       const currentUserId = userIdRef.current;
@@ -347,6 +357,7 @@ export function AIChatPanel({
               retryPrompt: null,
             };
           });
+          setLiveMessage("Response received");
         })
         .onError((err) => {
           const errorWithCode =
@@ -376,6 +387,8 @@ export function AIChatPanel({
               retryPrompt: normalized,
             };
           });
+          setLiveMessage(`Error: ${friendlyMessage}`);
+          requestAnimationFrame(() => inputRef.current?.focus());
         })
         .onDone(() => {
           streamRef.current = null;
@@ -383,6 +396,7 @@ export function AIChatPanel({
             if (prev.role !== "assistant") return prev;
             return { ...prev, streaming: false };
           });
+          setLiveMessage("Conversation idle");
         });
     },
     [activeRange, addMessage, setMeta, startStream, timezone, tripId, updateLastMessage]
@@ -541,7 +555,11 @@ export function AIChatPanel({
             onSubmit={handleSubmit}
             data-stream-phase={streamState.phase}
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            aria-busy={isStreaming}
           >
+            <div aria-live="assertive" className="sr-only" role="status">
+              {liveMessage}
+            </div>
             <div
               ref={inputShellRef}
               className={`chat-input-shell flex flex-1 flex-col gap-3 rounded-2xl px-4 py-4 sm:flex-row sm:items-end ${
@@ -563,8 +581,10 @@ export function AIChatPanel({
                 }}
                 className="max-h-40 flex-1 resize-none bg-transparent text-[15px] text-white/90 placeholder:text-[color:var(--chat-text-muted)] focus:outline-none focus-visible:ring focus-visible:ring-brand focus-visible:ring-offset-0 focus-visible:ring-offset-transparent"
                 rows={1}
+                name="chat-message"
                 placeholder="Ask about your expenses…"
                 aria-label="Ask about your expenses"
+                aria-invalid={isShaking}
               />
               <div
                 className="relative z-[1] flex items-center justify-between gap-3 sm:justify-end pointer-events-auto"

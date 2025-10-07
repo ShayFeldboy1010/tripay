@@ -1,4 +1,4 @@
-export type LLMProvider = "moonshot" | "groq" | "mock";
+export type LLMProvider = "groq" | "mock";
 
 export interface LLMConfig {
   provider: LLMProvider;
@@ -14,40 +14,20 @@ export interface LLMClient {
   }): Promise<string>;
 }
 
-import { MoonshotLLM } from "./moonshot";
 import Groq from "groq-sdk";
 
 const DEFAULT_MODELS: Record<LLMProvider, string> = {
-  moonshot: "moonshotai/kimi-k2-instruct-0905",
   groq: "llama-3.1-8b-instant",
   mock: "mock-model",
 };
 
 export function resolveLLMConfig(): LLMConfig {
-  const envProvider = process.env.LLM_PROVIDER as LLMProvider | undefined;
-  let provider: LLMProvider;
-  if (envProvider) {
-    provider = envProvider;
-  } else if (process.env.GROQ_API_KEY) {
-    provider = "groq";
-  } else if (process.env.MOONSHOT_API_KEY) {
-    provider = "moonshot";
-  } else {
-    provider = "mock";
-  }
-
+  const apiKey = process.env.GROQ_API_KEY;
+  const envProvider = (process.env.LLM_PROVIDER as LLMProvider | undefined) ?? (apiKey ? "groq" : undefined);
+  const provider: LLMProvider = envProvider === "groq" && apiKey ? "groq" : "mock";
   const envModel = process.env.LLM_MODEL?.trim();
   const model = envModel && envModel.length > 0 ? envModel : DEFAULT_MODELS[provider];
-
-  const baseUrl =
-    provider === "moonshot" ? process.env.MOONSHOT_BASE_URL : process.env.GROQ_BASE_URL;
-  const apiKey =
-    provider === "moonshot"
-      ? process.env.MOONSHOT_API_KEY
-      : provider === "groq"
-      ? process.env.GROQ_API_KEY
-      : undefined;
-
+  const baseUrl = process.env.GROQ_BASE_URL;
   return { provider, model, baseUrl, apiKey };
 }
 
@@ -84,8 +64,6 @@ class MockLLM implements LLMClient {
 
 export function createLLM(cfg: LLMConfig): LLMClient {
   switch (cfg.provider) {
-    case "moonshot":
-      return new MoonshotLLM(cfg);
     case "groq":
       return new GroqLLM(cfg);
     default:

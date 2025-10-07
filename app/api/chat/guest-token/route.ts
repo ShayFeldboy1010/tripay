@@ -1,18 +1,8 @@
 import { NextRequest } from "next/server";
 import { issueSseToken } from "@/src/server/auth/jwt";
+import { buildHeaders, errorResponse } from "../_shared";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function buildHeaders(req: NextRequest) {
-  const origin = req.headers.get("origin") ?? "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Expose-Headers": "Content-Type, Cache-Control",
-    Vary: "Origin",
-  } as Record<string, string>;
-}
 
 function normalizeUuid(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -24,7 +14,8 @@ function normalizeUuid(value: unknown): string | undefined {
 }
 
 export async function OPTIONS(req: NextRequest) {
-  return new Response(null, { status: 204, headers: buildHeaders(req) });
+  const headers = buildHeaders(req);
+  return new Response(null, { status: 204, headers });
 }
 
 export async function POST(req: NextRequest) {
@@ -37,14 +28,13 @@ export async function POST(req: NextRequest) {
     } | null;
 
     const claims: { tripId?: string; userId?: string } = {};
-    if (body?.tripId) {
-      claims.tripId = normalizeUuid(body.tripId);
-    }
-    if (body?.userId) {
-      claims.userId = normalizeUuid(body.userId);
-    }
+    if (body?.tripId) claims.tripId = normalizeUuid(body.tripId);
+    if (body?.userId) claims.userId = normalizeUuid(body.userId);
 
-    const ttl = typeof body?.ttlSeconds === "number" && Number.isFinite(body.ttlSeconds) ? body.ttlSeconds : 300;
+    const ttl = typeof body?.ttlSeconds === "number" && Number.isFinite(body.ttlSeconds)
+      ? Math.max(60, Math.min(body.ttlSeconds, 900))
+      : 300;
+
     const token = await issueSseToken("guest", {
       ttlSeconds: ttl,
       tripId: claims.tripId ?? null,
@@ -57,15 +47,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof Error && err.message === "invalid id format") {
-      return new Response(JSON.stringify({ error: err.message }), {
-        status: 400,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      return errorResponse(headers, 400, "AI-400", "Invalid id format");
     }
-    console.error("guest-token: failed", err);
-    return new Response(JSON.stringify({ error: "Unable to issue token" }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    console.error("[ai-chat] guest-token-failed", err);
+    return errorResponse(headers, 500, "AI-500", "Unable to issue token");
   }
 }
