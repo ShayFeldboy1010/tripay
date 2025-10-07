@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { buildExpensesStreamUrl, type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/services/ai/askAI";
+import { buildChatStreamUrl, type ExpensesChatMetaEvent, type ExpensesChatResult } from "@/src/lib/chatClient";
 
 export interface SSEMessage {
   event: string;
@@ -84,6 +84,8 @@ export const initialStreamStatus: StreamStatus = {
   attempt: 0,
   lastError: null,
 };
+
+const MAX_FETCH_RETRIES = 2;
 
 export function streamStatusReducer(state: StreamStatus, action: StreamAction): StreamStatus {
   switch (action.type) {
@@ -369,9 +371,10 @@ export function useSSE(options: UseSSEOptions = {}) {
       clearTimeout(timeout);
       if (!response.ok || !response.body) {
         const parsed = await parseResponseError(response);
-        if (parsed instanceof ChatStreamError && parsed.retriable && attempt < 1) {
-          const jitter = 200 + Math.floor(Math.random() * 400);
-          await wait(jitter);
+        if (parsed instanceof ChatStreamError && parsed.retriable && attempt < MAX_FETCH_RETRIES) {
+          const baseDelay = Math.min(1200, 300 * 2 ** attempt);
+          const jitter = Math.random() * 200;
+          await wait(baseDelay + jitter);
           return startFetchFallback(stream, url, attempt + 1);
         }
         throw parsed;
@@ -390,6 +393,10 @@ export function useSSE(options: UseSSEOptions = {}) {
       if (!stream.done) {
         if (stream.firstContentSeen) {
           finalize(stream, "success");
+        } else if (attempt < MAX_FETCH_RETRIES) {
+          const resumeDelay = Math.min(1200, 300 * 2 ** attempt) + Math.random() * 120;
+          await wait(resumeDelay);
+          return startFetchFallback(stream, url, attempt + 1);
         } else {
           throw new Error("Stream closed");
         }
@@ -426,7 +433,7 @@ export function useSSE(options: UseSSEOptions = {}) {
       const fetchTokenAndStart = async () => {
         try {
           const token = (await getToken?.()) ?? null;
-          const url = buildExpensesStreamUrl({
+          const url = buildChatStreamUrl({
             question: prompt,
             since: params.since,
             until: params.until,
