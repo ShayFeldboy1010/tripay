@@ -2,6 +2,7 @@ import { parse } from "pgsql-ast-parser";
 import type { SqlPlan } from "./nl2sql";
 import { query } from "@/src/server/db/pool";
 import { ALLOWED_AGG, EXPENSES_COLUMNS, EXPENSES_TABLE, MAX_LIMIT } from "./schema";
+import { prepareNamedStatement, SqlPreparationError } from "./sqlGuard";
 
 const ALLOWED_FILTER_COLUMNS = new Set(["category", "merchant", "currency", "amount", "notes"]);
 const ALLOWED_FUNCTIONS = new Set(Array.from(ALLOWED_AGG).map((fn) => fn.toLowerCase()));
@@ -140,22 +141,6 @@ function ensureSafePlan(plan: SqlPlan): ValidationOutcome {
   return { limit: limitValue };
 }
 
-export function prepareNamedStatement(sql: string, params: Record<string, any>): { sql: string; values: any[] } {
-  const order: string[] = [];
-  const values: any[] = [];
-  const transformed = sql.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, key: string) => {
-    if (!(key in params)) {
-      throw new Error(`Missing parameter value for :${key}`);
-    }
-    if (!order.includes(key)) {
-      order.push(key);
-      values.push(params[key]);
-    }
-    return `$${order.indexOf(key) + 1}`;
-  });
-  return { sql: transformed, values };
-}
-
 function buildFilters(plan: SqlPlan, params: Record<string, any>): string[] {
   const clauses: string[] = [];
   plan.filters.forEach((filter, index) => {
@@ -273,6 +258,20 @@ function deriveOrderClause(plan: SqlPlan): string {
   return "ORDER BY date DESC";
 }
 
+export class SqlExecutionFatalError extends Error {
+  readonly original: Error;
+  readonly fallback?: Error;
+  readonly details?: Record<string, unknown>;
+
+  constructor(message: string, options: { original: Error; fallback?: Error; details?: Record<string, unknown> }) {
+    super(message);
+    this.name = "SqlExecutionFatalError";
+    this.original = options.original;
+    this.fallback = options.fallback;
+    this.details = options.details;
+  }
+}
+
 export async function executePlan(plan: SqlPlan, context: ExecutionContext): Promise<ExecutionResult> {
   const { limit: planLimit } = ensureSafePlan(plan);
   const params: Record<string, any> = {
@@ -295,7 +294,15 @@ export async function executePlan(plan: SqlPlan, context: ExecutionContext): Pro
     " AND "
   )}\n${orderClause}\nLIMIT ${limitValue}`;
 
-  const prepared = prepareNamedStatement(sql, params);
+  let prepared;
+  try {
+    prepared = prepareNamedStatement(sql, params);
+  } catch (err) {
+    if (err instanceof SqlPreparationError) {
+      throw err;
+    }
+    throw new SqlPreparationError((err as Error).message || "Failed to prepare query", sql, params);
+  }
   let result;
   try {
     result = await query<ExpenseRow>(prepared.sql, prepared.values);

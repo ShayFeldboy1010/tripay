@@ -12,6 +12,7 @@ import {
   writeEvent,
   type Scope,
   type ChatQuery,
+  ChatQueryError,
 } from "../_shared";
 
 const PING_INTERVAL_MS = 15_000;
@@ -67,8 +68,17 @@ async function handle(req: NextRequest, input: ChatQuery) {
           try {
             computation = await prepareChat(input.question, scope, window);
           } catch (err) {
-            console.error("[ai-chat] computation_failed", err);
-            await sendError(send, "SQL-500", "Failed to prepare query");
+            if (err instanceof ChatQueryError) {
+              console.warn("[ai-chat] computation_rejected", {
+                message: err.message,
+                code: err.code,
+                details: err.details,
+              });
+              await sendError(send, err.code, err.message);
+            } else {
+              console.error("[ai-chat] computation_failed", err);
+              await sendError(send, "SQL-500", "Failed to prepare query");
+            }
             clearInterval(pingTimer);
             controller.close();
             return;
