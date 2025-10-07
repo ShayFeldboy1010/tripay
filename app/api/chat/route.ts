@@ -8,6 +8,7 @@ import {
   resolveBodyScope,
   resolveWindow,
   type ChatQuery,
+  ChatQueryError,
 } from "./_shared";
 
 export async function POST(req: NextRequest) {
@@ -37,6 +38,14 @@ export async function POST(req: NextRequest) {
   try {
     computation = await prepareChat(body.question, scope, window);
   } catch (err) {
+    if (err instanceof ChatQueryError) {
+      console.warn("[ai-chat] prepare_chat_rejected", {
+        message: err.message,
+        code: err.code,
+        details: err.details,
+      });
+      return errorResponse(baseHeaders, err.status, err.code, err.message);
+    }
     console.error("[ai-chat] prepare_chat_failed", err);
     return errorResponse(baseHeaders, 500, "SQL-500", "Unable to prepare query");
   }

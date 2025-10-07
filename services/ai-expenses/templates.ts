@@ -1,6 +1,7 @@
 import { query } from "@/src/server/db/pool";
 import type { ExecutionContext, ExecutionResult } from "./sqlExecutor";
-import { computeAggregatesForRows, prepareNamedStatement } from "./sqlExecutor";
+import { computeAggregatesForRows } from "./sqlExecutor";
+import { prepareNamedStatement } from "./sqlGuard";
 import { EXPENSES_TABLE } from "./schema";
 
 async function runTemplate(

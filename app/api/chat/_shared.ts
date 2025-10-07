@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { resolveTimeRange, toISODate } from "@/services/ai-expenses/timeRange";
 import { generateSqlPlan, type SqlPlan } from "@/services/ai-expenses/nl2sql";
-import { executePlan, type ExecutionResult } from "@/services/ai-expenses/sqlExecutor";
+import { executePlan, type ExecutionResult, SqlExecutionFatalError } from "@/services/ai-expenses/sqlExecutor";
+import { SqlPreparationError, logSqlPreparationError, sanitizeParamArray } from "@/services/ai-expenses/sqlGuard";
 import {
   runHighestExpenseFallback,
   runTopMerchantsFallback,
@@ -62,6 +63,20 @@ export interface ChatResultPayload {
   aggregates: ExecutionResult["aggregates"];
   rows: ExecutionResult["rows"];
   currencyNote?: string | null;
+}
+
+export class ChatQueryError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly details?: Record<string, unknown>;
+
+  constructor(status: number, code: string, message: string, details?: Record<string, unknown>) {
+    super(message);
+    this.name = "ChatQueryError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -229,19 +244,60 @@ async function runExecution(
 ): Promise<{ execution: ExecutionResult; usedFallback: boolean; fallbackReason: "planner_error" | "db_error" | null }> {
   const baseContext = { scope: context.scope, since: context.since, until: context.until };
   const template = guessFallbackTemplate(question, plan);
+  const runFallback = async () => runTemplateByName(template, baseContext);
+
   if (!plan) {
-    const execution = await runTemplateByName(template, baseContext);
-    return { execution, usedFallback: true, fallbackReason: "planner_error" };
+    try {
+      const execution = await runFallback();
+      return { execution, usedFallback: true, fallbackReason: "planner_error" };
+    } catch (fallbackErr) {
+      console.error("[ai-chat] fallback_failed", {
+        message: (fallbackErr as Error).message,
+        template,
+      });
+      throw new SqlExecutionFatalError("Fallback execution failed", {
+        original: fallbackErr as Error,
+        details: { template },
+      });
+    }
   }
+
   try {
     const execution = await executePlan(plan, baseContext);
     return { execution, usedFallback: false, fallbackReason: null };
   } catch (err) {
-    const execution = await runTemplateByName(template, baseContext);
+    let execution: ExecutionResult;
+    try {
+      execution = await runFallback();
+    } catch (fallbackErr) {
+      console.error("[ai-chat] fallback_failed", {
+        message: (fallbackErr as Error).message,
+        template,
+      });
+      const details = err instanceof SqlPreparationError
+        ? { sql: err.query, params: err.sanitizedParams, template }
+        : {
+            message: (err as Error).message,
+            sql: (err as any)?.executedSql,
+            params: Array.isArray((err as any)?.executedParams)
+              ? sanitizeParamArray((err as any).executedParams)
+              : undefined,
+            template,
+          };
+      throw new SqlExecutionFatalError("Fallback execution failed", {
+        original: err as Error,
+        fallback: fallbackErr as Error,
+        details,
+      });
+    }
+
+    if (err instanceof SqlPreparationError) {
+      logSqlPreparationError("plan_validation_failed", err);
+      return { execution, usedFallback: true, fallbackReason: "planner_error" };
+    }
+
     const error = err as Error & { executedSql?: string; executedParams?: any[] };
-    const params = Array.isArray(error.executedParams)
-      ? error.executedParams.map((value, index) => (index === 0 ? "***" : value))
-      : [];
+    const params = Array.isArray(error.executedParams) ? sanitizeParamArray(error.executedParams) : [];
     console.error("[ai-chat] db_error", {
       message: error.message,
       sql: error.executedSql,
@@ -296,7 +352,21 @@ export async function prepareChat(question: string, scope: Scope, window: ChatTi
     console.warn("[ai-chat] planner_failed", err);
   }
 
-  const outcome = await runExecution(plan, { scope, since: window.since, until: window.until }, question);
+  let outcome: Awaited<ReturnType<typeof runExecution>>;
+  try {
+    outcome = await runExecution(plan, { scope, since: window.since, until: window.until }, question);
+  } catch (err) {
+    if (err instanceof SqlExecutionFatalError) {
+      console.error("[ai-chat] fatal_sql_execution", {
+        message: err.message,
+        details: err.details,
+        original: err.original?.message,
+        fallback: err.fallback?.message,
+      });
+      throw new ChatQueryError(422, "SQL-422", "We couldn't prepare a safe query for that request. Please rephrase and try again.", err.details);
+    }
+    throw err;
+  }
   return {
     plan,
     execution: outcome.execution,
