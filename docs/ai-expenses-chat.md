@@ -44,10 +44,10 @@ Run `scripts/05-create-ai-expenses-view.sql` against your Supabase database (or 
 * Backend env: `AI_CHAT_AUTH_MODE=anonymous`
 * Frontend env: `NEXT_PUBLIC_AI_CHAT_AUTH_MODE=anonymous`
 
-Requests to `/api/ai/expenses/chat/stream` **do not** require an `Authorization` header or token. Instead, include the active trip ID (or user ID as a fallback) in the query string:
+Requests to `/api/chat/stream` **do not** require an `Authorization` header or token. Instead, include the active trip ID (or user ID as a fallback) in the query string:
 
 ```bash
-curl -N "http://localhost:3000/api/ai/expenses/chat/stream?q=highest%20expense%20this%20month&tripId=<TRIP_UUID>&since=2024-08-01&until=2024-08-31&tz=Asia/Seoul"
+curl -N "http://localhost:3000/api/chat/stream?q=highest%20expense%20this%20month&tripId=<TRIP_UUID>&since=2024-08-01&until=2024-08-31&tz=Asia/Seoul"
 ```
 
 Every query is automatically constrained by the provided `tripId` and the validated date range.
@@ -57,22 +57,22 @@ Every query is automatically constrained by the provided `tripId` and the valida
 * Backend env: `AI_CHAT_AUTH_MODE=jwt`
 * Frontend env: `NEXT_PUBLIC_AI_CHAT_AUTH_MODE=jwt`
 
-Obtain a 5-minute token before opening the SSE stream. You can exchange a user ID for a token via `/api/ai/expenses/chat/token`, or request a guest-scoped token via `/api/ai/expenses/guest-token`:
+Obtain a 5-minute token before opening the SSE stream. You can exchange a user ID for a token via `/api/chat/token`, or request a guest-scoped token via `/api/chat/guest-token`:
 
 ```bash
 # User-scoped token
-TOKEN=$(curl -s -X POST http://localhost:3000/api/ai/expenses/chat/token \
+TOKEN=$(curl -s -X POST http://localhost:3000/api/chat/token \
   -H "Content-Type: application/json" \
   -d '{"userId":"<USER_UUID>"}' | jq -r .token)
 
 # Guest token, optionally tied to a trip
-GUEST=$(curl -s -X POST http://localhost:3000/api/ai/expenses/guest-token \
+GUEST=$(curl -s -X POST http://localhost:3000/api/chat/guest-token \
   -H "Content-Type: application/json" \
   -d '{"tripId":"<TRIP_UUID>"}' | jq -r .token)
 
-curl -N "http://localhost:3000/api/ai/expenses/chat/stream?q=highest%20expense%20this%20month&tz=Asia/Seoul&token=${TOKEN}" | jq .
+curl -N "http://localhost:3000/api/chat/stream?q=highest%20expense%20this%20month&tz=Asia/Seoul&token=${TOKEN}" | jq .
 # or use the guest token (still include tripId when available)
-curl -N "http://localhost:3000/api/ai/expenses/chat/stream?q=highest%20expense%20this%20month&tripId=<TRIP_UUID>&tz=Asia/Seoul&token=${GUEST}" | jq .
+curl -N "http://localhost:3000/api/chat/stream?q=highest%20expense%20this%20month&tripId=<TRIP_UUID>&tz=Asia/Seoul&token=${GUEST}" | jq .
 ```
 
 Tokens embed the relevant `trip_id`/`user_id` claims and must accompany the stream request as `?token=...`.
