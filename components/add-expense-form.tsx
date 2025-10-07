@@ -137,8 +137,10 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 md:items-center md:p-4">
-      <Card className="flex h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border-none py-0 md:rounded-[28px]">
+    <div className="fixed inset-0 z-50">
+      <div className="overlay-dim absolute inset-0" />
+      <div className="relative flex h-full w-full items-end justify-center p-0 md:items-center md:p-4">
+        <Card className="glass-strong relative z-10 flex h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border-none py-0 md:rounded-[28px]">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 px-6 pb-4 pt-6">
           <div className="flex items-center gap-3">
             {/* Mobile handle indicator */}
@@ -320,7 +322,8 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
             </Button>
           </div>
         </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

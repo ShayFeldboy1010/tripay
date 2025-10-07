@@ -1,14 +1,15 @@
 /* Darker overlay + stronger modal */
 .overlay-dim {
-  background: rgba(6, 8, 14, 0.72);
-  backdrop-filter: blur(2px);
+  background: rgba(7, 10, 18, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .glass-strong {
-  background: linear-gradient(180deg, rgba(18,22,34,0.82), rgba(18,22,34,0.78));
-  border: 1px solid rgba(255,255,255,0.18);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
+  background: linear-gradient(180deg, rgba(13,19,32,0.92), rgba(10,16,28,0.86));
+  border: 1px solid rgba(255,255,255,0.22);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
   border-radius: 28px;
-  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+  box-shadow: 0 20px 48px rgba(4,7,18,0.6);
 }

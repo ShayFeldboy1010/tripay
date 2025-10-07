@@ -134,7 +134,7 @@ export function Modal({
       role="presentation"
     >
       <div
-        className={cn("absolute inset-0 bg-black/70 backdrop-blur-sm", overlayClassName)}
+        className={cn("absolute inset-0 overlay-dim", overlayClassName)}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -146,7 +146,7 @@ export function Modal({
         aria-describedby={describedBy}
         tabIndex={-1}
         className={cn(
-          "pointer-events-auto relative flex w-full max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))] min-h-0 flex-col overflow-hidden rounded-[28px] border border-[color:var(--chat-border-soft)]/60 bg-[color:var(--chat-bg-card)]/95 text-white shadow-[0_20px_48px_rgba(4,7,18,0.55)]",
+          "pointer-events-auto glass-strong relative flex w-full max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))] min-h-0 flex-col overflow-hidden text-white",
           contentClassName
         )}
         style={{ maxHeight: maxModalHeight }}

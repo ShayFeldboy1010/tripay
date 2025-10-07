@@ -443,9 +443,9 @@ export default function TripPage() {
       )}
       <Dialog.Root open={showEditTrip} onOpenChange={setShowEditTrip}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+          <Dialog.Overlay className="overlay-dim fixed inset-0" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
-            <Card className="rounded-t-[28px] border-none shadow-lg md:rounded-[28px]">
+            <Card className="glass-strong relative z-10 rounded-t-[28px] border-none shadow-lg md:rounded-[28px]">
               <CardHeader className="flex flex-row items-center justify-between px-4 pb-4 pt-4 md:px-6 md:pt-6">
                 <CardTitle>Edit Trip</CardTitle>
                 <Dialog.Close asChild>
