@@ -431,7 +431,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
               <CardContent>
                 <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                    <PieChart margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
                       <Pie
                         data={categoryChartData}
                         cx="50%"
@@ -442,7 +442,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                             ? ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`
                             : undefined
                         }
-                        outerRadius={80}
+                        outerRadius="75%"
                         dataKey="amount"
                       >
                         {categoryChartData.map((entry) => (

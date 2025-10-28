@@ -1,10 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase/client"
 import {
@@ -27,32 +33,37 @@ export default function HomePage() {
   const [tripId, setTripId] = useState("")
   const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([])
   const router = useRouter()
+  const tripNameInputRef = useRef<HTMLInputElement | null>(null)
+  const tripIdInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setRecentTrips(getRecentTrips())
   }, [])
 
-  const resumeTrip = useCallback(async (id: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("trips")
-        .select("id, name")
-        .eq("id", id)
-        .single()
+  const resumeTrip = useCallback(
+    async (id: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("trips")
+          .select("id, name")
+          .eq("id", id)
+          .single()
 
-      if (error || !data) {
-        removeRecentTrip(id)
-        setRecentTrips(getRecentTrips())
-        toast.error("Trip not found or access denied")
-        return
+        if (error || !data) {
+          removeRecentTrip(id)
+          setRecentTrips(getRecentTrips())
+          toast.error("Trip not found or access denied")
+          return
+        }
+
+        router.push(`/trip/${id}`)
+      } catch (e) {
+        console.error("Error resuming trip:", e)
+        toast.error("Failed to open trip")
       }
-
-      router.push(`/trip/${id}`)
-    } catch (e) {
-      console.error("Error resuming trip:", e)
-      toast.error("Failed to open trip")
-    }
-  }, [router])
+    },
+    [router],
+  )
 
   useEffect(() => {
     if (!AUTO_RESUME || recentTrips.length === 0) return
@@ -127,188 +138,251 @@ export default function HomePage() {
     }
   }
 
+  const focusCreateInput = () => {
+    const node = tripNameInputRef.current
+    if (!node) return
+    node.focus({ preventScroll: true })
+    node.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
+
+  const focusJoinInput = () => {
+    const node = tripIdInputRef.current
+    if (!node) return
+    node.focus({ preventScroll: true })
+    node.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
+
   const topTrip = recentTrips[0]
   const additionalTrips = topTrip ? recentTrips.slice(1, 5) : []
 
   return (
     <div className="min-100dvh min-vh app-bg antialiased">
       <div className="relative min-100dvh min-vh overflow-hidden text-white">
-        <div
-          className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
-        >
-          <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
-        <header className="max-w-2xl space-y-6">
-          <span className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1 text-sm font-medium uppercase tracking-[0.35em] text-white/80">
-            TripPay
-          </span>
-          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
-            Plan adventures, split costs, stay in sync
-          </h1>
-          <p className="text-lg text-white/70 md:text-xl">
-            Kick off a brand new journey or jump back into a trip a friend shared — all from one welcoming hub.
-          </p>
-        </header>
-
-        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-          <section className="space-y-6" aria-label="Recent trips">
-            {topTrip ? (
-              <div className="glass rounded-[28px] p-6">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
-                    Recent trips
-                  </p>
-                  <h2 className="text-2xl font-semibold text-white">Pick up where you left off</h2>
-                  <p className="text-sm text-white/70">
-                    Reopen a recent adventure or explore another journey in seconds.
-                  </p>
-                </div>
-                <div className="mt-6 space-y-5">
-                  <Button
-                    onClick={() => resumeTrip(topTrip.id)}
-                    className="group flex h-auto items-center justify-between rounded-[22px] glass-sm px-5 py-4 text-left text-white/90 transition duration-200 hover:-translate-y-0.5 hover:text-white"
-                    aria-label={`Resume trip ${topTrip.name ?? topTrip.id}`}
-                  >
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-white/60">Resume</p>
-                      <p className="mt-1 text-lg font-semibold leading-tight text-white">
-                        {topTrip.name || "Last trip"}
-                      </p>
-                      <p className="text-xs text-white/60">{topTrip.id}</p>
-                    </div>
-                    <ArrowRight className="size-5 shrink-0 text-white/60 transition-transform duration-200 group-hover:translate-x-1" />
-                  </Button>
-
-                  {additionalTrips.length > 0 && (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {additionalTrips.map((t) => (
-                        <Button
-                          key={t.id}
-                          variant="ghost"
-                          onClick={() => resumeTrip(t.id)}
-                          className="h-auto items-start justify-between rounded-[22px] glass-sm px-4 py-3 text-left text-white transition duration-200 hover:text-white"
-                          aria-label={`Open trip ${t.name ?? t.id}`}
-                        >
-                          <div className="space-y-1 text-white/80">
-                            <span className="block text-sm font-semibold leading-tight text-white">
-                              {t.name || "Unnamed trip"}
-                            </span>
-                            <span className="block text-xs text-white/60">{t.id}</span>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="glass rounded-[28px] border border-dashed border-white/25 p-6 text-white/70">
-                <p className="text-lg font-medium text-white">No trips yet</p>
-                <p className="mt-2 text-sm text-white/60">
-                  Create your first trip to see it appear here for quick access later.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section className="space-y-6" aria-label="Trip actions">
-            <Card className="relative overflow-hidden glass text-white">
-              <div aria-hidden className="absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-white/20 via-white/5 to-transparent" />
-              <CardHeader className="relative z-10 pb-0">
-                <CardTitle className="flex items-center gap-3 text-2xl">
-                  <span className="inline-flex size-11 items-center justify-center rounded-2xl glass-sm">
-                    <Plus className="size-5" />
-                  </span>
-                  Create a trip
-                </CardTitle>
-                <CardDescription className="relative z-10 text-base text-white/70">
-                  Start a new shared wallet and instantly get a Trip ID to send to your friends.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="relative z-10 space-y-5 pb-8 pt-6">
-                <div className="space-y-2">
-                  <label htmlFor="tripName" className="block text-sm font-medium text-white/70">
-                    Trip name
-                  </label>
-                  <Input
-                    id="tripName"
-                    placeholder="Weekend getaway"
-                    value={tripName}
-                    onChange={(e) => setTripName(e.target.value)}
-                    className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/50 focus-visible:ring-white/40"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="tripDescription" className="block text-sm font-medium text-white/70">
-                    Description (optional)
-                  </label>
-                  <Textarea
-                    id="tripDescription"
-                    placeholder="Fun weekend with friends"
-                    value={tripDescription}
-                    onChange={(e) => setTripDescription(e.target.value)}
-                    rows={2}
-                    className="rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/50 focus-visible:ring-white/40"
-                  />
-                </div>
-                <Button
-                  onClick={createTrip}
-                  disabled={!tripName.trim() || isCreating}
-                  variant="glass"
-                  className="h-12 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
-                >
-                  {isCreating ? "Creating..." : "Create trip"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden glass text-white">
-              <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),transparent_70%)]" />
-              <CardHeader className="relative z-10 pb-0">
-                <CardTitle className="flex items-center gap-3 text-2xl text-white">
-                  <span className="inline-flex size-11 items-center justify-center rounded-2xl glass-sm">
-                    <Users className="size-5" />
-                  </span>
-                  Join a trip
-                </CardTitle>
-                <CardDescription className="text-base text-white/70">
-                  Enter a Trip ID shared by friends to access the shared expenses instantly.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="relative z-10 space-y-5 pb-8 pt-6">
-                <div className="space-y-2">
-                  <label htmlFor="tripId" className="block text-sm font-medium text-white/70">
-                    Trip ID
-                  </label>
-                  <Input
-                    id="tripId"
-                    placeholder="550e8400-e29b-41d4-a716-446655440000"
-                    value={tripId}
-                    onChange={(e) => setTripId(e.target.value)}
-                    className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/50 focus-visible:ring-white/40"
-                    autoComplete="off"
-                  />
-                </div>
-                <Button
-                  onClick={joinTrip}
-                  disabled={!tripId.trim() || isJoining}
-                  variant="glass"
-                  className="h-12 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
-                >
-                  {isJoining ? "Joining..." : "Join trip"}
-                </Button>
-                <div className="glass-sm rounded-2xl p-4 text-xs text-white/70">
-                  <p className="font-semibold uppercase tracking-[0.35em] text-white/60">
-                    Try it out
-                  </p>
-                  <p className="mt-2 break-all font-mono text-[11px] text-white/80">
-                    550e8400-e29b-41d4-a716-446655440000
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-10 top-[-20%] h-[480px] w-[480px] rounded-full bg-indigo-500/20 blur-3xl" />
+          <div className="absolute -right-16 bottom-[-10%] h-[380px] w-[380px] rounded-full bg-fuchsia-500/10 blur-3xl" />
         </div>
+        <div className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]">
+          <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 py-12 md:px-10 md:py-20">
+            <header className="max-w-2xl space-y-5">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1 text-sm font-medium text-white/80">
+                TripPay
+              </span>
+              <h1
+                dir="auto"
+                className="text-balance text-4xl font-semibold tracking-tight text-white md:text-5xl"
+              >
+                Plan adventures, split costs, stay in sync
+              </h1>
+              <p dir="auto" className="text-pretty text-lg text-white/70 md:text-xl">
+                Kick off a new journey or jump back into one a friend shared — all from one welcoming hub.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  onClick={focusCreateInput}
+                  variant="glass"
+                  className="h-11 rounded-2xl px-6 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
+                >
+                  Start a trip
+                </Button>
+                <Button
+                  onClick={focusJoinInput}
+                  variant="outline"
+                  className="h-11 rounded-2xl border-white/30 px-6 text-base font-semibold text-white/90 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/60 hover:text-white"
+                >
+                  Enter a trip code
+                </Button>
+              </div>
+            </header>
+
+            <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+              <section className="space-y-6" aria-label="Recent trips">
+                <Card className="glass-sm border border-white/10 bg-white/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle dir="auto" className="text-2xl font-semibold text-white">
+                      Pick up where you left off
+                    </CardTitle>
+                    <CardDescription dir="auto" className="text-base text-white/70">
+                      Reopen a recent adventure or explore another journey in seconds.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    {topTrip ? (
+                      <Button
+                        onClick={() => resumeTrip(topTrip.id)}
+                        className="group flex h-auto items-center justify-between rounded-3xl border border-white/15 bg-white/5 px-5 py-4 text-left text-white/90 transition duration-200 hover:-translate-y-0.5 hover:text-white"
+                        aria-label={`Resume trip ${topTrip.name ?? topTrip.id}`}
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <p className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">Resume</p>
+                          <p dir="auto" className="truncate text-lg font-semibold leading-tight text-white">
+                            {topTrip.name || "Last trip"}
+                          </p>
+                          <p className="text-xs text-white/50" dir="ltr">
+                            {topTrip.id}
+                          </p>
+                        </div>
+                        <ArrowRight className="size-5 shrink-0 text-white/60 transition-transform duration-200 group-hover:translate-x-1" />
+                      </Button>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-6 text-white/70">
+                        <p dir="auto" className="text-lg font-medium text-white">
+                          No trips yet
+                        </p>
+                        <p dir="auto" className="mt-2 text-sm text-white/60">
+                          Create your first trip to see it appear here for quick access later.
+                        </p>
+                      </div>
+                    )}
+
+                    {additionalTrips.length > 0 && (
+                      <ul className="space-y-3">
+                        {additionalTrips.map((t) => (
+                          <li key={t.id}>
+                            <Button
+                              variant="ghost"
+                              onClick={() => resumeTrip(t.id)}
+                              className="group flex h-auto w-full items-center justify-between rounded-3xl px-4 py-3 text-left text-white/80 transition duration-200 hover:-translate-y-0.5 hover:text-white"
+                              aria-label={`Open trip ${t.name ?? t.id}`}
+                            >
+                              <div className="min-w-0 space-y-1 text-left">
+                                <span dir="auto" className="block truncate text-sm font-medium text-white">
+                                  {t.name || "Unnamed trip"}
+                                </span>
+                                <span className="block text-xs text-white/50" dir="ltr">
+                                  {t.id}
+                                </span>
+                              </div>
+                              <ArrowRight className="size-4 shrink-0 text-white/40 transition-transform duration-200 group-hover:translate-x-1" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              </section>
+
+              <section className="space-y-6" aria-label="Trip actions">
+                <Card className="glass-sm border border-white/10 bg-white/5">
+                  <CardHeader className="pb-0">
+                    <CardTitle dir="auto" className="flex items-center gap-3 text-2xl">
+                      <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+                        <Plus className="size-5" />
+                      </span>
+                      Create a trip
+                    </CardTitle>
+                    <CardDescription dir="auto" className="text-base text-white/70">
+                      Start a shared wallet and instantly get a Trip ID to send to your friends.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      className="space-y-4 pb-8 pt-6"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        createTrip()
+                      }}
+                    >
+                      <div className="space-y-2">
+                        <label htmlFor="tripName" className="block text-sm font-medium text-white/70" dir="auto">
+                          Trip name
+                        </label>
+                        <Input
+                          id="tripName"
+                          ref={tripNameInputRef}
+                          placeholder="Weekend getaway"
+                          value={tripName}
+                          onChange={(e) => setTripName(e.target.value)}
+                          className="h-11 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/60 focus-visible:ring-white/40"
+                          autoComplete="off"
+                          dir="auto"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="tripDescription" className="block text-sm font-medium text-white/70" dir="auto">
+                          Description (optional)
+                        </label>
+                        <Textarea
+                          id="tripDescription"
+                          placeholder="Fun weekend with friends"
+                          value={tripDescription}
+                          onChange={(e) => setTripDescription(e.target.value)}
+                          rows={2}
+                          className="rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/60 focus-visible:ring-white/40"
+                          dir="auto"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={!tripName.trim() || isCreating}
+                        variant="glass"
+                        className="h-11 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white disabled:opacity-70"
+                      >
+                        {isCreating ? "Creating..." : "Create trip"}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-sm border border-white/10 bg-white/5">
+                  <CardHeader className="pb-0">
+                    <CardTitle dir="auto" className="flex items-center gap-3 text-2xl">
+                      <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+                        <Users className="size-5" />
+                      </span>
+                      Join a trip
+                    </CardTitle>
+                    <CardDescription dir="auto" className="text-base text-white/70">
+                      Enter a Trip ID shared by friends to access expenses instantly.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      className="space-y-4 pb-8 pt-6"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        joinTrip()
+                      }}
+                    >
+                      <div className="space-y-2">
+                        <label htmlFor="tripId" className="block text-sm font-medium text-white/70" dir="auto">
+                          Trip ID
+                        </label>
+                        <Input
+                          id="tripId"
+                          ref={tripIdInputRef}
+                          placeholder="550e8400-e29b-41d4-a716-446655440000"
+                          value={tripId}
+                          onChange={(e) => setTripId(e.target.value)}
+                          className="h-11 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/60 focus-visible:ring-white/40"
+                          autoComplete="off"
+                          dir="ltr"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={!tripId.trim() || isJoining}
+                        variant="glass"
+                        className="h-11 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white disabled:opacity-70"
+                      >
+                        {isJoining ? "Joining..." : "Join trip"}
+                      </Button>
+                      <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-xs text-white/70" dir="ltr">
+                        <p className="font-semibold uppercase tracking-[0.25em] text-white/60">Example code</p>
+                        <p className="mt-2 break-all font-mono text-sm text-white/80">
+                          550e8400-e29b-41d4-a716-446655440000
+                        </p>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </section>
+            </div>
+
+            <footer className="mt-auto pt-4 text-sm text-white/40" dir="auto">
+              Built for travelers who split, share, and stay organized together.
+            </footer>
           </main>
         </div>
       </div>
