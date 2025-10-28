@@ -1,8 +1,7 @@
 "use client"
 
-import { useId, useRef, useState, type KeyboardEvent } from "react"
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import type { Expense } from "@/lib/supabase/client"
 import { calculateBalances } from "@/lib/balance"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
@@ -129,6 +128,36 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   const uniquePayers = new Set(expenses.map((e) => e.paid_by)).size
   const uniqueCategories = new Set(expenses.map((e) => e.category).filter(Boolean)).size
 
+  const overviewStats = useMemo(
+    () => [
+      {
+        title: "Total Spent",
+        helper: `${expenses.length} expenses`,
+        value: `₪${totalAmount.toFixed(2)}`,
+        icon: Banknote,
+      },
+      {
+        title: "Average",
+        helper: "per expense",
+        value: `₪${averageExpense.toFixed(2)}`,
+        icon: TrendingUp,
+      },
+      {
+        title: "Contributors",
+        helper: "people",
+        value: uniquePayers.toString(),
+        icon: Users,
+      },
+      {
+        title: "Categories",
+        helper: "different types",
+        value: uniqueCategories.toString(),
+        icon: Calendar,
+      },
+    ],
+    [averageExpense, expenses.length, totalAmount, uniqueCategories, uniquePayers],
+  )
+
   // Group expenses by payer
   const expensesByPayer = expenses.reduce(
     (acc, expense) => {
@@ -173,6 +202,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
     count: data.count,
   }))
 
+  const topCategories = Object.entries(expensesByCategory)
+    .sort(([, a], [, b]) => b.total - a.total)
+    .slice(0, 5)
+
   // Deterministic colors handled by colorForKey
 
   // Group expenses by date for timeline
@@ -208,6 +241,8 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
     )
   }
 
+  const shouldShowPieLabels = categoryChartData.length <= 5
+
   return (
     <div className={className} dir="ltr">
       <div className="space-y-4">
@@ -221,83 +256,64 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
             tabIndex={0}
             className="space-y-4"
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                  <Banknote className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold numeric-display">₪{totalAmount.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">{expenses.length} expenses</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Average</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold numeric-display">₪{averageExpense.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">per expense</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Contributors</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold numeric-display">{uniquePayers}</div>
-                  <p className="text-xs text-muted-foreground">people</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Categories</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold numeric-display">{uniqueCategories}</div>
-                  <p className="text-xs text-muted-foreground">different types</p>
-                </CardContent>
-              </Card>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {overviewStats.map(({ title, helper, value, icon: Icon }) => (
+                <Card key={title} className="border border-white/10 bg-white/5">
+                  <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
+                    <div>
+                      <CardTitle className="text-sm font-semibold tracking-tight text-white">{title}</CardTitle>
+                      <CardDescription className="text-xs text-white/60">{helper}</CardDescription>
+                    </div>
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10">
+                      <Icon className="h-4 w-4 text-white/80" />
+                    </span>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="numeric-display text-3xl font-bold text-white" dir="ltr">{value}</div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            <Card>
+            <Card className="border border-white/10">
               <CardHeader>
                 <CardTitle>Top Categories</CardTitle>
                 <CardDescription>Highest spending by category</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(expensesByCategory)
-                    .sort(([, a], [, b]) => b.total - a.total)
-                    .slice(0, 5)
-                    .map(([category, data]) => (
-                      <div key={category} className="flex w-full items-center gap-3">
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <Badge
-                            variant="outline"
-                            dir="auto"
-                            className="shrink-0 text-white"
-                            style={{ backgroundColor: colorForKey(category), borderColor: colorForKey(category) }}
-                          >
-                            {category}
-                          </Badge>
+              <CardContent className="space-y-4">
+                {topCategories.map(([category, data]) => {
+                  const percentage = totalAmount > 0 ? (data.total / totalAmount) * 100 : 0
+                  return (
+                    <div key={category} className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span
+                            className="mt-1 h-3 w-3 flex-shrink-0 rounded-full"
+                            style={{ backgroundColor: colorForKey(category) }}
+                          />
                           <div className="min-w-0 text-left">
-                            <p dir="auto" className="truncate-1 text-balance text-sm font-semibold text-white">
+                            <p dir="auto" className="truncate-1 text-sm font-semibold text-white">
                               {category}
                             </p>
-                            <p className="truncate-2 text-xs text-white/70 leading-tight">{data.count} expenses</p>
+                            <p className="text-xs text-white/60">{data.count} expenses</p>
                           </div>
                         </div>
-                        <div className="ml-auto flex-none text-right">
-                          <span className="grad-text numeric-display text-sm font-semibold">₪{data.total.toFixed(2)}</span>
+                        <div className="text-right" dir="ltr">
+                          <span className="grad-text numeric-display text-sm font-semibold">
+                            ₪{data.total.toFixed(2)}
+                          </span>
+                          <p className="text-xs text-white/60">{percentage.toFixed(1)}%</p>
                         </div>
                       </div>
-                    ))}
-                </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: colorForKey(category), width: `${Math.min(percentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
               </CardContent>
             </Card>
           </div>
@@ -373,7 +389,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                     .sort(([, a], [, b]) => b.total - a.total)
                     .map(([payer, data]) => (
                       <div key={payer} className="glass-sm rounded-2xl p-4" dir="ltr">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                           <div className="flex min-w-0 flex-1 items-center gap-3">
                             <div
                               className="h-4 w-4 flex-shrink-0 rounded-full"
@@ -386,11 +402,9 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                               <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                             </div>
                           </div>
-                          <div className="ml-auto flex-none text-right">
+                          <div className="text-right" dir="ltr">
                             <p className="grad-text numeric-display text-lg font-bold">₪{data.total.toFixed(2)}</p>
-                            <p className="truncate-2 text-sm text-white/70 leading-tight">
-                              Avg ₪{(data.total / data.count).toFixed(2)} per expense
-                            </p>
+                            <p className="text-sm text-white/70">Avg ₪{(data.total / data.count).toFixed(2)} per expense</p>
                           </div>
                         </div>
                       </div>
@@ -422,8 +436,12 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         data={categoryChartData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={shouldShowPieLabels}
+                        label={
+                          shouldShowPieLabels
+                            ? ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`
+                            : undefined
+                        }
                         outerRadius={80}
                         dataKey="amount"
                       >
@@ -446,28 +464,37 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                 <div className="space-y-3">
                   {Object.entries(expensesByCategory)
                     .sort(([, a], [, b]) => b.total - a.total)
-                    .map(([category, data]) => (
-                      <div key={category} className="glass-sm flex w-full items-center gap-3 rounded-2xl p-3" dir="ltr">
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <div
-                            className="h-4 w-4 flex-shrink-0 rounded-full"
-                            style={{ backgroundColor: colorForKey(category) }}
-                          />
-                          <div className="min-w-0 text-left">
-                            <p dir="auto" className="truncate-1 text-balance font-medium text-white">
-                              {category}
-                            </p>
-                            <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
+                    .map(([category, data]) => {
+                      const share = totalAmount > 0 ? (data.total / totalAmount) * 100 : 0
+                      return (
+                        <div key={category} className="glass-sm flex w-full flex-col gap-2 rounded-2xl p-3" dir="ltr">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start gap-3">
+                              <div
+                                className="mt-1 h-3 w-3 flex-shrink-0 rounded-full"
+                                style={{ backgroundColor: colorForKey(category) }}
+                              />
+                              <div className="min-w-0 text-left">
+                                <p dir="auto" className="truncate-1 text-balance font-medium text-white">
+                                  {category}
+                                </p>
+                                <p className="truncate-2 text-xs text-white/70 leading-tight">{data.count} expenses</p>
+                              </div>
+                            </div>
+                            <div className="text-right" dir="ltr">
+                              <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
+                              <p className="text-xs text-white/60">{share.toFixed(1)}%</p>
+                            </div>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: colorForKey(category), width: `${Math.min(share, 100)}%` }}
+                            />
                           </div>
                         </div>
-                        <div className="ml-auto flex-none text-right">
-                          <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
-                          <p className="truncate-2 text-sm text-white/70 leading-tight numeric-display">
-                            {((data.total / totalAmount) * 100).toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                 </div>
               </CardContent>
             </Card>
@@ -561,7 +588,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           </p>
                           <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                         </div>
-                        <div className="ml-auto flex-none text-right">
+                        <div className="ml-auto flex-none text-right" dir="ltr">
                           <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
                         </div>
                       </div>
