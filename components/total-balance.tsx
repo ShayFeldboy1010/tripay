@@ -20,39 +20,58 @@ export function TotalBalance({ amount, totalExpenses, participantCount, averageE
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="relative glass p-8 md:p-10 rounded-[28px] overflow-hidden"
+      className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/5 p-8 backdrop-blur md:p-10"
     >
-      <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full blur-xl" />
-      <div className="absolute bottom-6 left-6 w-16 h-16 bg-white/5 rounded-full blur-lg" />
+      <div className="pointer-events-none absolute -right-10 top-0 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-12 left-4 h-28 w-28 rounded-full bg-white/5 blur-2xl" />
 
-      <div className="relative space-y-6">
-        <div className="text-center space-y-2">
+      <div className="relative space-y-8">
+        <div className="space-y-2 text-center">
           <p className="text-sm uppercase tracking-[0.4em] text-white/60">יתרת הטיול</p>
           <p
             dir="ltr"
-            className="grad-text numeric-display text-[clamp(2.75rem,9vw,4.75rem)] font-extrabold tracking-tight leading-none text-center"
+            className="grad-text numeric-display text-[clamp(2.5rem,8vw,4.5rem)] font-extrabold leading-none tracking-tight"
           >
             {totalFormatted}
           </p>
           <p className="text-base text-white/70">סכום מצטבר של כל ההוצאות ששויכו לטיול הזה</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mt-8">
-          <div className="text-center glass-sm p-4" dir="ltr">
-            <Receipt className="mx-auto h-5 w-5 text-white/70" />
-            <p className="mt-2 text-xs text-white/60">סה״כ הוצאות</p>
-            <p className="mt-1 text-lg font-semibold text-white numeric-display">{totalExpenses}</p>
-          </div>
-          <div className="text-center glass-sm p-4" dir="ltr">
-            <Users className="mx-auto h-5 w-5 text-white/70" />
-            <p className="mt-2 text-xs text-white/60">משתתפים</p>
-            <p className="mt-1 text-lg font-semibold text-white numeric-display">{participantCount}</p>
-          </div>
-          <div className="text-center glass-sm p-4" dir="ltr">
-            <TrendingUp className="mx-auto h-5 w-5 text-white/70" />
-            <p className="mt-2 text-xs text-white/60">ממוצע הוצאה</p>
-            <p className="mt-1 text-lg font-semibold text-white numeric-display">{averageFormatted}</p>
-          </div>
+        <div className="grid gap-3 sm:grid-cols-3" dir="ltr">
+          {[
+            {
+              icon: Receipt,
+              label: "סה״כ הוצאות",
+              value: totalExpenses.toLocaleString(),
+            },
+            {
+              icon: Users,
+              label: "משתתפים",
+              value: participantCount.toLocaleString(),
+            },
+            {
+              icon: TrendingUp,
+              label: "ממוצע הוצאה",
+              value: averageFormatted,
+            },
+          ].map(({ icon: Icon, label, value }) => (
+            <div
+              key={label}
+              className="glass-sm flex items-center justify-between rounded-2xl px-4 py-3 text-left sm:flex-col sm:items-center sm:gap-3 sm:text-center"
+            >
+              <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10">
+                  <Icon className="h-4 w-4 text-white/80" />
+                </span>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-[0.3em] text-white/50">{label}</p>
+                  <p className="numeric-display text-lg font-semibold text-white" dir="ltr">
+                    {value}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </motion.div>
