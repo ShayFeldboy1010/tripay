@@ -8,7 +8,7 @@ import {
   prepareChat,
   resolveStreamingScope,
   resolveWindow,
-  streamGroqAnswer,
+  streamOpenAIAnswer,
   writeEvent,
   type Scope,
   type ChatQuery,
@@ -85,7 +85,7 @@ async function handle(req: NextRequest, input: ChatQuery) {
           }
 
           try {
-            const { answer, model } = await streamGroqAnswer({
+            const { answer, model } = await streamOpenAIAnswer({
               question: input.question,
               plan: computation.plan,
               execution: computation.execution,

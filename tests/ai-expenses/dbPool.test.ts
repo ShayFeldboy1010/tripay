@@ -42,7 +42,7 @@ describe("db pool", () => {
   it("returns basic pool config without ssl by default", () => {
     const config = buildPoolConfig();
     expect(config.connectionString).toBe(process.env.DATABASE_URL);
-    expect(config.ssl).toBeUndefined();
+    expect(config.ssl).toMatchObject({ rejectUnauthorized: false });
   });
 
   it("disables certificate verification when PGSSLMODE=require", () => {

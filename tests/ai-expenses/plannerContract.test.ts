@@ -3,15 +3,15 @@ import { generateSqlPlan } from "@/services/ai-expenses/nl2sql";
 
 const createMock = vi.fn();
 
-vi.mock("@/services/ai-expenses/groq", () => ({
-  getGroqClient: () => ({
+vi.mock("@/services/ai-expenses/openai", () => ({
+  getOpenAIClient: () => ({
     chat: {
       completions: {
         create: createMock,
       },
     },
   }),
-  getGroqModels: () => ({ primary: "primary-model", fallback: "fallback-model" }),
+  getOpenAIModels: () => ({ primary: "primary-model", fallback: "fallback-model" }),
 }));
 
 describe("nl2sql planner contract", () => {

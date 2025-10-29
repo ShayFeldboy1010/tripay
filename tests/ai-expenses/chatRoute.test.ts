@@ -32,9 +32,9 @@ vi.mock("@/services/ai-expenses/templates", () => ({
   runTopMerchantsFallback: runTopMerchantsFallbackMock,
 }));
 
-vi.mock("@/services/ai-expenses/groq", () => ({
-  getGroqClient: () => fakeClient,
-  getGroqModels: () => ({ primary: "primary-model", fallback: "fallback-model" }),
+vi.mock("@/services/ai-expenses/openai", () => ({
+  getOpenAIClient: () => fakeClient,
+  getOpenAIModels: () => ({ primary: "primary-model", fallback: "fallback-model" }),
 }));
 
 const TEST_SCOPE_ID = "11111111-1111-1111-1111-111111111111";

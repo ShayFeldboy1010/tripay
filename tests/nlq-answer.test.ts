@@ -28,11 +28,11 @@ const expenses: Expense[] = [
 
 describe("answerQuestion", () => {
   const originalProvider = process.env.LLM_PROVIDER;
-  const originalGroqKey = process.env.GROQ_API_KEY;
+  const originalOpenAIKey = process.env.OPENAI_API_KEY;
 
   beforeAll(() => {
     process.env.LLM_PROVIDER = "mock";
-    delete process.env.GROQ_API_KEY;
+    delete process.env.OPENAI_API_KEY;
   });
 
   afterAll(() => {
@@ -42,10 +42,10 @@ describe("answerQuestion", () => {
       process.env.LLM_PROVIDER = originalProvider;
     }
 
-    if (originalGroqKey === undefined) {
-      delete process.env.GROQ_API_KEY;
+    if (originalOpenAIKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
     } else {
-      process.env.GROQ_API_KEY = originalGroqKey;
+      process.env.OPENAI_API_KEY = originalOpenAIKey;
     }
   });
 

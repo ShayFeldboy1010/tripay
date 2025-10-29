@@ -6,19 +6,26 @@ import {
   runTotalsFallback,
 } from "@/services/ai-expenses/templates";
 
-const queryMock = vi.hoisted(() => vi.fn());
+const fetchExpenseRowsMock = vi.hoisted(() => vi.fn());
 
-vi.mock("@/src/server/db/pool", () => ({
-  query: queryMock,
-}));
+vi.mock("@/services/ai-expenses/sqlExecutor", async () => {
+  const actual = await vi.importActual<typeof import("@/services/ai-expenses/sqlExecutor")>(
+    "@/services/ai-expenses/sqlExecutor",
+  );
+  return {
+    ...actual,
+    fetchExpenseRows: fetchExpenseRowsMock,
+  };
+});
 
 describe("templates", () => {
   beforeEach(() => {
-    queryMock.mockReset();
+    fetchExpenseRowsMock.mockReset();
   });
 
   it("returns the highest expense row", async () => {
-    queryMock.mockResolvedValue({
+    fetchExpenseRowsMock.mockResolvedValue({
+      sql: JSON.stringify({ limit: 1 }),
       rows: [
         { date: "2025-02-02", amount: 99, currency: "USD", category: "Flights", merchant: "Airline", notes: null },
       ],
@@ -29,18 +36,22 @@ describe("templates", () => {
       since: "2025-02-01",
       until: "2025-02-28",
     });
-    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("ORDER BY amount DESC"), [
-      "u",
-      "2025-02-01",
-      "2025-02-28",
-    ]);
+    expect(fetchExpenseRowsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: { column: "user_id", id: "u" },
+        since: "2025-02-01",
+        until: "2025-02-28",
+      }),
+      expect.objectContaining({ order: { column: "amount", ascending: false }, limit: 1 }),
+    );
     expect(result.rows[0].amount).toBe(99);
     expect(result.aggregates.max?.amount).toBe(99);
     expect(result.rows[0].date).toBe("2025-02-02");
   });
 
   it("builds totals fallback", async () => {
-    queryMock.mockResolvedValue({
+    fetchExpenseRowsMock.mockResolvedValue({
+      sql: JSON.stringify({ limit: 200 }),
       rows: [],
     });
     await runTotalsFallback({
@@ -48,18 +59,20 @@ describe("templates", () => {
       since: "2025-01-01",
       until: "2025-01-31",
     });
-    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("ORDER BY date DESC"), [
-      "u",
-      "2025-01-01",
-      "2025-01-31",
-    ]);
+    expect(fetchExpenseRowsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: { column: "user_id", id: "u" },
+      }),
+      expect.objectContaining({ order: { column: "date", ascending: false }, limit: 200 }),
+    );
   });
 
   it("creates synthetic rows for category totals", async () => {
-    queryMock.mockResolvedValue({
+    fetchExpenseRowsMock.mockResolvedValue({
+      sql: JSON.stringify({}),
       rows: [
-        { category: "Food", currency: "USD", sum: 120 },
-        { category: "Travel", currency: "EUR", sum: 90 },
+        { date: "2025-02-01", amount: 120, currency: "USD", category: "Food", merchant: null, notes: null },
+        { date: "2025-02-01", amount: 90, currency: "EUR", category: "Travel", merchant: null, notes: null },
       ],
     });
 
@@ -76,9 +89,10 @@ describe("templates", () => {
   });
 
   it("creates synthetic rows for merchant totals", async () => {
-    queryMock.mockResolvedValue({
+    fetchExpenseRowsMock.mockResolvedValue({
+      sql: JSON.stringify({}),
       rows: [
-        { merchant: "Cafe", currency: "USD", sum: 33 },
+        { date: "2025-02-01", amount: 33, currency: "USD", category: null, merchant: "Cafe", notes: null },
       ],
     });
 

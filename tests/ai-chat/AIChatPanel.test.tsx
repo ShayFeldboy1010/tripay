@@ -148,7 +148,9 @@ describe("AIChatPanel submit flow", () => {
       errorCallback(authError);
     });
 
-    await screen.findByText(/AUTH_REQUIRED: Authentication required\. Please sign in to continue\./);
+    await screen.findByText(/AUTH_REQUIRED: Authentication required\. Please sign in to continue\./, {
+      selector: "p",
+    });
     const retryButton = await screen.findByRole("button", { name: /retry/i });
     expect(retryButton).toBeTruthy();
   });

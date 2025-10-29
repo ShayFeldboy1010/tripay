@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import {
   buildHeaders,
   buildResultPayload,
-  collectGroqAnswer,
+  collectOpenAIAnswer,
   errorResponse,
   prepareChat,
   resolveBodyScope,
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { answer, model } = await collectGroqAnswer({
+    const { answer, model } = await collectOpenAIAnswer({
       question: body.question,
       plan: computation.plan,
       execution: computation.execution,

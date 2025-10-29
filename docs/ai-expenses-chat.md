@@ -1,14 +1,14 @@
 # AI Expenses Chat
 
-This feature enables natural-language questions over the expenses database using a validated NL → SQL → Postgres execution pipeline with Groq for orchestration.
+This feature enables natural-language questions over the expenses database using a validated NL → SQL → Postgres execution pipeline with OpenAI for orchestration.
 
 ## Environment
 
 Set the following environment variables before running the app:
 
 ```
-GROQ_API_KEY=<your groq key>
-GROQ_MODEL=llama-3.1-70b-versatile
+OPENAI_API_KEY=<your openai key>
+OPENAI_MODEL=openai/gpt-oss-120b
 # One of these must point at the Postgres instance that hosts the expenses tables
 DATABASE_URL=postgres://...
 # or SUPABASE_DB_URL=postgres://...
