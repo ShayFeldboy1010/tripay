@@ -1,87 +1,69 @@
-import { query } from "@/src/server/db/pool";
-import type { ExecutionContext, ExecutionResult } from "./sqlExecutor";
-import { computeAggregatesForRows } from "./sqlExecutor";
-import { prepareNamedStatement } from "./sqlGuard";
-import { EXPENSES_TABLE } from "./schema";
+import type { Aggregates, ExecutionContext, ExecutionResult, ExpenseRow } from "./sqlExecutor";
+import { computeAggregatesForRows, fetchExpenseRows } from "./sqlExecutor";
 
-async function runTemplate(
-  context: ExecutionContext,
-  sql: string,
-  params: Record<string, any>,
-  limit: number,
-  mapper?: (row: any) => any
-): Promise<ExecutionResult> {
-  const prepared = prepareNamedStatement(sql, params);
-  const result = await query(prepared.sql, prepared.values);
-  const rows = (mapper ? result.rows.map(mapper) : result.rows).map((row: any) => ({
-    ...row,
-    date: new Date(row.date).toISOString().slice(0, 10),
-  }));
+function buildResult(sql: string, rows: ExpenseRow[], limit: number, aggregates?: Aggregates): ExecutionResult {
+  const computed = aggregates ?? computeAggregatesForRows(rows);
   return {
-    sql: prepared.sql,
-    params: prepared.values,
+    sql,
+    params: [],
     rows,
-    aggregates: computeAggregatesForRows(rows),
+    aggregates: computed,
     limit,
   };
 }
 
 export async function runHighestExpenseFallback(context: ExecutionContext): Promise<ExecutionResult> {
   const limit = 1;
-  const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM ${EXPENSES_TABLE}\nWHERE ${context.scope.column} = :scope\n  AND date BETWEEN :since AND :until\nORDER BY amount DESC\nLIMIT ${limit}`;
-  return runTemplate(
-    context,
-    sql,
-    { scope: context.scope.id, since: context.since, until: context.until },
-    limit
-  );
+  const { rows, sql } = await fetchExpenseRows(context, {
+    order: { column: "amount", ascending: false },
+    limit,
+  });
+  return buildResult(sql, rows, limit);
 }
 
 export async function runTotalsByCategoryFallback(context: ExecutionContext): Promise<ExecutionResult> {
-  const limit = 20;
-  const sql = `SELECT category, currency, SUM(amount) AS sum\nFROM ${EXPENSES_TABLE}\nWHERE ${context.scope.column} = :scope\n  AND date BETWEEN :since AND :until\nGROUP BY category, currency\nORDER BY sum DESC\nLIMIT ${limit}`;
-  return runTemplate(
-    context,
-    sql,
-    { scope: context.scope.id, since: context.since, until: context.until },
-    limit,
-    (row) => ({
-      date: context.until,
-      amount: Number(row.sum ?? 0),
-      currency: row.currency,
-      category: row.category ?? "Uncategorized",
-      merchant: null,
-      notes: null,
-    })
-  );
+  const previewLimit = 20;
+  const fetchLimit = Math.min(context.previewLimit ?? 200, 200);
+  const { rows, sql } = await fetchExpenseRows(context, {
+    order: { column: "amount", ascending: false },
+    limit: fetchLimit,
+  });
+  const aggregates = computeAggregatesForRows(rows);
+  const previewRows: ExpenseRow[] = aggregates.byCategory.slice(0, previewLimit).map((item) => ({
+    date: context.until,
+    amount: item.sum,
+    currency: item.currency,
+    category: item.category ?? "Uncategorized",
+    merchant: null,
+    notes: null,
+  }));
+  return buildResult(sql, previewRows, previewRows.length, aggregates);
 }
 
 export async function runTopMerchantsFallback(context: ExecutionContext): Promise<ExecutionResult> {
-  const limit = 10;
-  const sql = `SELECT merchant, currency, SUM(amount) AS sum\nFROM ${EXPENSES_TABLE}\nWHERE ${context.scope.column} = :scope\n  AND date BETWEEN :since AND :until\nGROUP BY merchant, currency\nORDER BY sum DESC\nLIMIT ${limit}`;
-  return runTemplate(
-    context,
-    sql,
-    { scope: context.scope.id, since: context.since, until: context.until },
-    limit,
-    (row) => ({
-      date: context.until,
-      amount: Number(row.sum ?? 0),
-      currency: row.currency,
-      category: null,
-      merchant: row.merchant ?? "Unknown",
-      notes: null,
-    })
-  );
+  const previewLimit = 10;
+  const fetchLimit = Math.min(context.previewLimit ?? 200, 200);
+  const { rows, sql } = await fetchExpenseRows(context, {
+    order: { column: "amount", ascending: false },
+    limit: fetchLimit,
+  });
+  const aggregates = computeAggregatesForRows(rows);
+  const previewRows: ExpenseRow[] = aggregates.byMerchant.slice(0, previewLimit).map((item) => ({
+    date: context.until,
+    amount: item.sum,
+    currency: item.currency,
+    category: null,
+    merchant: item.merchant ?? "Unknown",
+    notes: null,
+  }));
+  return buildResult(sql, previewRows, previewRows.length, aggregates);
 }
 
 export async function runTotalsFallback(context: ExecutionContext): Promise<ExecutionResult> {
   const limit = Math.min(context.previewLimit ?? 200, 200);
-  const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM ${EXPENSES_TABLE}\nWHERE ${context.scope.column} = :scope\n  AND date BETWEEN :since AND :until\nORDER BY date DESC\nLIMIT ${limit}`;
-  return runTemplate(
-    context,
-    sql,
-    { scope: context.scope.id, since: context.since, until: context.until },
-    limit
-  );
+  const { rows, sql } = await fetchExpenseRows(context, {
+    order: { column: "date", ascending: false },
+    limit,
+  });
+  return buildResult(sql, rows, limit);
 }
