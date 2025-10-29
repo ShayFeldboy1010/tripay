@@ -1,4 +1,4 @@
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 import { NextRequest } from "next/server";
 import type { AIQuery } from "@/lib/ai/schema";
 
@@ -11,15 +11,15 @@ const allowedKinds = new Set([
 ]);
 
 export async function POST(req: NextRequest) {
-  if (!process.env.GROQ_API_KEY) {
-    return new Response(JSON.stringify({ error: "Groq not configured" }), { status: 501 });
+  if (!process.env.OPENAI_API_KEY) {
+    return new Response(JSON.stringify({ error: "OpenAI not configured" }), { status: 501 });
   }
 
   const { text, tripId } = await req.json();
-  const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL });
 
   const completion = await client.chat.completions.create({
-    model: "llama-3.1-8b-instant",
+    model: process.env.OPENAI_MODEL || "openai/gpt-oss-120b",
     messages: [
       {
         role: "system",

@@ -40,11 +40,11 @@ Continue building your app on:
 5. **AI expenses view** – after seeding the database run `scripts/05-create-ai-expenses-view.sql` so the `ai_expenses` view exists. The AI chat feature reads from this view and will fail if it is missing. Make sure the server has a Postgres connection string configured (set `DATABASE_URL` or `SUPABASE_DB_URL`) so the AI chat can query the view.
 
 
-## Configuring Groq AI
+## Configuring OpenAI
 
-- Set `GROQ_API_KEY` in both `.env.local` and the Vercel project to enable Groq-powered parsing.
-- The backend automatically selects Groq when an API key is present and defaults to the `llama-3.1-8b-instant` model. Override with `LLM_MODEL` if you prefer a different Groq deployment.
-- You no longer need to set `LLM_PROVIDER`; the server defaults to Groq when the key is present and gracefully falls back to a mock responder otherwise.
+- Set `OPENAI_API_KEY` in both `.env.local` and the Vercel project to enable OpenAI-powered parsing.
+- The backend automatically selects OpenAI when an API key is present and defaults to the `openai/gpt-oss-120b` model. Override with `LLM_MODEL` if you prefer a different deployment.
+- You no longer need to set `LLM_PROVIDER`; the server defaults to OpenAI when the key is present and gracefully falls back to a mock responder otherwise.
 - Make sure the Supabase environment variables above are configured so the answers the API returns are grounded in your trip data.
 
 ## AI Chat – Single Path
@@ -56,7 +56,7 @@ flowchart LR
   B -->|GET /api/chat/stream| C
   C -->|Plan & SQL| D[Planner + Supabase]
   D -->|Result Rows| C
-  C -->|Prompt| E[Groq LLM]
+  C -->|Prompt| E[OpenAI LLM]
   E -->|Tokens| B
 ```
 

@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import Groq from "groq-sdk";
-import { getGroqClient, getGroqModels } from "./groq";
+import OpenAI from "openai";
+import { getOpenAIClient, getOpenAIModels } from "./openai";
 import { ALLOWED_AGG, ALLOWED_CLAUSES, EXPENSES_COLUMNS, EXPENSES_TABLE, MAX_LIMIT } from "./schema";
 
 export type Intent = "aggregation" | "lookup" | "ranking";
@@ -61,23 +61,23 @@ function buildSystemPrompt(): string {
   return cachedSystemPrompt;
 }
 
-async function callGroq(question: string, payload: Record<string, any>): Promise<string> {
-  const client = getGroqClient();
-  const { primary, fallback } = getGroqModels();
+async function callOpenAI(question: string, payload: Record<string, any>): Promise<string> {
+  const client = getOpenAIClient();
+  const { primary, fallback } = getOpenAIModels();
 
-  const baseRequest = {
+  const baseRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
     messages: [
-      { role: "system" as const, content: buildSystemPrompt() },
+      { role: "system", content: buildSystemPrompt() },
       {
-        role: "user" as const,
+        role: "user",
         content: JSON.stringify({ question, context: payload }),
       },
     ],
     model: primary,
     temperature: 0,
-    response_format: { type: "json_object" as const },
+    response_format: { type: "json_object" },
     stream: false,
-  } as Groq.Chat.Completions.ChatCompletionCreateParams;
+  };
 
   try {
     const res = await client.chat.completions.create(baseRequest);
@@ -97,18 +97,18 @@ async function callGroq(question: string, payload: Record<string, any>): Promise
 
 async function translateToEnglish(question: string): Promise<string | null> {
   try {
-    const client = getGroqClient();
-    const { primary, fallback } = getGroqModels();
-    const baseRequest = {
+    const client = getOpenAIClient();
+    const { primary, fallback } = getOpenAIModels();
+    const baseRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
       messages: [
-        { role: "system" as const, content: "Translate to English for SQL planning. Respond with English text only." },
-        { role: "user" as const, content: question },
+        { role: "system", content: "Translate to English for SQL planning. Respond with English text only." },
+        { role: "user", content: question },
       ],
       model: primary,
       temperature: 0,
       stream: false,
       response_format: { type: "text" },
-    } as Groq.Chat.Completions.ChatCompletionCreateParams;
+    };
     try {
       const res = await client.chat.completions.create(baseRequest);
       return res.choices?.[0]?.message?.content?.trim() || null;
@@ -201,7 +201,7 @@ export async function generateSqlPlan(
   while (attempt < 2) {
     try {
       const reminder = attempt === 0 ? "" : "\nRemember: return valid JSON only.";
-      const raw = await callGroq(planningQuestion + reminder, {
+      const raw = await callOpenAI(planningQuestion + reminder, {
         ...payload,
         originalQuestion: question,
         translated: translated ?? null,

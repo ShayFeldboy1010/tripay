@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGroqClient, getGroqModels } from "@/services/ai-expenses/groq";
+import { getOpenAIClient, getOpenAIModels } from "@/services/ai-expenses/openai";
 
 import { CONNECTION_ENV_KEYS, SSL_ENV_KEYS, query } from "@/src/server/db/pool";
 
@@ -19,7 +19,7 @@ export async function GET() {
       return acc;
     }, {}),
 
-    GROQ_API_KEY: Boolean(process.env.GROQ_API_KEY),
+    OPENAI_API_KEY: Boolean(process.env.OPENAI_API_KEY),
   } as const;
 
   let supabaseOk = false;
@@ -39,12 +39,12 @@ export async function GET() {
 
   let llmOk = false;
   let llmError: string | null = null;
-  if (!envsPresent.GROQ_API_KEY) {
-    llmError = "GROQ_API_KEY missing";
+  if (!envsPresent.OPENAI_API_KEY) {
+    llmError = "OPENAI_API_KEY missing";
   } else {
     try {
-      const client = getGroqClient();
-      const { primary } = getGroqModels();
+      const client = getOpenAIClient();
+      const { primary } = getOpenAIModels();
       await client.models.retrieve(primary);
       llmOk = true;
     } catch (err) {

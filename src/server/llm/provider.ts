@@ -1,4 +1,4 @@
-export type LLMProvider = "groq" | "mock";
+export type LLMProvider = "openai" | "mock";
 
 export interface LLMConfig {
   provider: LLMProvider;
@@ -14,30 +14,30 @@ export interface LLMClient {
   }): Promise<string>;
 }
 
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 
 const DEFAULT_MODELS: Record<LLMProvider, string> = {
-  groq: "llama-3.1-8b-instant",
+  openai: "openai/gpt-oss-120b",
   mock: "mock-model",
 };
 
 export function resolveLLMConfig(): LLMConfig {
-  const apiKey = process.env.GROQ_API_KEY;
-  const envProvider = (process.env.LLM_PROVIDER as LLMProvider | undefined) ?? (apiKey ? "groq" : undefined);
-  const provider: LLMProvider = envProvider === "groq" && apiKey ? "groq" : "mock";
+  const apiKey = process.env.OPENAI_API_KEY;
+  const envProvider = (process.env.LLM_PROVIDER as LLMProvider | undefined) ?? (apiKey ? "openai" : undefined);
+  const provider: LLMProvider = envProvider === "openai" && apiKey ? "openai" : "mock";
   const envModel = process.env.LLM_MODEL?.trim();
   const model = envModel && envModel.length > 0 ? envModel : DEFAULT_MODELS[provider];
-  const baseUrl = process.env.GROQ_BASE_URL;
+  const baseUrl = process.env.OPENAI_BASE_URL;
   return { provider, model, baseUrl, apiKey };
 }
 
-class GroqLLM implements LLMClient {
-  private client: Groq;
+class OpenAILLM implements LLMClient {
+  private client: OpenAI;
   private model: string;
   constructor(cfg: LLMConfig) {
     const options: { apiKey?: string; baseURL?: string } = { apiKey: cfg.apiKey };
     if (cfg.baseUrl) options.baseURL = cfg.baseUrl;
-    this.client = new Groq(options);
+    this.client = new OpenAI(options);
     this.model = cfg.model;
   }
   async chatCompletion(payload: {
@@ -64,8 +64,8 @@ class MockLLM implements LLMClient {
 
 export function createLLM(cfg: LLMConfig): LLMClient {
   switch (cfg.provider) {
-    case "groq":
-      return new GroqLLM(cfg);
+    case "openai":
+      return new OpenAILLM(cfg);
     default:
       return new MockLLM();
   }

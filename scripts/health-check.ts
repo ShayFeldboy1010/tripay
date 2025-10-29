@@ -64,23 +64,23 @@ function analyzeProviders(file: string, content: string) {
   if (file.startsWith("tests/")) {
     return;
   }
-  const patterns = [/OPENAI_/g, /ANTHROPIC_/g, /MOONSHOT/g];
+  const patterns = [/GROQ_/g, /ANTHROPIC_/g, /MOONSHOT/g];
   if (patterns.some((pattern) => pattern.test(content))) {
     recordFinding("duplicateProviders", {
       file,
       line: null,
-      message: "Detected legacy provider keys (OPENAI/ANTHROPIC/MOONSHOT)",
+      message: "Detected legacy provider keys (GROQ/ANTHROPIC/MOONSHOT)",
       severity: "medium",
-      suggestion: "Remove unused provider env vars and ensure GROQ is the single LLM provider.",
+      suggestion: "Remove unused provider env vars and ensure OpenAI is the single LLM provider.",
     });
   }
-  if (/LLM_PROVIDER\s*=\s*(?!\"?groq\"?)/i.test(content) && !file.endsWith("package.json")) {
+  if (/LLM_PROVIDER\s*=\s*(?!\"?openai\"?)/i.test(content) && !file.endsWith("package.json")) {
     recordFinding("envConflicts", {
       file,
       line: findLineNumber(content, "LLM_PROVIDER"),
-      message: "LLM_PROVIDER set to non-groq value",
+      message: "LLM_PROVIDER set to non-openai value",
       severity: "medium",
-      suggestion: "Normalize LLM_PROVIDER to 'groq' or remove overrides.",
+      suggestion: "Normalize LLM_PROVIDER to 'openai' or remove overrides.",
     });
   }
 }

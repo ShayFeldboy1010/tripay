@@ -9,7 +9,7 @@ import {
   runTotalsByCategoryFallback,
   runTotalsFallback,
 } from "@/services/ai-expenses/templates";
-import { getGroqClient, getGroqModels } from "@/services/ai-expenses/groq";
+import { getOpenAIClient, getOpenAIModels } from "@/services/ai-expenses/openai";
 import { verifySseToken, type VerifiedSseToken, verifyAndExtractUserId } from "@/src/server/auth/jwt";
 import {
   AI_CHAT_AUTH_MODE,
@@ -54,7 +54,7 @@ export interface ChatTimeWindow {
 export interface ChatResultPayload {
   answer: string;
   model: string;
-  provider: "groq";
+  provider: "openai";
   plan: SqlPlan | null;
   usedFallback: boolean;
   fallbackReason: "planner_error" | "db_error" | null;
@@ -375,15 +375,15 @@ export async function prepareChat(question: string, scope: Scope, window: ChatTi
   } satisfies ChatComputation;
 }
 
-export async function streamGroqAnswer(args: {
+export async function streamOpenAIAnswer(args: {
   question: string;
   plan: SqlPlan | null;
   execution: ExecutionResult;
   timeRange: ChatTimeWindow;
   send: (event: string, data: unknown) => Promise<void> | void;
 }) {
-  const client = getGroqClient();
-  const { primary, fallback } = getGroqModels();
+  const client = getOpenAIClient();
+  const { primary, fallback } = getOpenAIModels();
   let answer = "";
 
   async function run(model: string) {
@@ -416,14 +416,14 @@ export async function streamGroqAnswer(args: {
   }
 }
 
-export async function collectGroqAnswer(args: {
+export async function collectOpenAIAnswer(args: {
   question: string;
   plan: SqlPlan | null;
   execution: ExecutionResult;
   timeRange: ChatTimeWindow;
 }) {
   let finalAnswer = "";
-  const { answer, model } = await streamGroqAnswer({
+  const { answer, model } = await streamOpenAIAnswer({
     ...args,
     send: async (_event, data) => {
       if (typeof data === "string") {
@@ -452,7 +452,7 @@ export function buildResultPayload(args: {
   return {
     answer: args.answer.trim(),
     model: args.model,
-    provider: "groq" as const,
+    provider: "openai" as const,
     plan: args.plan,
     usedFallback: args.computation.usedFallback,
     fallbackReason: args.computation.fallbackReason,
