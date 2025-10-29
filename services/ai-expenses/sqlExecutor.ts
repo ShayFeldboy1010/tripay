@@ -1,12 +1,15 @@
 import { parse } from "pgsql-ast-parser";
-import type { SqlPlan } from "./nl2sql";
-import { query } from "@/src/server/db/pool";
+import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+import type { SqlPlan, SqlFilter } from "./nl2sql";
+import { getServerSupabaseClient } from "@/src/server/supabase/client";
 import { ALLOWED_AGG, EXPENSES_COLUMNS, EXPENSES_TABLE, MAX_LIMIT } from "./schema";
-import { prepareNamedStatement, SqlPreparationError } from "./sqlGuard";
 
 const ALLOWED_FILTER_COLUMNS = new Set(["category", "merchant", "currency", "amount", "notes"]);
 const ALLOWED_FUNCTIONS = new Set(Array.from(ALLOWED_AGG).map((fn) => fn.toLowerCase()));
 const ALLOWED_COLUMNS = new Set(Object.keys(EXPENSES_COLUMNS));
+
+type ExpenseQueryBuilder = PostgrestFilterBuilder<any, ExpenseRow[], ExpenseRow>;
+type OrderConfig = { column: "amount" | "date"; ascending: boolean };
 
 export interface ExecutionScope {
   column: "trip_id" | "user_id";
@@ -141,19 +144,57 @@ function ensureSafePlan(plan: SqlPlan): ValidationOutcome {
   return { limit: limitValue };
 }
 
-function buildFilters(plan: SqlPlan, params: Record<string, any>): string[] {
-  const clauses: string[] = [];
-  plan.filters.forEach((filter, index) => {
-    if (!ALLOWED_FILTER_COLUMNS.has(filter.column)) return;
-    const paramKey = `filter_${index}`;
-    params[paramKey] = filter.value;
-    if (filter.op === "ILIKE") {
-      clauses.push(`${filter.column} ILIKE :${paramKey}`);
-    } else {
-      clauses.push(`${filter.column} ${filter.op} :${paramKey}`);
+function normalizeFilterValue(filter: SqlFilter): string | number | null {
+  if (filter.column === "amount") {
+    const numeric = typeof filter.value === "number" ? filter.value : Number(filter.value);
+    if (!Number.isFinite(numeric)) {
+      return null;
     }
-  });
-  return clauses;
+    return numeric;
+  }
+  if (typeof filter.value === "string" || typeof filter.value === "number") {
+    return filter.value;
+  }
+  return null;
+}
+
+function applyFilter(builder: ExpenseQueryBuilder, filter: SqlFilter): ExpenseQueryBuilder {
+  if (!ALLOWED_FILTER_COLUMNS.has(filter.column)) {
+    return builder;
+  }
+  const value = normalizeFilterValue(filter);
+  if (value === null) {
+    return builder;
+  }
+  switch (filter.op) {
+    case "=":
+      return builder.eq(filter.column, value);
+    case "!=":
+      return builder.neq(filter.column, value);
+    case ">":
+      return builder.gt(filter.column, value);
+    case "<":
+      return builder.lt(filter.column, value);
+    case ">=":
+      return builder.gte(filter.column, value);
+    case "<=":
+      return builder.lte(filter.column, value);
+    case "ILIKE":
+      if (typeof value !== "string") {
+        return builder;
+      }
+      return builder.ilike(filter.column, value.includes("%") ? value : `%${value}%`);
+    default:
+      return builder;
+  }
+}
+
+function applyFilters(builder: ExpenseQueryBuilder, filters: SqlFilter[]): ExpenseQueryBuilder {
+  let current = builder;
+  for (const filter of filters) {
+    current = applyFilter(current, filter);
+  }
+  return current;
 }
 
 export function computeAggregatesForRows(rows: ExpenseRow[]): Aggregates {
@@ -240,22 +281,102 @@ export function computeAggregatesForRows(rows: ExpenseRow[]): Aggregates {
   };
 }
 
-function deriveOrderClause(plan: SqlPlan): string {
+function buildDebugStatement(input: {
+  context: ExecutionContext;
+  filters: SqlFilter[];
+  order: OrderConfig;
+  limit: number;
+}): string {
+  return JSON.stringify({
+    client: "supabase",
+    table: EXPENSES_TABLE,
+    scope: input.context.scope,
+    since: input.context.since,
+    until: input.context.until,
+    filters: input.filters.map((filter) => ({
+      column: filter.column,
+      op: filter.op,
+      value: normalizeFilterValue(filter),
+    })),
+    order: input.order,
+    limit: input.limit,
+  });
+}
+
+function createBaseQuery(context: ExecutionContext): ExpenseQueryBuilder {
+  const supabase = getServerSupabaseClient();
+  return supabase
+    .from(EXPENSES_TABLE)
+    .select("date, amount, currency, category, merchant, notes")
+    .eq(context.scope.column, context.scope.id)
+    .gte("date", context.since)
+    .lte("date", context.until);
+}
+
+function normalizeRow(row: any, fallbackDate: string): ExpenseRow {
+  const amountRaw = row.amount;
+  const amount = typeof amountRaw === "number" ? amountRaw : Number(amountRaw ?? 0);
+  const dateValue = row.date ?? fallbackDate;
+  const date = typeof dateValue === "string"
+    ? dateValue.slice(0, 10)
+    : new Date(dateValue).toISOString().slice(0, 10);
+  return {
+    date,
+    amount: Number.isFinite(amount) ? Number(amount) : 0,
+    currency: typeof row.currency === "string" ? row.currency : String(row.currency ?? ""),
+    category: row.category ?? null,
+    merchant: row.merchant ?? null,
+    notes: row.notes ?? null,
+  };
+}
+
+interface FetchOptions {
+  filters?: SqlFilter[];
+  order?: OrderConfig;
+  limit: number;
+}
+
+export async function fetchExpenseRows(
+  context: ExecutionContext,
+  options: FetchOptions,
+): Promise<{ rows: ExpenseRow[]; sql: string }> {
+  const filters = options.filters ?? [];
+  const order = options.order ?? { column: "date", ascending: false };
+  let builder = createBaseQuery(context);
+  builder = applyFilters(builder, filters);
+  builder = builder.order(order.column, { ascending: order.ascending, nullsFirst: false });
+  builder = builder.limit(options.limit);
+
+  const debugSql = buildDebugStatement({ context, filters, order, limit: options.limit });
+  const { data, error } = await builder;
+  if (error) {
+    const err = new Error(error.message || "Supabase query failed");
+    (err as any).executedSql = debugSql;
+    (err as any).executedParams = [];
+    (err as any).cause = error;
+    throw err;
+  }
+
+  const rows = (data ?? []).map((row) => normalizeRow(row, context.until));
+  return { rows, sql: debugSql };
+}
+
+function resolveOrder(plan: SqlPlan): OrderConfig {
   if (plan.order.length > 0) {
     const primary = plan.order[0];
     const by = primary.by.toLowerCase();
     const direction = primary.dir.toUpperCase();
-    if (by.includes("amount") || by === "sum" || by === "max" || by === "total") {
-      return `ORDER BY amount ${direction}`;
+    if (by.includes("amount") || by === "sum" || by === "max" || by === "total" || by === "avg") {
+      return { column: "amount", ascending: direction === "ASC" };
     }
     if (by.includes("date")) {
-      return `ORDER BY date ${direction}`;
+      return { column: "date", ascending: direction === "ASC" };
     }
   }
   if (plan.intent === "ranking") {
-    return "ORDER BY amount DESC";
+    return { column: "amount", ascending: false };
   }
-  return "ORDER BY date DESC";
+  return { column: "date", ascending: false };
 }
 
 export class SqlExecutionFatalError extends Error {
@@ -274,53 +395,17 @@ export class SqlExecutionFatalError extends Error {
 
 export async function executePlan(plan: SqlPlan, context: ExecutionContext): Promise<ExecutionResult> {
   const { limit: planLimit } = ensureSafePlan(plan);
-  const params: Record<string, any> = {
-    scope_id: context.scope.id,
-    since: context.since,
-    until: context.until,
-  };
-
-  const filters = buildFilters(plan, params);
-  const whereLines = [
-    `${context.scope.column} = :scope_id`,
-    "date BETWEEN :since AND :until",
-    ...filters,
-  ];
-
   const limitValue = Math.min(plan.limit ?? planLimit, planLimit, context.previewLimit ?? MAX_LIMIT, MAX_LIMIT);
-  const orderClause = deriveOrderClause(plan);
-
-  const sql = `SELECT date, amount, currency, category, merchant, notes\nFROM ${EXPENSES_TABLE}\nWHERE ${whereLines.join(
-    " AND "
-  )}\n${orderClause}\nLIMIT ${limitValue}`;
-
-  let prepared;
-  try {
-    prepared = prepareNamedStatement(sql, params);
-  } catch (err) {
-    if (err instanceof SqlPreparationError) {
-      throw err;
-    }
-    throw new SqlPreparationError((err as Error).message || "Failed to prepare query", sql, params);
-  }
-  let result;
-  try {
-    result = await query<ExpenseRow>(prepared.sql, prepared.values);
-  } catch (err) {
-    const error = err as Error & { executedSql?: string; executedParams?: any[] };
-    error.executedSql = prepared.sql;
-    error.executedParams = prepared.values;
-    throw error;
-  }
-
-  const rows = result.rows.map((row) => ({
-    ...row,
-    date: new Date(row.date).toISOString().slice(0, 10),
-  }));
+  const order = resolveOrder(plan);
+  const { rows, sql } = await fetchExpenseRows(context, {
+    filters: plan.filters,
+    order,
+    limit: limitValue,
+  });
 
   return {
-    sql: prepared.sql,
-    params: prepared.values,
+    sql,
+    params: [],
     rows,
     aggregates: computeAggregatesForRows(rows),
     limit: limitValue,
