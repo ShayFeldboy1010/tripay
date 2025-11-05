@@ -88,7 +88,7 @@ export async function downloadExpenseSummaryPDF(
   const pdfDoc = await PDFDocument.create()
   let page = pdfDoc.addPage()
   let pageHeight = page.getHeight()
-  const margin = 50
+  const margin = 40
   let cursorY = pageHeight - margin
 
   const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -162,62 +162,128 @@ export async function downloadExpenseSummaryPDF(
 
   drawText("Expenses", { font: boldFont, size: 14, lineGap: 10 })
 
-  const columnGap = 12
+  const tableTextColor = rgb(34 / 255, 41 / 255, 57 / 255)
+  const headerBackground = rgb(34 / 255, 41 / 255, 57 / 255)
+  const headerTextColor = rgb(1, 1, 1)
+  const stripeBackground = rgb(245 / 255, 247 / 255, 250 / 255)
+
+  const columnGap = 8
   const columns = [
-    { width: 90 },
-    { width: 210 },
-    { width: 110 },
-    { width: 110 },
-    { width: 70 },
+    { width: 60 },
+    { width: 135 },
+    { width: 65 },
+    { width: 75 },
+    { width: 80 },
+    { width: 60, align: "right" as const },
   ]
 
-  const drawRow = (cells: string[], opts: { bold?: boolean } = {}) => {
+  const tableWidth = columns.reduce((total, column) => total + column.width, 0) + columnGap * (columns.length - 1)
+
+  let tableCursorY = cursorY - 10
+
+  const ensureTableSpace = (heightNeeded: number) => {
+    if (tableCursorY - heightNeeded < margin) {
+      page = pdfDoc.addPage()
+      pageHeight = page.getHeight()
+      cursorY = pageHeight - margin
+      tableCursorY = cursorY
+      return true
+    }
+    return false
+  }
+
+  type DrawRowOptions = {
+    bold?: boolean
+    isHeader?: boolean
+    backgroundColor?: ReturnType<typeof rgb>
+    textColor?: ReturnType<typeof rgb>
+  }
+
+  const drawRow = (cells: string[], opts: DrawRowOptions = {}) => {
     const font = opts.bold ? boldFont : regularFont
     const size = 10
-    const rowHeight = size + 6
-    ensureSpace(rowHeight)
+    const paddingX = 6
+    const paddingY = 4
+    const rowHeight = size + paddingY * 2
+    const newPageStarted = ensureTableSpace(rowHeight)
+    if (newPageStarted && !opts.isHeader) {
+      drawHeader()
+    }
+
+    const rowBottom = tableCursorY - rowHeight
+
+    if (opts.backgroundColor) {
+      page.drawRectangle({ x: margin, y: rowBottom, width: tableWidth, height: rowHeight, color: opts.backgroundColor })
+    }
+
     let x = margin
     cells.forEach((text, index) => {
       const column = columns[index]
-      const maxWidth = column.width
-      const truncated = truncateToWidth(text, maxWidth, font, size)
-      if (index === cells.length - 1) {
+      if (!column) return
+
+      const availableWidth = Math.max(column.width - paddingX * 2, 0)
+      const truncated = truncateToWidth(text, availableWidth, font, size)
+
+      let textX = x + paddingX
+      if (column.align === "right") {
         const textWidth = font.widthOfTextAtSize(truncated, size)
-        page.drawText(truncated, {
-          x: x + maxWidth - textWidth,
-          y: cursorY,
-          size,
-          font,
-          color: rgb(34 / 255, 41 / 255, 57 / 255),
-        })
-      } else {
-        page.drawText(truncated, {
-          x,
-          y: cursorY,
-          size,
-          font,
-          color: rgb(34 / 255, 41 / 255, 57 / 255),
-        })
+        textX = x + column.width - paddingX - textWidth
+      } else if (column.align === "center") {
+        const textWidth = font.widthOfTextAtSize(truncated, size)
+        textX = x + (column.width - textWidth) / 2
       }
-      x += maxWidth + columnGap
+
+      page.drawText(truncated, {
+        x: textX,
+        y: rowBottom + paddingY,
+        size,
+        font,
+        color: opts.textColor ?? tableTextColor,
+      })
+
+      x += column.width + columnGap
     })
-    cursorY -= rowHeight
+
+    tableCursorY = rowBottom
   }
 
-  drawRow(["Date", "Title", "Category", "Paid By", "Amount"], { bold: true })
+  function drawHeader() {
+    drawRow(["Date", "Title", "Category", "Location", "Payers", "Amount"], {
+      bold: true,
+      isHeader: true,
+      backgroundColor: headerBackground,
+      textColor: headerTextColor,
+    })
+  }
 
-  sortedExpenses.forEach((expense) => {
+  drawHeader()
+
+  sortedExpenses.forEach((expense, index) => {
     const date = getExpenseDate(expense)
     const formattedDate = date ? date.toLocaleDateString() : ""
-    const paidBy = expense.paid_by || (expense.is_shared_payment ? "Shared" : "-")
-    drawRow([
-      formattedDate,
-      expense.title || "Untitled",
-      expense.category || "Uncategorized",
-      paidBy,
-      formatCurrency(expense.amount),
-    ])
+    const location = expense.location?.trim() || "Unspecified"
+    const payers = Array.isArray(expense.payers) && expense.payers.length > 0
+      ? expense.payers.join(", ")
+      : expense.paid_by || (expense.is_shared_payment ? "Shared" : "-")
+
+    drawRow(
+      [
+        formattedDate,
+        expense.title || "Untitled",
+        expense.category || "Uncategorized",
+        location,
+        payers,
+        formatCurrency(expense.amount),
+      ],
+      index % 2 === 0
+        ? {
+            backgroundColor: stripeBackground,
+          }
+        : undefined,
+    )
   })
+
+  cursorY = tableCursorY
 
   const fileBase = slugify(options?.tripName || "trip") || "trip"
   const fileName = `${fileBase}-expense-summary.pdf`
@@ -236,34 +302,29 @@ export function downloadExpensesByDateCSV(
     throw new Error("No expenses to export")
   }
 
-  const currency = resolveCurrency(options?.currency)
+  const sortedExpenses = [...expenses].sort((a, b) => {
+    const aDate = getExpenseDate(a)?.getTime() ?? 0
+    const bDate = getExpenseDate(b)?.getTime() ?? 0
+    return aDate - bDate
+  })
 
-  const summary = expenses.reduce(
-    (acc, expense) => {
-      const date = getExpenseDate(expense)
-      if (!date) {
-        return acc
-      }
-      const key = date.toISOString().slice(0, 10)
-      if (!acc[key]) {
-        acc[key] = { total: 0, count: 0 }
-      }
-      acc[key].total += expense.amount
-      acc[key].count += 1
-      return acc
-    },
-    {} as Record<string, { total: number; count: number }>,
-  )
+  const rows = sortedExpenses.map((expense) => {
+    const date = getExpenseDate(expense)
+    const formattedDate = date ? date.toLocaleDateString() : ""
+    const location = expense.location?.trim() || "Unspecified"
+    const payers = Array.isArray(expense.payers) && expense.payers.length > 0
+      ? expense.payers.join(", ")
+      : expense.paid_by || (expense.is_shared_payment ? "Shared" : "-")
 
-  const rows = Object.entries(summary)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([date, data]) => ({
-      Date: date,
-      "Total Amount": data.total.toFixed(2),
-      "Expenses Count": data.count,
-      "Average Amount": (data.total / data.count).toFixed(2),
-      Currency: currency,
-    }))
+    return {
+      Date: formattedDate,
+      Title: expense.title || "Untitled",
+      Amount: expense.amount.toFixed(2),
+      Category: expense.category || "Uncategorized",
+      Location: location,
+      Payers: payers,
+    }
+  })
 
   const csv = Papa.unparse(rows)
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
