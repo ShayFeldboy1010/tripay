@@ -58,6 +58,8 @@
     "geist": "latest",
     "input-otp": "1.4.1",
     "jose": "^5.9.6",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.454.0",
     "luxon": "^3.7.2",
     "next": "15.2.4",
