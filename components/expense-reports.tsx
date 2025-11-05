@@ -10,7 +10,11 @@ import { LocationsReport } from "@/components/locations-report"
 import { colorForKey } from "@/lib/chartColors"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { downloadExpenseSummaryPDF, downloadExpensesByDateCSV } from "@/lib/export-reports"
+import {
+  PDF_LIBRARY_UNAVAILABLE_ERROR,
+  downloadExpenseSummaryPDF,
+  downloadExpensesByDateCSV,
+} from "@/lib/export-reports"
 
 const tabs = ["Overview", "People", "Categories", "Locations", "Timeline"] as const
 type TabValue = (typeof tabs)[number]
@@ -157,7 +161,11 @@ export function ExpenseReports({ expenses, className, tripName, currency }: Expe
       toast.success("PDF report downloaded")
     } catch (error) {
       console.error(error)
-      toast.error("Failed to export PDF report")
+      const message =
+        error instanceof Error && error.message === PDF_LIBRARY_UNAVAILABLE_ERROR
+          ? "PDF export is temporarily unavailable. Check your connection and try again."
+          : "Failed to export PDF report"
+      toast.error(message)
     } finally {
       setExportingPdf(false)
     }
