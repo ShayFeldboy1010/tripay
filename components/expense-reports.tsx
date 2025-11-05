@@ -1,13 +1,16 @@
 "use client"
 
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react"
+import { useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Expense } from "@/lib/supabase/client"
 import { calculateBalances } from "@/lib/balance"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { TrendingUp, Users, Banknote, Calendar } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { TrendingUp, Users, Banknote, Calendar, FileDown, FileSpreadsheet } from "lucide-react"
 import { LocationsReport } from "@/components/locations-report"
 import { colorForKey } from "@/lib/chartColors"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const tabs = ["Overview", "People", "Categories", "Locations", "Timeline"] as const
 type TabValue = (typeof tabs)[number]
@@ -158,6 +161,109 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
     [averageExpense, expenses.length, totalAmount, uniqueCategories, uniquePayers],
   )
 
+  const formatDate = useCallback((value: string | Date) => {
+    const date = typeof value === "string" ? new Date(value) : value
+    if (Number.isNaN(date.getTime())) return "—"
+    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)
+  }, [])
+
+  const downloadFile = useCallback((content: BlobPart, mimeType: string, extension: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `trip-expense-summary-${timestamp}.${extension}`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [])
+
+  const handleExportPDF = useCallback(() => {
+    const doc = new jsPDF({ unit: "pt" })
+    const generatedAt = new Date()
+
+    doc.setFontSize(18)
+    doc.text("Trip Expense Summary", 40, 48)
+    doc.setFontSize(11)
+    doc.setTextColor(90)
+    doc.text(`Generated ${formatDate(generatedAt)}`, 40, 68)
+    doc.setTextColor(0)
+
+    autoTable(doc, {
+      startY: 88,
+      head: [["Metric", "Value"]],
+      body: overviewStats.map((stat) => [stat.title, stat.value]),
+      styles: { fontSize: 11, cellPadding: 8, lineColor: [230, 230, 230], lineWidth: 0.5 },
+      headStyles: { fillColor: [34, 34, 34], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    })
+
+    if (expenses.length > 0) {
+      autoTable(doc, {
+        startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
+          ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 24
+          : 120,
+        head: [["Date", "Title", "Category", "Paid By", "Amount"]],
+        body: expenses.map((expense) => [
+          formatDate(expense.date),
+          expense.title || expense.description || "Untitled expense",
+          expense.category || "Uncategorized",
+          expense.paid_by || (expense.payers?.length ? expense.payers.join(", ") : "—"),
+          `₪${expense.amount.toFixed(2)}`,
+        ]),
+        styles: { fontSize: 10, cellPadding: 6, overflow: "linebreak" },
+        headStyles: { fillColor: [34, 34, 34], textColor: 255 },
+        alternateRowStyles: { fillColor: [248, 248, 248] },
+        columnStyles: {
+          1: { cellWidth: 180 },
+          3: { cellWidth: 120 },
+        },
+      })
+    } else {
+      doc.setFontSize(12)
+      doc.text("No expenses to display.", 40, 130)
+    }
+
+    const pdfOutput = doc.output("blob")
+    downloadFile(pdfOutput, "application/pdf", "pdf")
+  }, [downloadFile, expenses, formatDate, overviewStats])
+
+  const handleExportCSV = useCallback(() => {
+    const grouped = expenses.reduce(
+      (acc, expense) => {
+        const isoDate = new Date(expense.date)
+        if (Number.isNaN(isoDate.getTime())) {
+          const key = "Unknown"
+          acc[key] = acc[key] || { total: 0, count: 0 }
+          acc[key].total += expense.amount
+          acc[key].count += 1
+          return acc
+        }
+        const key = isoDate.toISOString().split("T")[0]
+        if (!acc[key]) {
+          acc[key] = { total: 0, count: 0 }
+        }
+        acc[key].total += expense.amount
+        acc[key].count += 1
+        return acc
+      },
+      {} as Record<string, { total: number; count: number }>,
+    )
+
+    const rows = Object.entries(grouped)
+      .sort(([a], [b]) => (a === "Unknown" ? 1 : b === "Unknown" ? -1 : a.localeCompare(b)))
+      .map(([isoDate, metrics]) => {
+        const label = isoDate === "Unknown" ? "Unknown" : formatDate(isoDate)
+        return `${label},${metrics.total.toFixed(2)},${metrics.count}`
+      })
+
+    const header = "Date,Total Amount,Number of Expenses"
+    const csvContent = [header, ...rows].join("\n")
+    downloadFile(csvContent, "text/csv;charset=utf-8", "csv")
+  }, [downloadFile, expenses, formatDate])
+
   // Group expenses by payer
   const expensesByPayer = expenses.reduce(
     (acc, expense) => {
@@ -246,6 +352,19 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   return (
     <div className={className} dir="ltr">
       <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold tracking-tight text-white/90">Expense summary</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="glass" size="sm" onClick={handleExportPDF}">
+              <FileDown className="size-4" aria-hidden="true" />
+              Export PDF
+            </Button>
+            <Button variant="ghostLight" size="sm" onClick={handleExportCSV}">
+              <FileSpreadsheet className="size-4" aria-hidden="true" />
+              Export CSV
+            </Button>
+          </div>
+        </div>
         <SummaryTabs idPrefix={tabsIdPrefix} value={selectedTab} onChange={setSelectedTab} />
 
         {selectedTab === "Overview" && (
