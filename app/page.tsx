@@ -138,14 +138,30 @@ export default function HomePage() {
     }
   }
 
-  const focusCreateInput = () => {
+  const focusCreateInput = (
+    event?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event) {
+      const target = event.target as HTMLElement
+      if (target.closest("button, input, textarea")) {
+        return
+      }
+    }
     const node = tripNameInputRef.current
     if (!node) return
     node.focus({ preventScroll: true })
     node.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 
-  const focusJoinInput = () => {
+  const focusJoinInput = (
+    event?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event) {
+      const target = event.target as HTMLElement
+      if (target.closest("button, input, textarea")) {
+        return
+      }
+    }
     const node = tripIdInputRef.current
     if (!node) return
     node.focus({ preventScroll: true })
@@ -163,226 +179,192 @@ export default function HomePage() {
           <div className="absolute -right-16 bottom-[-10%] h-[380px] w-[380px] rounded-full bg-fuchsia-500/10 blur-3xl" />
         </div>
         <div className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]">
-          <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 py-12 md:px-10 md:py-20">
-            <header className="max-w-2xl space-y-5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1 text-sm font-medium text-white/80">
+          <main className="relative z-10 mx-auto flex min-h-[calc(100dvh-48px)] w-full max-w-4xl flex-col items-center justify-center gap-12 px-4 py-12 text-center md:px-10">
+            <header className="space-y-5">
+              <span className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 py-1 text-sm font-medium text-white/80">
                 TripPay
               </span>
-              <h1
-                dir="auto"
-                className="text-balance text-4xl font-semibold tracking-tight text-white md:text-5xl"
-              >
-                Plan adventures, split costs, stay in sync
+              <h1 className="text-balance text-4xl font-semibold tracking-tight text-white md:text-5xl">
+                TripPay
               </h1>
-              <p dir="auto" className="text-pretty text-lg text-white/70 md:text-xl">
-                Kick off a new journey or jump back into one a friend shared — all from one welcoming hub.
+              <p className="text-pretty text-lg text-white/70 md:text-xl">
+                Let&apos;s get lost — but track every expense!
               </p>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Button
-                  onClick={focusCreateInput}
-                  variant="glass"
-                  className="h-11 rounded-2xl px-6 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
-                >
-                  Start a trip
-                </Button>
-                <Button
-                  onClick={focusJoinInput}
-                  variant="outline"
-                  className="h-11 rounded-2xl border-white/30 px-6 text-base font-semibold text-white/90 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/60 hover:text-white"
-                >
-                  Enter a trip code
-                </Button>
-              </div>
             </header>
 
-            <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-              <section className="space-y-6" aria-label="Recent trips">
-                <Card className="glass-sm border border-white/10 bg-white/5">
-                  <CardHeader className="pb-2">
-                    <CardTitle dir="auto" className="text-2xl font-semibold text-white">
-                      Pick up where you left off
-                    </CardTitle>
-                    <CardDescription dir="auto" className="text-base text-white/70">
-                      Reopen a recent adventure or explore another journey in seconds.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    {topTrip ? (
+            <section className="grid w-full gap-6 md:grid-cols-3">
+              <Card
+                role={topTrip ? "button" : undefined}
+                tabIndex={topTrip ? 0 : -1}
+                onClick={() => {
+                  if (topTrip) {
+                    resumeTrip(topTrip.id)
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (!topTrip) return
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    resumeTrip(topTrip.id)
+                  }
+                }}
+                className="group cursor-pointer bg-white/5 transition hover:-translate-y-1 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+              >
+                <CardHeader className="items-center gap-4 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white/80 transition group-hover:bg-white/15 group-hover:text-white">
+                    <ArrowRight className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white">
+                    My Trips
+                  </CardTitle>
+                  <CardDescription className="text-white/70">
+                    Open a recent adventure in seconds.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-center">
+                  {topTrip ? (
+                    <>
                       <Button
-                        onClick={() => resumeTrip(topTrip.id)}
-                        className="group flex h-auto items-center justify-between rounded-3xl border border-white/15 bg-white/5 px-5 py-4 text-left text-white/90 transition duration-200 hover:-translate-y-0.5 hover:text-white"
-                        aria-label={`Resume trip ${topTrip.name ?? topTrip.id}`}
+                        variant="glass"
+                        className="w-full justify-center rounded-2xl font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          resumeTrip(topTrip.id)
+                        }}
                       >
-                        <div className="min-w-0 space-y-1">
-                          <p className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">Resume</p>
-                          <p dir="auto" className="truncate text-lg font-semibold leading-tight text-white">
-                            {topTrip.name || "Last trip"}
-                          </p>
-                          <p className="text-xs text-white/50" dir="ltr">
-                            {topTrip.id}
-                          </p>
-                        </div>
-                        <ArrowRight className="size-5 shrink-0 text-white/60 transition-transform duration-200 group-hover:translate-x-1" />
+                        Resume {topTrip.name}
                       </Button>
-                    ) : (
-                      <div className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-6 text-white/70">
-                        <p dir="auto" className="text-lg font-medium text-white">
-                          No trips yet
-                        </p>
-                        <p dir="auto" className="mt-2 text-sm text-white/60">
-                          Create your first trip to see it appear here for quick access later.
-                        </p>
-                      </div>
-                    )}
-
-                    {additionalTrips.length > 0 && (
-                      <ul className="space-y-3">
-                        {additionalTrips.map((t) => (
-                          <li key={t.id}>
-                            <Button
-                              variant="ghost"
-                              onClick={() => resumeTrip(t.id)}
-                              className="group flex h-auto w-full items-center justify-between rounded-3xl px-4 py-3 text-left text-white/80 transition duration-200 hover:-translate-y-0.5 hover:text-white"
-                              aria-label={`Open trip ${t.name ?? t.id}`}
+                      {additionalTrips.length > 0 ? (
+                        <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-white/70">
+                          {additionalTrips.map((trip) => (
+                            <button
+                              key={trip.id}
+                              className="rounded-full bg-white/10 px-3 py-1 transition hover:bg-white/20"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                resumeTrip(trip.id)
+                              }}
                             >
-                              <div className="min-w-0 space-y-1 text-left">
-                                <span dir="auto" className="block truncate text-sm font-medium text-white">
-                                  {t.name || "Unnamed trip"}
-                                </span>
-                                <span className="block text-xs text-white/50" dir="ltr">
-                                  {t.id}
-                                </span>
-                              </div>
-                              <ArrowRight className="size-4 shrink-0 text-white/40 transition-transform duration-200 group-hover:translate-x-1" />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              </section>
+                              {trip.name}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="text-sm text-white/70">
+                      No trips yet. Create one to get started.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-              <section className="space-y-6" aria-label="Trip actions">
-                <Card className="glass-sm border border-white/10 bg-white/5">
-                  <CardHeader className="pb-0">
-                    <CardTitle dir="auto" className="flex items-center gap-3 text-2xl">
-                      <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
-                        <Plus className="size-5" />
-                      </span>
-                      Create a trip
-                    </CardTitle>
-                    <CardDescription dir="auto" className="text-base text-white/70">
-                      Start a shared wallet and instantly get a Trip ID to send to your friends.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form
-                      className="space-y-4 pb-8 pt-6"
-                      onSubmit={(event) => {
-                        event.preventDefault()
-                        createTrip()
-                      }}
+              <Card
+                className="group bg-white/5 transition hover:-translate-y-1 hover:bg-white/10"
+                onClick={focusCreateInput}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    focusCreateInput(event)
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+              >
+                <CardHeader className="items-center gap-4 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white/80 transition group-hover:bg-white/15 group-hover:text-white">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white">
+                    Create New Trip
+                  </CardTitle>
+                  <CardDescription className="text-white/70">
+                    Name it and you&apos;re ready to roll.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    className="space-y-4"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      createTrip()
+                    }}
+                  >
+                    <Input
+                      ref={tripNameInputRef}
+                      value={tripName}
+                      onChange={(event) => setTripName(event.target.value)}
+                      placeholder="Trip name"
+                      className="h-12 rounded-2xl border-white/20 bg-white/10 text-base text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
+                    />
+                    <Textarea
+                      value={tripDescription}
+                      onChange={(event) => setTripDescription(event.target.value)}
+                      placeholder="Short description (optional)"
+                      className="min-h-[96px] rounded-2xl border-white/20 bg-white/10 text-base text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
+                    />
+                    <Button
+                      type="submit"
+                      variant="glass"
+                      className="w-full rounded-2xl font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white"
+                      disabled={isCreating || !tripName.trim()}
                     >
-                      <div className="space-y-2">
-                        <label htmlFor="tripName" className="block text-sm font-medium text-white/70" dir="auto">
-                          Trip name
-                        </label>
-                        <Input
-                          id="tripName"
-                          ref={tripNameInputRef}
-                          placeholder="Weekend getaway"
-                          value={tripName}
-                          onChange={(e) => setTripName(e.target.value)}
-                          className="h-11 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/60 focus-visible:ring-white/40"
-                          autoComplete="off"
-                          dir="auto"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="tripDescription" className="block text-sm font-medium text-white/70" dir="auto">
-                          Description (optional)
-                        </label>
-                        <Textarea
-                          id="tripDescription"
-                          placeholder="Fun weekend with friends"
-                          value={tripDescription}
-                          onChange={(e) => setTripDescription(e.target.value)}
-                          rows={2}
-                          className="rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/60 focus-visible:ring-white/40"
-                          dir="auto"
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        disabled={!tripName.trim() || isCreating}
-                        variant="glass"
-                        className="h-11 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white disabled:opacity-70"
-                      >
-                        {isCreating ? "Creating..." : "Create trip"}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
+                      {isCreating ? "Creating..." : "Create trip"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
 
-                <Card className="glass-sm border border-white/10 bg-white/5">
-                  <CardHeader className="pb-0">
-                    <CardTitle dir="auto" className="flex items-center gap-3 text-2xl">
-                      <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
-                        <Users className="size-5" />
-                      </span>
-                      Join a trip
-                    </CardTitle>
-                    <CardDescription dir="auto" className="text-base text-white/70">
-                      Enter a Trip ID shared by friends to access expenses instantly.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form
-                      className="space-y-4 pb-8 pt-6"
-                      onSubmit={(event) => {
-                        event.preventDefault()
-                        joinTrip()
-                      }}
+              <Card
+                className="group bg-white/5 transition hover:-translate-y-1 hover:bg-white/10"
+                onClick={focusJoinInput}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    focusJoinInput(event)
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+              >
+                <CardHeader className="items-center gap-4 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white/80 transition group-hover:bg-white/15 group-hover:text-white">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white">
+                    Join a Trip
+                  </CardTitle>
+                  <CardDescription className="text-white/70">
+                    Pop in the invite code and go.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    className="space-y-4"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      joinTrip()
+                    }}
+                  >
+                    <Input
+                      ref={tripIdInputRef}
+                      value={tripId}
+                      onChange={(event) => setTripId(event.target.value)}
+                      placeholder="Trip code"
+                      className="h-12 rounded-2xl border-white/20 bg-white/10 text-base text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
+                    />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      className="w-full rounded-2xl border-white/40 font-semibold text-white/90 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/70 hover:text-white"
+                      disabled={isJoining || !tripId.trim()}
                     >
-                      <div className="space-y-2">
-                        <label htmlFor="tripId" className="block text-sm font-medium text-white/70" dir="auto">
-                          Trip ID
-                        </label>
-                        <Input
-                          id="tripId"
-                          ref={tripIdInputRef}
-                          placeholder="550e8400-e29b-41d4-a716-446655440000"
-                          value={tripId}
-                          onChange={(e) => setTripId(e.target.value)}
-                          className="h-11 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/60 focus-visible:ring-white/40"
-                          autoComplete="off"
-                          dir="ltr"
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        disabled={!tripId.trim() || isJoining}
-                        variant="glass"
-                        className="h-11 w-full rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white disabled:opacity-70"
-                      >
-                        {isJoining ? "Joining..." : "Join trip"}
-                      </Button>
-                      <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-xs text-white/70" dir="ltr">
-                        <p className="font-semibold uppercase tracking-[0.25em] text-white/60">Example code</p>
-                        <p className="mt-2 break-all font-mono text-sm text-white/80">
-                          550e8400-e29b-41d4-a716-446655440000
-                        </p>
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-              </section>
-            </div>
-
-            <footer className="mt-auto pt-4 text-sm text-white/40" dir="auto">
-              Built for travelers who split, share, and stay organized together.
-            </footer>
+                      {isJoining ? "Joining..." : "Join trip"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </section>
           </main>
         </div>
       </div>
