@@ -4,6 +4,52 @@ import Papa from "papaparse"
 import type { Expense } from "@/lib/supabase/client"
 import type { PDFFont } from "pdf-lib"
 
+type PdfLibModule = typeof import("pdf-lib")
+
+const PDF_LIB_CDN_URL = "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm"
+
+let cachedPdfLib: PdfLibModule | null = null
+
+export const PDF_LIBRARY_UNAVAILABLE_ERROR = "PDF generation library is unavailable"
+
+async function loadPdfLib(): Promise<PdfLibModule> {
+  if (cachedPdfLib) {
+    return cachedPdfLib
+  }
+
+  try {
+    const pdfLibModule = await import("pdf-lib")
+    cachedPdfLib = pdfLibModule
+    return pdfLibModule
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    const isModuleMissing = /Cannot find module|module not found|resolve 'pdf-lib'/i.test(message)
+
+    if (!isModuleMissing) {
+      throw error
+    }
+
+    console.warn(
+      "[export-reports] Failed to load local pdf-lib module, attempting CDN fallback...",
+      error,
+    )
+
+    try {
+      const pdfLibModule = (await import(
+        /* webpackIgnore: true */ PDF_LIB_CDN_URL
+      )) as PdfLibModule
+      cachedPdfLib = pdfLibModule
+      return pdfLibModule
+    } catch (fallbackError) {
+      console.error(
+        "[export-reports] Unable to load pdf-lib from CDN fallback.",
+        fallbackError,
+      )
+      throw new Error(PDF_LIBRARY_UNAVAILABLE_ERROR)
+    }
+  }
+}
+
 const FALLBACK_CURRENCY = "ILS"
 
 function resolveCurrency(currency?: string | null): string {
@@ -83,7 +129,7 @@ export async function downloadExpenseSummaryPDF(
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value)
 
-  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib")
+  const { PDFDocument, StandardFonts, rgb } = await loadPdfLib()
 
   const pdfDoc = await PDFDocument.create()
   let page = pdfDoc.addPage()
