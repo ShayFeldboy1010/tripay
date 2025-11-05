@@ -109,7 +109,7 @@ export default function TripSummaryPage() {
         averageExpense={averageExpense}
       />
       <div className="glass rounded-[28px] p-6">
-        <ExpenseReports expenses={expenses} />
+        <ExpenseReports expenses={expenses} tripName={trip.name} currency={trip.base_currency} />
       </div>
       {showAddForm && (
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
