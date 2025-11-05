@@ -5,9 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { Expense } from "@/lib/supabase/client"
 import { calculateBalances } from "@/lib/balance"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { TrendingUp, Users, Banknote, Calendar } from "lucide-react"
+import { TrendingUp, Users, Banknote, Calendar, FileDown, FileSpreadsheet, Loader2 } from "lucide-react"
 import { LocationsReport } from "@/components/locations-report"
 import { colorForKey } from "@/lib/chartColors"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
+import { downloadExpenseSummaryPDF, downloadExpensesByDateCSV } from "@/lib/export-reports"
 
 const tabs = ["Overview", "People", "Categories", "Locations", "Timeline"] as const
 type TabValue = (typeof tabs)[number]
@@ -116,11 +119,63 @@ function SummaryTabs({ value, onChange, idPrefix }: SummaryTabsProps) {
 interface ExpenseReportsProps {
   expenses: Expense[]
   className?: string
+  tripName?: string
+  currency?: string | null
 }
 
-export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
+export function ExpenseReports({ expenses, className, tripName, currency }: ExpenseReportsProps) {
   const [selectedTab, setSelectedTab] = useState<TabValue>("Overview")
   const tabsIdPrefix = useId()
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingCsv, setExportingCsv] = useState(false)
+
+  const resolvedCurrency = useMemo(() => {
+    const normalized = currency?.trim().toUpperCase()
+    if (!normalized) {
+      return "ILS"
+    }
+    try {
+      new Intl.NumberFormat("en-US", { style: "currency", currency: normalized }).format(1)
+      return normalized
+    } catch (error) {
+      console.warn(`Unsupported currency '${currency}', defaulting to ILS.`, error)
+      return "ILS"
+    }
+  }, [currency])
+
+  const formatCurrency = useMemo(() => {
+    const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: resolvedCurrency })
+    return (value: number) => formatter.format(value)
+  }, [resolvedCurrency])
+
+  const safeTripName = tripName?.trim() || "Trip"
+
+  const handleExportPdf = async () => {
+    try {
+      setExportingPdf(true)
+      await downloadExpenseSummaryPDF(expenses, { tripName: safeTripName, currency: resolvedCurrency })
+      toast.success("PDF report downloaded")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to export PDF report")
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    try {
+      setExportingCsv(true)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      downloadExpensesByDateCSV(expenses, { tripName: safeTripName, currency: resolvedCurrency })
+      toast.success("CSV report downloaded")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to export CSV report")
+    } finally {
+      setExportingCsv(false)
+    }
+  }
 
   // Calculate summary statistics
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
@@ -133,13 +188,13 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
       {
         title: "Total Spent",
         helper: `${expenses.length} expenses`,
-        value: `₪${totalAmount.toFixed(2)}`,
+        value: formatCurrency(totalAmount),
         icon: Banknote,
       },
       {
         title: "Average",
         helper: "per expense",
-        value: `₪${averageExpense.toFixed(2)}`,
+        value: formatCurrency(averageExpense),
         icon: TrendingUp,
       },
       {
@@ -155,7 +210,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
         icon: Calendar,
       },
     ],
-    [averageExpense, expenses.length, totalAmount, uniqueCategories, uniquePayers],
+    [averageExpense, expenses.length, formatCurrency, totalAmount, uniqueCategories, uniquePayers],
   )
 
   // Group expenses by payer
@@ -246,6 +301,32 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
   return (
     <div className={className} dir="ltr">
       <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="glass"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+          >
+            {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            <span>Export PDF</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghostLight"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={exportingCsv}
+          >
+            {exportingCsv ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            <span>Export CSV</span>
+          </Button>
+        </div>
         <SummaryTabs idPrefix={tabsIdPrefix} value={selectedTab} onChange={setSelectedTab} />
 
         {selectedTab === "Overview" && (
@@ -300,7 +381,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         </div>
                         <div className="text-right" dir="ltr">
                           <span className="grad-text numeric-display text-sm font-semibold">
-                            ₪{data.total.toFixed(2)}
+                            {formatCurrency(data.total)}
                           </span>
                           <p className="text-xs text-white/60">{percentage.toFixed(1)}%</p>
                         </div>
@@ -339,7 +420,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Amount"]} />
                       <Bar dataKey="amount">
                         {payerChartData.map((entry) => (
                           <Cell key={entry.name} fill={colorForKey(entry.name)} />
@@ -370,7 +451,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           <p className="truncate-2 text-xs text-white/70 leading-tight">Settlement balance</p>
                         </div>
                         <div className="ml-auto flex-none text-right">
-                          <p className="grad-text numeric-display text-lg font-bold">₪{balance.amount.toFixed(2)}</p>
+                          <p className="grad-text numeric-display text-lg font-bold">{formatCurrency(balance.amount)}</p>
                         </div>
                       </div>
                     ))}
@@ -403,8 +484,10 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                             </div>
                           </div>
                           <div className="text-right" dir="ltr">
-                            <p className="grad-text numeric-display text-lg font-bold">₪{data.total.toFixed(2)}</p>
-                            <p className="text-sm text-white/70">Avg ₪{(data.total / data.count).toFixed(2)} per expense</p>
+                            <p className="grad-text numeric-display text-lg font-bold">{formatCurrency(data.total)}</p>
+                            <p className="text-sm text-white/70">
+                              Avg {formatCurrency(data.total / data.count)} per expense
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -449,7 +532,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           <Cell key={entry.name} fill={colorForKey(entry.name)} strokeWidth={1} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`₪${Number(value).toFixed(2)}`, "Amount"]} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Amount"]} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -482,7 +565,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                               </div>
                             </div>
                             <div className="text-right" dir="ltr">
-                              <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
+                              <p className="grad-text numeric-display font-semibold">{formatCurrency(data.total)}</p>
                               <p className="text-xs text-white/60">{share.toFixed(1)}%</p>
                             </div>
                           </div>
@@ -557,7 +640,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                         }}
                         labelStyle={{ color: "rgba(255,255,255,0.7)" }}
                         formatter={(value, name) => [
-                          name === "amount" ? `₪${Number(value).toFixed(2)}` : value,
+                          name === "amount" ? formatCurrency(Number(value)) : value,
                           name === "amount" ? "Amount" : "Count",
                         ]}
                       />
@@ -589,7 +672,7 @@ export function ExpenseReports({ expenses, className }: ExpenseReportsProps) {
                           <p className="truncate-2 text-sm text-white/70 leading-tight">{data.count} expenses</p>
                         </div>
                         <div className="ml-auto flex-none text-right" dir="ltr">
-                          <p className="grad-text numeric-display font-semibold">₪{data.total.toFixed(2)}</p>
+                          <p className="grad-text numeric-display font-semibold">{formatCurrency(data.total)}</p>
                         </div>
                       </div>
                     ))}
