@@ -12,13 +12,30 @@ let cachedPdfLib: PdfLibModule | null = null
 
 export const PDF_LIBRARY_UNAVAILABLE_ERROR = "PDF generation library is unavailable"
 
+function resolvePdfLibModule(module: unknown): PdfLibModule {
+  if (module && typeof module === "object") {
+    if ("PDFDocument" in module) {
+      return module as PdfLibModule
+    }
+
+    if ("default" in module) {
+      const defaultExport = (module as { default?: unknown }).default
+      if (defaultExport && typeof defaultExport === "object" && "PDFDocument" in defaultExport) {
+        return defaultExport as PdfLibModule
+      }
+    }
+  }
+
+  throw new Error(PDF_LIBRARY_UNAVAILABLE_ERROR)
+}
+
 async function loadPdfLib(): Promise<PdfLibModule> {
   if (cachedPdfLib) {
     return cachedPdfLib
   }
 
   try {
-    const pdfLibModule = await import("pdf-lib")
+    const pdfLibModule = resolvePdfLibModule(await import("pdf-lib"))
     cachedPdfLib = pdfLibModule
     return pdfLibModule
   } catch (error) {
@@ -35,9 +52,9 @@ async function loadPdfLib(): Promise<PdfLibModule> {
     )
 
     try {
-      const pdfLibModule = (await import(
-        /* webpackIgnore: true */ PDF_LIB_CDN_URL
-      )) as PdfLibModule
+      const pdfLibModule = resolvePdfLibModule(
+        await import(/* webpackIgnore: true */ PDF_LIB_CDN_URL),
+      )
       cachedPdfLib = pdfLibModule
       return pdfLibModule
     } catch (fallbackError) {
