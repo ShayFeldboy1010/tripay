@@ -60,7 +60,7 @@
     "jose": "^5.9.6",
     "lucide-react": "^0.454.0",
     "luxon": "^3.7.2",
-    "next": "15.2.4",
+    "next": "15.2.8",
     "next-themes": "latest",
     "ofx-parse": "npm:node-ofx-parser@^0.5.1",
     "openai": "^4.77.0",
