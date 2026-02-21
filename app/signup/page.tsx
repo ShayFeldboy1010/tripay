@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail, Lock, Eye, EyeOff, UserPlus } from "lucide-react"
+import { Lock, Eye, EyeOff, UserPlus, Mail } from "lucide-react"
 import { toast } from "sonner"
 
 export default function SignupPage() {
@@ -15,7 +15,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
   const { signUp } = useAuth()
   const router = useRouter()
 
@@ -40,36 +39,13 @@ export default function SignupPage() {
         toast.error(error.message)
         return
       }
-      setEmailSent(true)
+      toast.success("Account created!")
+      router.push("/")
     } catch {
       toast.error("Failed to create account")
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (emailSent) {
-    return (
-      <div className="min-100dvh min-vh app-bg flex items-center justify-center px-4">
-        <div className="w-full max-w-sm text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/25">
-            <Mail className="h-6 w-6 text-emerald-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Check your email</h1>
-          <p className="mt-2 text-sm text-white/50">
-            We sent a confirmation link to <span className="text-white/80">{email}</span>.
-            Click the link to activate your account.
-          </p>
-          <Button
-            onClick={() => router.push("/login")}
-            variant="outline"
-            className="mt-6 rounded-xl"
-          >
-            Back to Login
-          </Button>
-        </div>
-      </div>
-    )
   }
 
   return (
