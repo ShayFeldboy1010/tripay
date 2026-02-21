@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/theme/ThemeProvider'
 import { RootClient } from '@/app/RootClient'
 import { AIChatProvider } from '@/components/AIChatStore'
 import { AIChatWidget } from '@/components/AIChatWidget'
+import { AuthProvider } from '@/components/auth-provider'
 
 export const metadata: Metadata = {
   title: 'Trip Expenses',
@@ -44,12 +45,14 @@ export default function RootLayout({
       <body className="antialiased touch-manipulation">
         <div className="min-100dvh min-vh app-bg antialiased pb-[var(--safe-bottom)]">
           <RootClient>
-            <ThemeProvider>
-              <AIChatProvider>
-                {children}
-                <AIChatWidget />
-              </AIChatProvider>
-            </ThemeProvider>
+            <AuthProvider>
+              <ThemeProvider>
+                <AIChatProvider>
+                  {children}
+                  <AIChatWidget />
+                </AIChatProvider>
+              </ThemeProvider>
+            </AuthProvider>
           </RootClient>
         </div>
       </body>

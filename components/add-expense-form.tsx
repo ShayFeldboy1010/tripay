@@ -91,9 +91,9 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
         amount: amountNum,
         category: category as Expense["category"],
         location_id: locationId,
-        location: locationName, // Set legacy location field to satisfy not-null constraint
+        location: locationName,
         payers: selectedPayers,
-        paid_by: selectedPayerNames.length === 1 ? selectedPayerNames[0] : "Multiple", // Set paid_by for database constraint
+        paid_by: selectedPayerNames.length === 1 ? selectedPayerNames[0] : "Multiple",
         description: description.trim() || "",
         is_shared_payment: isSharedPayment,
       }
@@ -140,28 +140,26 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
     <div className="fixed inset-0 z-50">
       <div className="overlay-dim absolute inset-0" />
       <div className="relative flex h-full w-full items-end justify-center p-0 md:items-center md:p-4">
-        <Card className="glass-strong relative z-10 flex h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border-none py-0 md:rounded-[28px]">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 px-6 pb-4 pt-6">
+        <Card className="glass-strong relative z-10 flex h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-[var(--radius-xxl)] border-none py-0 md:rounded-[var(--radius-xxl)]">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 px-5 pb-3 pt-5">
           <div className="flex items-center gap-3">
-            {/* Mobile handle indicator */}
-            <div className="h-1 w-8 rounded-full bg-white/30 md:hidden" />
-            <CardTitle className="text-lg font-semibold text-white md:text-xl">Add New Expense</CardTitle>
+            <div className="h-1 w-8 rounded-full bg-white/20 md:hidden" />
+            <CardTitle className="text-base font-semibold text-white">Add New Expense</CardTitle>
           </div>
           <Button
             variant="ghostLight"
             size="sm"
             onClick={onCancel}
-            className="h-9 w-9 min-h-[44px] min-w-[44px] rounded-full p-0 text-white/70 hover:text-white md:h-8 md:w-8 md:min-h-0 md:min-w-0"
+            className="h-8 w-8 min-h-[44px] min-w-[44px] rounded-lg p-0 text-white/50 hover:text-white md:h-8 md:w-8 md:min-h-0 md:min-w-0"
           >
-            <X className="h-5 w-5 md:h-4 md:w-4" />
+            <X className="h-4 w-4" />
           </Button>
         </CardHeader>
 
-        {/* Scrollable content */}
-        <CardContent className="flex-1 overflow-y-auto px-6 pb-0">
-          <form id="add-expense-form" onSubmit={handleSubmit} className="space-y-5 pb-4">
+        <CardContent className="flex-1 overflow-y-auto px-5 pb-0">
+          <form id="add-expense-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
             <div>
-              <label htmlFor="title" className="mb-2 block text-sm font-medium text-white/70">
+              <label htmlFor="title" className="mb-1.5 block text-xs font-medium text-white/50">
                 Title *
               </label>
               <Input
@@ -169,14 +167,14 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                 placeholder="Dinner at restaurant"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30 md:h-11 md:text-sm"
+                className="h-11 rounded-xl md:h-10"
                 autoComplete="off"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="date" className="mb-2 block text-sm font-medium text-white/70">
+              <label htmlFor="date" className="mb-1.5 block text-xs font-medium text-white/50">
                 Date *
               </label>
               <Input
@@ -184,17 +182,17 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30 md:h-11 md:text-sm"
+                className="h-11 rounded-xl md:h-10"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="amount" className="mb-2 block text-sm font-medium text-white/70">
-                Amount (₪) *
+              <label htmlFor="amount" className="mb-1.5 block text-xs font-medium text-white/50">
+                Amount * (₪)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60">₪</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">₪</span>
                 <Input
                   id="amount"
                   type="number"
@@ -202,7 +200,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                   placeholder="25.50"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="h-12 rounded-2xl border-white/20 bg-white/10 pl-8 pr-4 text-end text-base text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30 md:h-11 md:text-sm"
+                  className="h-11 rounded-xl pl-8 pr-4 text-end md:h-10"
                   inputMode="decimal"
                   required
                 />
@@ -210,14 +208,14 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
             </div>
 
             <div>
-              <label htmlFor="category" className="mb-2 block text-sm font-medium text-white/70">
+              <label htmlFor="category" className="mb-1.5 block text-xs font-medium text-white/50">
                 Category *
               </label>
               <Select value={category} onValueChange={setCategory} required>
-                <SelectTrigger className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white focus-visible:border-white/40 focus-visible:ring-white/30 md:h-11 md:text-sm">
+                <SelectTrigger className="h-11 rounded-xl md:h-10">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent className="glass-sm border-none text-white">
+                <SelectContent className="glass-strong border-none text-white">
                   {EXPENSE_CATEGORIES.map((cat) => (
                     <SelectItem key={cat} value={cat} className="rounded-lg text-white">
                       {cat}
@@ -228,14 +226,14 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
             </div>
 
             <div>
-              <label htmlFor="location" className="mb-2 block text-sm font-medium text-white/70">
+              <label htmlFor="location" className="mb-1.5 block text-xs font-medium text-white/50">
                 Location *
               </label>
               <Select value={locationId} onValueChange={setLocationId} required>
-                <SelectTrigger className="h-12 rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white focus-visible:border-white/40 focus-visible:ring-white/30 md:h-11 md:text-sm">
+                <SelectTrigger className="h-11 rounded-xl md:h-10">
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
-                <SelectContent className="glass-sm border-none text-white">
+                <SelectContent className="glass-strong border-none text-white">
                   {availableLocations.map((location) => (
                     <SelectItem key={location.id} value={location.id} className="rounded-lg text-white">
                       {location.name}
@@ -246,8 +244,8 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-white/70">Payers * (select one or more)</label>
-              <div className="space-y-3 rounded-2xl border border-white/20 bg-white/5 p-4">
+              <label className="mb-1.5 block text-xs font-medium text-white/50">Payers * (select one or more)</label>
+              <div className="space-y-2 rounded-xl border border-white/8 bg-white/3 p-3">
                 {availableParticipants.map((participant) => (
                   <div key={participant.id} className="flex items-center space-x-3">
                     <Checkbox
@@ -256,7 +254,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                       onCheckedChange={() => handlePayerToggle(participant.id)}
                       className="h-5 w-5"
                     />
-                    <label htmlFor={participant.id} className="flex-1 py-2 text-base text-white md:text-sm">
+                    <label htmlFor={participant.id} className="flex-1 py-1.5 text-sm text-white">
                       {participant.name}
                     </label>
                   </div>
@@ -271,16 +269,13 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                 onCheckedChange={(checked) => setIsSharedPayment(!!checked)}
                 className="h-5 w-5"
               />
-              <label
-                htmlFor="shared-payment"
-                className="cursor-pointer text-base text-white md:text-sm"
-              >
+              <label htmlFor="shared-payment" className="cursor-pointer text-sm text-white/70">
                 Shared Payment (no balance impact)
               </label>
             </div>
 
             <div>
-              <label htmlFor="description" className="mb-2 block text-sm font-medium text-white/70">
+              <label htmlFor="description" className="mb-1.5 block text-xs font-medium text-white/50">
                 Description (optional)
               </label>
               <Textarea
@@ -288,26 +283,23 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
                 placeholder="Additional details..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="rounded-2xl border-white/20 bg-white/10 px-4 text-base text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30 md:text-sm"
+                rows={2}
+                className="rounded-xl"
               />
             </div>
-
           </form>
         </CardContent>
 
-        {/* Sticky bottom submit bar */}
         <div
-          className="glass-sm flex-shrink-0 p-4 md:p-6"
+          className="flex-shrink-0 border-t border-white/6 p-4"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <Button
               type="submit"
               form="add-expense-form"
               disabled={isSubmitting || !title.trim() || !date || !amount.trim() || !category || !locationId || selectedPayers.length === 0}
-              variant="glass"
-              className="flex-1 h-12 rounded-2xl px-4 text-base font-semibold text-white/90 transition hover:-translate-y-0.5 hover:text-white md:h-11 md:text-sm"
+              className="flex-1 h-11 rounded-xl font-medium md:h-10"
               onClick={handleSubmit}
             >
               {isSubmitting ? "Adding..." : "Add Expense"}
@@ -316,7 +308,7 @@ export default function AddExpenseForm({ tripId, onExpenseAdded, onCancel }: Add
               type="button"
               variant="ghostLight"
               onClick={onCancel}
-              className="h-12 rounded-2xl px-6 text-base text-white/70 transition hover:text-white md:h-11 md:text-sm"
+              className="h-11 rounded-xl px-5 md:h-10"
             >
               Cancel
             </Button>

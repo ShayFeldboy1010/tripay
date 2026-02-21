@@ -56,7 +56,7 @@ export default function TripSummaryPage() {
             .order("created_at", { ascending: false });
           if (expensesData) {
             setExpenses(expensesData);
-            expensesData.forEach((e) => offlineStorage.saveExpense(e));
+            expensesData.forEach((e: Expense) => offlineStorage.saveExpense(e));
           }
           const { data: participantsData } = await supabase
             .from("participants")
@@ -101,14 +101,14 @@ export default function TripSummaryPage() {
   const averageExpense = totalExpenses > 0 ? totalAmount / totalExpenses : 0;
 
   const content = (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 pb-32 pt-6 text-white lg:pb-12">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-32 pt-4 text-white lg:pb-8">
       <TotalBalance
         amount={totalAmount}
         totalExpenses={totalExpenses}
         participantCount={participantCount}
         averageExpense={averageExpense}
       />
-      <div className="glass rounded-[28px] p-6">
+      <div className="glass rounded-[var(--radius-xxl)] p-5">
         <ExpenseReports expenses={expenses} tripName={trip.name} currency={trip.base_currency} />
       </div>
       {showAddForm && (
@@ -157,12 +157,12 @@ export default function TripSummaryPage() {
   return (
     <div className="min-100dvh min-vh app-bg antialiased text-white">
       <div
-        className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
+        className="space-y-4 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >
         <header className="sticky top-0 z-30">
-          <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
-            <span className="text-lg font-semibold tracking-tight">TripPay</span>
-            <div className="flex items-center gap-2 text-white/80">
+          <div className="glass flex h-12 items-center justify-between rounded-[var(--radius-xxl)] px-4">
+            <span className="text-base font-semibold tracking-tight">TripPay</span>
+            <div className="flex items-center gap-1.5 text-white/60">
               <OfflineIndicator />
               <TripSettingsDropdown
                 tripId={tripId}
@@ -180,4 +180,3 @@ export default function TripSummaryPage() {
     </div>
   );
 }
-

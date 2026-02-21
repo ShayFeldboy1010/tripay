@@ -37,19 +37,19 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
   return (
     <Tooltip.Provider>
     <div>
-      {open && <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={() => setOpen(false)} />}
       <div
         ref={containerRef}
         tabIndex={-1}
         className="fixed z-50 right-4"
-        style={{ bottom: isDesktop ? "2rem" : `calc(6rem + env(safe-area-inset-bottom))` }}
+        style={{ bottom: isDesktop ? "1.5rem" : `calc(5rem + env(safe-area-inset-bottom))` }}
       >
         <AnimatePresence>
           {open && (
             <div className="absolute inset-0">
               {actions.map((a, i) => {
                 const angle = (-90 - i * 45) * (Math.PI / 180);
-                const radius = 120;
+                const radius = 100;
                 const x = Math.cos(angle) * radius;
                 const y = Math.sin(angle) * radius;
                 const Icon = a.icon;
@@ -59,7 +59,7 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
                     initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
                     animate={{ scale: 1, x, y, opacity: 1 }}
                     exit={{ scale: 0, x: 0, y: 0, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 28, delay: i * 0.03 }}
                     className="absolute flex flex-col items-center"
                   >
                     <Tooltip.Root>
@@ -70,19 +70,19 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
                             setOpen(false);
                           }}
                           aria-label={a.label}
-                          className="glass-sm flex h-14 w-14 items-center justify-center rounded-full text-white/90 transition hover:text-white"
+                          className="glass flex h-12 w-12 items-center justify-center rounded-2xl text-white/80 transition-all duration-200 hover:text-white hover:scale-105 active:scale-95"
                         >
                           <Icon className="h-5 w-5" />
                         </button>
                       </Tooltip.Trigger>
                       <Tooltip.Content
                         side="top"
-                        className="glass-sm rounded px-2 py-1 text-xs text-white/90"
+                        className="glass-sm rounded-lg px-2 py-1 text-xs text-white/80"
                       >
                         {a.label}
                       </Tooltip.Content>
                     </Tooltip.Root>
-                    <span dir="auto" className="mt-1 rounded bg-white/10 px-2 text-xs text-white">
+                    <span dir="auto" className="mt-1 rounded-md bg-black/40 px-1.5 text-[10px] text-white/70">
                       {a.label}
                     </span>
                   </motion.div>
@@ -91,13 +91,15 @@ export function FAB({ onAddExpense, onAddLocation, onAddParticipants }: FABProps
             </div>
           )}
         </AnimatePresence>
-        <button
+        <motion.button
           aria-label="Open menu"
           onClick={() => setOpen((p) => !p)}
-          className="glass flex h-14 w-14 items-center justify-center rounded-full text-white transition hover:text-white"
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="glass flex h-12 w-12 items-center justify-center rounded-2xl text-white transition-all duration-200 hover:scale-105 active:scale-95"
         >
-          <Plus className="h-6 w-6" />
-        </button>
+          <Plus className="h-5 w-5" />
+        </motion.button>
       </div>
     </div>
     </Tooltip.Provider>

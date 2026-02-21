@@ -44,8 +44,6 @@ export default function TripSearchPage() {
     }
   }, [tripId])
 
-
-
   const loadTripData = async () => {
     try {
       const offlineTrip = offlineStorage.getTrip(tripId)
@@ -69,7 +67,7 @@ export default function TripSearchPage() {
         if (expensesData) {
           setExpenses(expensesData)
           setFilteredExpenses(expensesData)
-          expensesData.forEach((e) => offlineStorage.saveExpense(e))
+          expensesData.forEach((e: Expense) => offlineStorage.saveExpense(e))
         }
         await syncManager.downloadTripData(tripId)
       }
@@ -90,7 +88,7 @@ export default function TripSearchPage() {
           table: "expenses",
           filter: `trip_id=eq.${tripId}`,
         },
-        (payload) => {
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
           if (payload.eventType === "INSERT") {
             const newExpense = payload.new as Expense
             setExpenses((prev) => [newExpense, ...prev])
@@ -133,9 +131,7 @@ export default function TripSearchPage() {
   if (loading) {
     return (
       <div className="min-100dvh min-vh app-bg antialiased text-white">
-        <div
-          className="space-y-4 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
-        >
+        <div className="space-y-3 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]">
           <ExpenseCardSkeleton />
           <ExpenseCardSkeleton />
           <ExpenseCardSkeleton />
@@ -149,8 +145,8 @@ export default function TripSearchPage() {
   }
 
   const content = (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-40 pt-4 text-white lg:pb-8">
-      <ExpenseFilters expenses={expenses} onFiltersChanged={setFilteredExpenses} className="rounded-2xl" />
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-40 pt-4 text-white lg:pb-8">
+      <ExpenseFilters expenses={expenses} onFiltersChanged={setFilteredExpenses} className="rounded-xl" />
       <ExpenseList expenses={filteredExpenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
       {showAddForm && (
         <AddExpenseForm tripId={tripId} onExpenseAdded={onExpenseAdded} onCancel={() => setShowAddForm(false)} />
@@ -187,7 +183,6 @@ export default function TripSearchPage() {
           {content}
         </DesktopShell>
         {fab}
-        
       </>
     )
   }
@@ -195,12 +190,12 @@ export default function TripSearchPage() {
   return (
     <div className="min-100dvh min-vh app-bg antialiased text-white">
       <div
-        className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
+        className="space-y-4 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >
         <header className="sticky top-0 z-30">
-          <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
-            <span className="text-lg font-semibold tracking-tight">TripPay</span>
-            <div className="flex items-center gap-2 text-white/80">
+          <div className="glass flex h-12 items-center justify-between rounded-[var(--radius-xxl)] px-4">
+            <span className="text-base font-semibold tracking-tight">TripPay</span>
+            <div className="flex items-center gap-1.5 text-white/60">
               <OfflineIndicator />
               <TripSettingsDropdown
                 tripId={tripId}

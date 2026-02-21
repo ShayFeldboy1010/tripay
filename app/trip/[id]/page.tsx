@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase, type Trip, type Expense, type Participant, type Location } from "@/lib/supabase/client"
-import { X } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
+import { X, Share2, Copy, Check } from "lucide-react"
 import { ExpenseList } from "@/components/expense-list"
 import AddExpenseForm from "@/components/add-expense-form"
 import { OfflineIndicator } from "@/components/offline-indicator"
@@ -17,7 +18,7 @@ import { DesktopShell } from "@/components/desktop-shell"
 import { useIsDesktop } from "@/hooks/useIsDesktop"
 import { offlineStorage } from "@/lib/offline-storage"
 import { syncManager } from "@/lib/sync-manager"
-import type { RealtimeChannel } from "@supabase/supabase-js"
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import { ExpenseCardSkeleton } from "@/components/expense-card-skeleton"
 import { ManageParticipantsModal } from "@/components/manage-participants-modal"
 import { ManageLocationsModal } from "@/components/manage-locations-modal"
@@ -27,12 +28,13 @@ import { TripSettingsDropdown } from "@/components/trip-settings-dropdown"
 import { useDelayedLoading } from "@/hooks/useDelayedLoading"
 import CreditImportDialog from "@/src/features/import/CreditImportDialog"
 import { ingestBatch } from "@/src/lib/import/ingest"
-import type { NormalizedExpense } from "@/src/types/import"
+import type { NormalizedExpense, SupportedCurrency } from "@/src/types/import"
 import { cryptoHash } from "@/src/lib/import/parsers"
 
 export default function TripPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const tripId = params.id as string
 
   const [trip, setTrip] = useState<Trip | null>(null)
@@ -43,6 +45,8 @@ export default function TripPage() {
   const [showParticipants, setShowParticipants] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
   const [showEditTrip, setShowEditTrip] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -118,9 +122,7 @@ export default function TripPage() {
         setExpenses(offlineExpenses)
       }
 
-      // If online, fetch fresh data and update offline storage
       if (navigator.onLine) {
-        // Load trip details
         const { data: tripData, error: tripError } = await supabase.from("trips").select("*").eq("id", tripId).single()
 
         if (tripError) {
@@ -135,7 +137,6 @@ export default function TripPage() {
           offlineStorage.saveTrip(tripData)
         }
 
-        // Load expenses
         const { data: expensesData, error: expensesError } = await supabase
           .from("expenses")
           .select("*")
@@ -146,14 +147,11 @@ export default function TripPage() {
           console.error("Error loading expenses:", expensesError)
         } else {
           setExpenses(expensesData || [])
-
-          // Save to offline storage
-          expensesData?.forEach((expense) => {
+          expensesData?.forEach((expense: Expense) => {
             offlineStorage.saveExpense(expense)
           })
         }
 
-        // Download data for offline use
         await syncManager.downloadTripData(tripId)
       }
     } catch (error) {
@@ -176,16 +174,12 @@ export default function TripPage() {
           table: "expenses",
           filter: `trip_id=eq.${tripId}`,
         },
-        (payload) => {
-          console.log("[v0] Real-time expense change:", payload)
-
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           if (payload.eventType === "INSERT") {
             const newExpense = payload.new as Expense
             setExpenses((prev) => {
-              // Avoid duplicates if expense was added locally
               if (prev.some((e) => e.id === newExpense.id)) return prev
               const updated = [newExpense, ...prev]
-              // Save to offline storage
               offlineStorage.saveExpense(newExpense)
               return updated
             })
@@ -193,7 +187,6 @@ export default function TripPage() {
             const updatedExpense = payload.new as Expense
             setExpenses((prev) => {
               const updated = prev.map((expense) => (expense.id === updatedExpense.id ? updatedExpense : expense))
-              // Save to offline storage
               offlineStorage.saveExpense(updatedExpense)
               return updated
             })
@@ -201,7 +194,6 @@ export default function TripPage() {
             const deletedExpense = payload.old as Expense
             setExpenses((prev) => {
               const updated = prev.filter((expense) => expense.id !== deletedExpense.id)
-              // Remove from offline storage
               offlineStorage.deleteExpense(deletedExpense.id)
               return updated
             })
@@ -216,21 +208,16 @@ export default function TripPage() {
           table: "trips",
           filter: `id=eq.${tripId}`,
         },
-        (payload) => {
-          console.log("[v0] Real-time trip change:", payload)
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           const updatedTrip = payload.new as Trip
           setTrip(updatedTrip)
           offlineStorage.saveTrip(updatedTrip)
         },
       )
-      .subscribe((status) => {
-        console.log("[v0] Real-time subscription status:", status)
-      })
+      .subscribe()
 
     channelRef.current = channel
   }
-
-  // Removed filter panel; expenses list always shows all expenses
 
   const deleteTrip = async () => {
     if (!confirm("Are you sure you want to delete this trip?")) return
@@ -264,12 +251,21 @@ export default function TripPage() {
     }
   }
 
+  const copyTripCode = async () => {
+    try {
+      await navigator.clipboard.writeText(tripId)
+      setCopied(true)
+      toast.success("Trip code copied")
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error("Failed to copy")
+    }
+  }
+
   const onExpenseAdded = (newExpense: Expense) => {
     if (navigator.onLine) {
-      // Real-time subscription will handle the state update
       setShowAddForm(false)
     } else {
-      // Add to local state and offline storage immediately
       const updatedExpenses = [newExpense, ...expenses]
       setExpenses(updatedExpenses)
       offlineStorage.saveExpense(newExpense)
@@ -278,10 +274,7 @@ export default function TripPage() {
   }
 
   const onExpenseUpdated = (updatedExpense: Expense) => {
-    if (navigator.onLine) {
-      // Real-time subscription will handle the state update
-    } else {
-      // Update local state and offline storage immediately
+    if (!navigator.onLine) {
       const updatedExpenses = expenses.map((expense) => (expense.id === updatedExpense.id ? updatedExpense : expense))
       setExpenses(updatedExpenses)
       offlineStorage.saveExpense(updatedExpense)
@@ -289,10 +282,7 @@ export default function TripPage() {
   }
 
   const onExpenseDeleted = (expenseId: string) => {
-    if (navigator.onLine) {
-      // Real-time subscription will handle the state update
-    } else {
-      // Remove from local state and offline storage immediately
+    if (!navigator.onLine) {
       const updatedExpenses = expenses.filter((expense) => expense.id !== expenseId)
       setExpenses(updatedExpenses)
       offlineStorage.deleteExpense(expenseId)
@@ -315,7 +305,6 @@ export default function TripPage() {
       setIsImporting(false)
     }
   }
-
 
   const participantNameLookup = useMemo(() => {
     const map = new Map<string, string>()
@@ -341,7 +330,7 @@ export default function TripPage() {
       const rawLast4 = typeof sourceMeta.cardLast4 === "string" ? sourceMeta.cardLast4 : ""
       const cardLast4 = rawLast4 ? rawLast4.replace(/\D/g, "").slice(-4) : ""
       const fileName = typeof sourceMeta.fileName === "string" ? sourceMeta.fileName : undefined
-      const currency = typeof sourceMeta.currency === "string" && sourceMeta.currency ? sourceMeta.currency : "ILS"
+      const currency = (typeof sourceMeta.currency === "string" && sourceMeta.currency ? sourceMeta.currency : "ILS") as SupportedCurrency
       const storedHash = typeof sourceMeta.hash === "string" && sourceMeta.hash ? sourceMeta.hash : undefined
       const isoDate = expense.date ? new Date(expense.date).toISOString() : new Date(expense.created_at).toISOString()
       const parsedAmount = Number(expense.amount)
@@ -376,9 +365,7 @@ export default function TripPage() {
   if (delayedLoading) {
     return (
       <div className="min-100dvh min-vh app-bg antialiased text-white">
-        <div
-          className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)] space-y-4"
-        >
+        <div className="px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)] space-y-3">
           <ExpenseCardSkeleton />
           <ExpenseCardSkeleton />
           <ExpenseCardSkeleton />
@@ -390,12 +377,12 @@ export default function TripPage() {
   if (!trip) {
     return (
       <div className="min-100dvh min-vh app-bg antialiased flex items-center justify-center text-white">
-        <div className="space-y-6 text-center">
-          <p className="text-lg font-medium text-white/80">Trip not found</p>
+        <div className="space-y-4 text-center">
+          <p className="text-base font-medium text-white/60">Trip not found</p>
           <Button
             onClick={() => router.push("/")}
-            variant="glass"
-            className="h-11 rounded-2xl px-5 text-white/90 hover:text-white"
+            variant="outline"
+            className="h-10 rounded-xl px-5"
           >
             Go Home
           </Button>
@@ -408,18 +395,28 @@ export default function TripPage() {
   const totalCount = expenses.length
 
   const content = (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-40 pt-4 text-white lg:pb-8">
-      <Card className="gap-4 px-5 sm:px-6">
-        <div className="space-y-1">
-          <h2 dir="auto" className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
-            {trip.name}
-          </h2>
-          <p className="text-sm text-white/70">Have Fun!</p>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-40 pt-4 text-white lg:pb-8">
+      {/* Trip header card */}
+      <Card className="gap-4 px-5">
+        <div className="flex items-start justify-between">
+          <div className="space-y-0.5">
+            <h2 dir="auto" className="text-xl md:text-2xl font-semibold text-white">
+              {trip.name}
+            </h2>
+            <p className="text-xs text-white/35">{totalCount} expenses</p>
+          </div>
+          <div className="text-end">
+            <p className="grad-text numeric-display text-3xl font-bold md:text-4xl">₪{totalAmount.toFixed(2)}</p>
+          </div>
         </div>
-        <div className="space-y-1 text-end">
-          <p className="grad-text numeric-display text-4xl font-bold leading-tight md:text-5xl">₪{totalAmount.toFixed(2)}</p>
-          <p className="text-sm text-white/60 numeric-display">{totalCount} total expenses</p>
-        </div>
+        {/* Share button */}
+        <button
+          onClick={() => setShowShareDialog(true)}
+          className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/60 transition w-fit"
+        >
+          <Share2 className="h-3 w-3" />
+          Share trip code
+        </button>
       </Card>
 
       {showAddForm && (
@@ -427,6 +424,7 @@ export default function TripPage() {
       )}
 
       <ExpenseList expenses={expenses} onExpenseUpdated={onExpenseUpdated} onExpenseDeleted={onExpenseDeleted} />
+
       {showParticipants && (
         <ManageParticipantsModal
           tripId={tripId}
@@ -441,22 +439,24 @@ export default function TripPage() {
           onLocationsChange={setLocations}
         />
       )}
+
+      {/* Edit Trip Dialog */}
       <Dialog.Root open={showEditTrip} onOpenChange={setShowEditTrip}>
         <Dialog.Portal>
           <Dialog.Overlay className="overlay-dim fixed inset-0" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-md outline-none">
-            <Card className="glass-strong relative z-10 rounded-t-[28px] border-none shadow-lg md:rounded-[28px]">
-              <CardHeader className="flex flex-row items-center justify-between px-4 pb-4 pt-4 md:px-6 md:pt-6">
-                <CardTitle>Edit Trip</CardTitle>
+            <Card className="glass-strong relative z-10 rounded-t-[var(--radius-xxl)] border-none md:rounded-[var(--radius-xxl)]">
+              <CardHeader className="flex flex-row items-center justify-between px-5 pb-3 pt-5">
+                <CardTitle className="text-base">Edit Trip</CardTitle>
                 <Dialog.Close asChild>
-                  <Button variant="ghostLight" size="sm" className="h-9 w-9 p-0 rounded-full">
-                    <X className="h-5 w-5" />
+                  <Button variant="ghostLight" size="sm" className="h-8 w-8 p-0 rounded-lg">
+                    <X className="h-4 w-4" />
                   </Button>
                 </Dialog.Close>
               </CardHeader>
-              <CardContent className="space-y-4 px-4 pb-4 md:px-6">
+              <CardContent className="space-y-3 px-5 pb-5">
                 <div>
-                  <label htmlFor="edit-name" className="mb-1 block text-sm font-medium text-white/70">
+                  <label htmlFor="edit-name" className="mb-1 block text-xs font-medium text-white/50">
                     Trip Name
                   </label>
                   <Input
@@ -464,11 +464,11 @@ export default function TripPage() {
                     dir="auto"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="h-11 rounded-2xl border-white/20 bg-white/10 px-4 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
+                    className="h-10 rounded-xl"
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-description" className="mb-1 block text-sm font-medium text-white/70">
+                  <label htmlFor="edit-description" className="mb-1 block text-xs font-medium text-white/50">
                     Description
                   </label>
                   <Textarea
@@ -477,17 +477,54 @@ export default function TripPage() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
-                    className="rounded-2xl border-white/20 bg-white/10 px-4 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/30"
+                    className="rounded-xl"
                   />
                 </div>
                 <Button
                   onClick={saveTrip}
                   disabled={!editName.trim()}
-                  variant="glass"
-                  className="h-11 w-full rounded-2xl px-4 text-white/90 hover:text-white"
+                  className="w-full h-10 rounded-xl"
                 >
                   Save
                 </Button>
+              </CardContent>
+            </Card>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Share Trip Dialog */}
+      <Dialog.Root open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="overlay-dim fixed inset-0" />
+          <Dialog.Content className="fixed inset-x-0 bottom-0 md:inset-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-sm outline-none">
+            <Card className="glass-strong relative z-10 rounded-t-[var(--radius-xxl)] border-none md:rounded-[var(--radius-xxl)]">
+              <CardHeader className="flex flex-row items-center justify-between px-5 pb-3 pt-5">
+                <CardTitle className="text-base">Share Trip</CardTitle>
+                <Dialog.Close asChild>
+                  <Button variant="ghostLight" size="sm" className="h-8 w-8 p-0 rounded-lg">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </Dialog.Close>
+              </CardHeader>
+              <CardContent className="space-y-3 px-5 pb-5">
+                <p className="text-xs text-white/40">Share this code with others so they can join your trip.</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={tripId}
+                    readOnly
+                    dir="ltr"
+                    className="h-10 rounded-xl text-xs font-mono flex-1"
+                  />
+                  <Button
+                    onClick={copyTripCode}
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 rounded-xl flex-shrink-0"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </Dialog.Content>
@@ -537,16 +574,16 @@ export default function TripPage() {
   return (
     <div className="min-100dvh min-vh app-bg antialiased text-white">
       <div
-        className="space-y-6 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
+        className="space-y-4 px-[max(env(safe-area-inset-left),16px)] pr-[max(env(safe-area-inset-right),16px)] pt-[max(env(safe-area-inset-top),12px)] pb-[max(env(safe-area-inset-bottom),24px)]"
       >
         <header className="sticky top-0 z-30">
-          <div className="glass flex h-14 items-center justify-between rounded-[28px] px-4">
-            <span className="text-lg font-semibold tracking-tight">TripPay</span>
-            <div className="flex items-center gap-2 text-white/80">
+          <div className="glass flex h-12 items-center justify-between rounded-[var(--radius-xxl)] px-4">
+            <span className="text-base font-semibold tracking-tight">TripPay</span>
+            <div className="flex items-center gap-1.5 text-white/60">
               <OfflineIndicator />
               <button
                 onClick={() => setShowImportDialog(true)}
-                className="glass-sm h-9 rounded-2xl px-3 text-xs text-white/80 transition hover:text-white"
+                className="glass-sm h-8 rounded-xl px-2.5 text-[10px] text-white/50 transition hover:text-white/80"
               >
                 ייבוא דוח
               </button>
