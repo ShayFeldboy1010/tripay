@@ -125,31 +125,18 @@ export default function HomePage() {
 
     setIsJoining(true)
     try {
-      const { data, error } = await supabase
-        .from("trips")
-        .select("id, name")
-        .eq("id", tripCode.trim())
-        .single()
+      const { data, error } = await supabase.rpc("join_trip", {
+        p_trip_id: tripCode.trim(),
+      })
 
-      if (error || !data) {
-        toast.error("Trip not found")
+      if (error) {
+        toast.error("Failed to join trip")
         return
       }
 
-      // Check if already a member
-      const { data: existing } = await supabase
-        .from("trip_members")
-        .select("id")
-        .eq("trip_id", data.id)
-        .eq("user_id", user.id)
-        .maybeSingle()
-
-      if (!existing) {
-        await supabase.from("trip_members").insert({
-          trip_id: data.id,
-          user_id: user.id,
-          role: "member",
-        })
+      if (data?.error) {
+        toast.error(data.error)
+        return
       }
 
       toast.success(`Joined "${data.name}"`)
