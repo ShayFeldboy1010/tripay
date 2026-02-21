@@ -1,80 +1,154 @@
-# Trip Expense App
+# TripPay
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+A collaborative trip expense tracker built for groups who travel together. Track shared expenses in real time, split costs fairly, and let AI answer questions about your spending — all from a polished mobile-first interface.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/shays-projects-2f625896/v0-trip-expense-app)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/QAYrHD7pyaM)
+**[Live Demo](https://feldboy.vercel.app)**
 
-## Overview
+---
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## Features
 
-## Deployment
+- **Real-time collaboration** — expenses sync instantly across all devices via Supabase Realtime
+- **User authentication** — email-based auth with Supabase Auth; trip membership and role-based access control
+- **Smart expense splitting** — track who paid what, mark shared payments, and see per-person balances
+- **AI-powered chat** — ask natural-language questions about your expenses ("What did we spend on food in Tokyo?") powered by OpenAI
+- **Multi-currency support** — import credit card statements (CSV/XLSX/OFX) with automatic currency detection
+- **Offline-first** — works without internet; queues changes and syncs when back online
+- **Export** — generate PDF and Excel reports for trip summaries
+- **RTL support** — full Hebrew and English bidirectional text support
+- **Responsive design** — glass-morphism UI optimized for mobile and desktop
 
-Your project is live at:
+## Tech Stack
 
-**[https://vercel.com/shays-projects-2f625896/v0-trip-expense-app](https://vercel.com/shays-projects-2f625896/v0-trip-expense-app)**
+| Layer | Technology |
+|-------|-----------|
+| Framework | [Next.js 15](https://nextjs.org) (App Router) |
+| Language | TypeScript |
+| Database | [Supabase](https://supabase.com) (Postgres + Auth + Realtime) |
+| Auth | Supabase Auth via `@supabase/ssr` |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com) |
+| UI Components | [Radix UI](https://radix-ui.com) + [shadcn/ui](https://ui.shadcn.com) |
+| Animations | [Framer Motion](https://motion.dev) |
+| AI | [OpenAI](https://openai.com) (NL → SQL pipeline) |
+| Testing | [Vitest](https://vitest.dev) |
+| Deployment | [Vercel](https://vercel.com) |
 
-## Build your app
+## Architecture
 
-Continue building your app on:
+```
+app/                    Next.js App Router pages & API routes
+components/             React components (UI, forms, modals, chat)
+lib/                    Core utilities (Supabase clients, balance calc, exports)
+services/               AI expense query pipeline (NL → SQL → LLM)
+src/                    Credit card import parsers & ingestion
+hooks/                  Custom React hooks
+scripts/                SQL migrations (01–07)
+middleware.ts           Auth session refresh & route protection
+```
 
-**[https://v0.app/chat/projects/QAYrHD7pyaM](https://v0.app/chat/projects/QAYrHD7pyaM)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
-
-## Troubleshooting Supabase Writes
-
-1. **Environment variables** – ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are configured locally in `.env.local` and in Vercel project settings.
-2. **Schema** – run the SQL scripts in `scripts/` to keep the database in sync. Missing columns such as `is_shared_payment` will cause inserts to fail.
-3. **Row Level Security** – confirm that policies allow your user to insert and update rows for the trip. RLS errors surface from Supabase with a detailed `code` and `message`.
-4. **Client errors** – the app now logs Supabase error `code`, `message`, and `details` to the console. Use these logs to diagnose issues quickly.
-5. **AI expenses view** – after seeding the database run `scripts/05-create-ai-expenses-view.sql` so the `ai_expenses` view exists. The AI chat feature reads from this view and will fail if it is missing. Make sure the server has a Postgres connection string configured (set `DATABASE_URL` or `SUPABASE_DB_URL`) so the AI chat can query the view. If your database requires TLS, set `PGSSLMODE` (`require`, `verify-ca`, or `verify-full`) and provide certificate paths with `PGSSLROOTCERT` / `PGSSLCERT` / `PGSSLKEY` as needed.
-
-5. **AI expenses view** – after seeding the database run `scripts/05-create-ai-expenses-view.sql` so the `ai_expenses` view exists. The AI chat feature reads from this view and will fail if it is missing. Make sure the server has a Postgres connection string configured (set `DATABASE_URL` or `SUPABASE_DB_URL`) so the AI chat can query the view.
-
-
-## Configuring OpenAI
-
-- Set `OPENAI_API_KEY` in both `.env.local` and the Vercel project to enable OpenAI-powered parsing.
-- The backend automatically selects OpenAI when an API key is present and defaults to the `openai/gpt-oss-120b` model. Override with `LLM_MODEL` if you prefer a different deployment.
-- You no longer need to set `LLM_PROVIDER`; the server defaults to OpenAI when the key is present and gracefully falls back to a mock responder otherwise.
-- Make sure the Supabase environment variables above are configured so the answers the API returns are grounded in your trip data.
-
-## AI Chat – Single Path
+### AI Chat Pipeline
 
 ```mermaid
 flowchart LR
-  A[Traveler] -->|Ask| B[React Widget]
-  B -->|POST /api/chat| C[Next.js Route]
-  B -->|GET /api/chat/stream| C
-  C -->|Plan & SQL| D[Planner + Supabase]
-  D -->|Result Rows| C
-  C -->|Prompt| E[OpenAI LLM]
-  E -->|Tokens| B
+  A[User Question] --> B[React Chat Widget]
+  B -->|POST /api/chat| C[Next.js API Route]
+  C -->|NL → SQL| D[Query Planner]
+  D -->|Execute| E[Supabase Postgres]
+  E -->|Result Rows| C
+  C -->|Compose Answer| F[OpenAI LLM]
+  F -->|Stream Tokens| B
 ```
 
-### Quickstart
+## Getting Started
 
-1. `pnpm i` – install dependencies once.
-2. `pnpm dev` – start the web app locally (runs both UI and API routes).
-3. Visit `http://localhost:3000`, open the AI chat bubble, and submit a question. Streaming tokens should appear immediately.
-4. Run `pnpm api:smoke` to execute the chat API smoke tests.
-5. `pnpm health` generates `reports/health.json` and refreshes `docs/codex-audit.md` with a static analysis report.
+### Prerequisites
 
-## Locale & Direction
+- Node.js 18+
+- [pnpm](https://pnpm.io)
+- A [Supabase](https://supabase.com) project
 
-- Text inputs and dynamic text containers use `dir="auto"` so Hebrew/English content flows in the correct direction.
-- The `<html>` element reads a `locale` cookie (`he` or `en`) and sets the page `dir` accordingly. Default is `en`.
-- To test manually, set `document.cookie = "locale=he"` (or `en`) and reload.
+### Setup
 
-## Trip Page Shortcuts
+```bash
+# Clone the repository
+git clone https://github.com/ShayFeldboy1010/tripay.git
+cd tripay
 
-- Buttons above the expense list open participant and location management modals.
-- Components added: `ManageParticipantsModal` and `ManageLocationsModal`.
+# Install dependencies
+pnpm install
+
+# Configure environment variables
+cp .env.local.example .env.local
+# Edit .env.local with your Supabase and OpenAI credentials
+```
+
+### Database
+
+Run the SQL migration scripts in order against your Supabase project (SQL Editor):
+
+```
+scripts/01-create-tables.sql
+scripts/02-update-schema.sql
+scripts/03-add-locations-participants.sql
+scripts/04-add-shared-payment.sql
+scripts/05-create-ai-expenses-view.sql
+scripts/06-add-user-auth.sql
+scripts/07-migrate-existing-trips.sql
+```
+
+### Run
+
+```bash
+pnpm dev          # Start dev server at http://localhost:3000
+pnpm build        # Production build
+pnpm test         # Run test suite
+pnpm lint         # Lint check
+pnpm typecheck    # TypeScript check
+```
+
+## Project Structure
+
+```
+├── app/
+│   ├── page.tsx                    # Dashboard (trip list)
+│   ├── login/page.tsx              # Authentication
+│   ├── signup/page.tsx
+│   ├── auth/callback/route.ts      # OAuth callback handler
+│   ├── trip/[id]/
+│   │   ├── page.tsx                # Trip expenses view
+│   │   ├── summary/page.tsx        # Balances, charts, exports
+│   │   └── search/page.tsx         # Search & filter expenses
+│   └── api/
+│       ├── chat/                   # AI chat endpoints
+│       └── ai-query/               # Direct AI query endpoint
+├── components/
+│   ├── ui/                         # Base components (Button, Card, Input)
+│   ├── auth-provider.tsx           # Auth context & session management
+│   ├── expense-list.tsx            # Expense display with date grouping
+│   ├── add-expense-form.tsx        # Create expense modal
+│   ├── desktop-shell.tsx           # Desktop sidebar layout
+│   ├── mobile-nav.tsx              # Mobile bottom navigation
+│   ├── fab.tsx                     # Floating action button
+│   └── AIChatWidget.tsx            # AI chat interface
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts               # Browser client (lazy singleton)
+│   │   ├── server.ts               # Server client (cookie-based)
+│   │   └── middleware.ts            # Middleware client (session refresh)
+│   ├── balance.ts                  # Expense splitting calculations
+│   └── export-reports.ts           # PDF & Excel generation
+├── services/                       # AI query execution pipeline
+├── scripts/                        # SQL migrations (01-07)
+└── middleware.ts                   # Route protection & auth
+```
+
+## Key Design Decisions
+
+- **Lazy Supabase client** — the browser client uses a `Proxy` to defer initialization until runtime, avoiding build-time crashes when env vars aren't available during static generation
+- **SECURITY DEFINER functions** — trip joining and claiming use Postgres functions that bypass RLS to allow operations before membership exists
+- **Offline queue** — pending mutations are stored in `localStorage` and replayed on reconnection via a sync manager
+- **Glass morphism UI** — consistent design system built on CSS custom properties with dark navy (#0B1020) base theme
+
+## License
+
+MIT

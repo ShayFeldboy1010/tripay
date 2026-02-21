@@ -1,6 +1,7 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "tripay",
+  "version": "1.0.0",
+  "description": "Collaborative trip expense tracker with real-time sync, AI chat, and multi-currency support",
   "private": true,
   "scripts": {
     "build": "next build",
